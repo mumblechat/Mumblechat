@@ -54,6 +54,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -458,6 +459,7 @@ public class DappBrowserFragment extends BaseFragment implements OnSignTransacti
         refresh = baseView.findViewById(R.id.refresh);
         final MenuItem reload = toolbar.getMenu().findItem(R.id.action_reload);
         final MenuItem newTab = toolbar.getMenu().findItem(R.id.action_new_tab);
+        final MenuItem viewTabs = toolbar.getMenu().findItem(R.id.action_view_tabs);
         final MenuItem share = toolbar.getMenu().findItem(R.id.action_share);
         final MenuItem scan = toolbar.getMenu().findItem(R.id.action_scan);
         final MenuItem add = toolbar.getMenu().findItem(R.id.action_add_to_my_dapps);
@@ -473,6 +475,10 @@ public class DappBrowserFragment extends BaseFragment implements OnSignTransacti
         });
         if (newTab != null) newTab.setOnMenuItemClickListener(menuItem -> {
             openNewTab();
+            return true;
+        });
+        if (viewTabs != null) viewTabs.setOnMenuItemClickListener(menuItem -> {
+            showTabsDialog();
             return true;
         });
         if (share != null) share.setOnMenuItemClickListener(menuItem -> {
@@ -1584,6 +1590,34 @@ public class DappBrowserFragment extends BaseFragment implements OnSignTransacti
         addressBar.leaveEditMode();
         
         viewModel.track(Analytics.Action.RELOAD_BROWSER);
+    }
+
+    private void showTabsDialog()
+    {
+        if (getContext() == null) return;
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Browser Tabs");
+        
+        String currentUrl = web3.getUrl();
+        String message = "Current Tab:\n" + (currentUrl != null ? currentUrl : "No page loaded");
+        
+        // Check if there's navigation history
+        if (web3.canGoBack() || web3.canGoForward())
+        {
+            message += "\n\nYou can navigate using the back/forward buttons.";
+        }
+        
+        builder.setMessage(message);
+        builder.setPositiveButton("New Tab", (dialog, which) -> openNewTab());
+        builder.setNegativeButton("Close", (dialog, which) -> dialog.dismiss());
+        
+        if (currentUrl != null && !currentUrl.isEmpty())
+        {
+            builder.setNeutralButton("Reload", (dialog, which) -> reloadPage());
+        }
+        
+        builder.show();
     }
 
     private void resetDappBrowser()

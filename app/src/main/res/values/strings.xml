@@ -281,6 +281,7 @@
     <string name="facebook" translatable="false">Facebook</string>
     <string name="twitter" translatable="false">Twitter</string>
     <string name="instagram" translatable="false">Instagram</string>
+    <string name="action_view_tabs">View Tabs</string>
     <string name="erc20" translatable="false">ERC 20</string>
     <string name="erc875" translatable="false">ERC 875</string>
     <string name="erc875legacy" translatable="false">ERC 875*</string>

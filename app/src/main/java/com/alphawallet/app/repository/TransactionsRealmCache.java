@@ -209,9 +209,7 @@ public class TransactionsRealmCache implements TransactionLocalSource {
         {
             return instance.where(RealmTransaction.class)
                     .sort("timeStamp", Sort.DESCENDING)
-                    .beginGroup()
-                    .lessThan("timeStamp", fetchTime)
-                    .endGroup();
+                    .lessThan("timeStamp", fetchTime);
         }
         else
         {

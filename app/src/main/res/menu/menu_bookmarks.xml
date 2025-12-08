@@ -20,9 +20,17 @@
             app:showAsAction="withText" />
 
         <item
+            android:id="@+id/action_view_tabs"
+            android:icon="@drawable/ic_tabs"
+            android:orderInCategory="3"
+            android:title="@string/action_view_tabs"
+            app:iconTint="?colorControlNormal"
+            app:showAsAction="withText" />
+
+        <item
             android:id="@+id/action_share"
             android:icon="@drawable/ic_dapp_share"
-            android:orderInCategory="3"
+            android:orderInCategory="4"
             android:title="@string/action_share"
             app:iconTint="?colorControlNormal"
             app:showAsAction="withText" />
@@ -30,7 +38,7 @@
         <item
             android:id="@+id/action_add_to_my_dapps"
             android:icon="@drawable/ic_plus"
-            android:orderInCategory="4"
+            android:orderInCategory="5"
             android:title="@string/add_to_my_dapps"
             app:iconTint="?colorControlNormal"
             app:showAsAction="withText" />
@@ -38,7 +46,7 @@
         <item
             android:id="@+id/action_my_dapps"
             android:icon="@drawable/ic_my_dapps"
-            android:orderInCategory="5"
+            android:orderInCategory="6"
             android:title="@string/my_dapps"
             app:iconTint="?colorControlNormal"
             app:showAsAction="withText" />
@@ -46,7 +54,7 @@
         <item
             android:id="@+id/action_history"
             android:icon="@drawable/ic_dapp_history"
-            android:orderInCategory="6"
+            android:orderInCategory="7"
             android:title="@string/history"
             app:iconTint="?colorControlNormal"
             app:showAsAction="withText" />
@@ -54,7 +62,7 @@
         <item
             android:id="@+id/action_set_as_homepage"
             android:icon="@drawable/ic_home"
-            android:orderInCategory="7"
+            android:orderInCategory="8"
             android:title="@string/action_set_as_homepage"
             app:iconTint="?colorControlNormal"
             app:showAsAction="withText" />
@@ -63,7 +71,7 @@
         <item
             android:id="@+id/action_network"
             android:icon="@drawable/ic_network_2"
-            android:orderInCategory="8"
+            android:orderInCategory="9"
             android:title="@string/action_update_network"
             app:iconTint="?colorControlNormal"
             app:showAsAction="withText" />
@@ -71,7 +79,7 @@
         <item
             android:id="@+id/action_scan"
             android:icon="@drawable/ic_camera_scan"
-            android:orderInCategory="9"
+            android:orderInCategory="10"
             android:title="@string/action_scan_dapp"
             app:iconTint="?colorControlNormal"
             app:showAsAction="withText" />
@@ -79,7 +87,7 @@
         <item
             android:id="@+id/action_clear_cache"
             android:icon="@drawable/ic_settings_cache"
-            android:orderInCategory="10"
+            android:orderInCategory="11"
             android:title="@string/title_clear_browser_cache"
             app:iconTint="?colorControlNormal"
             app:showAsAction="withText" />
