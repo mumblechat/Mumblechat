@@ -2,7 +2,10 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android"
     android:opacity="opaque">
     
-    <!-- White background only -->
+    <!-- White background -->
     <item android:drawable="@android:color/white" />
+    
+    <!-- Centered RamaPay logo with proper size -->
+    <item android:drawable="@drawable/splash_logo_centered" />
     
 </layer-list>
