@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme.NoActionBar.Splash">
-        <item name="android:windowSplashScreenBackground">?android:colorBackground</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_aw</item>
+        <item name="android:windowSplashScreenBackground">@color/white</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo_rama</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
     </style>
 </resources>

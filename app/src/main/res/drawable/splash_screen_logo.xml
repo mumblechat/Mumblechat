@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- White background -->
+    <item android:drawable="@color/white" />
+    
+    <!-- Logo with padding to ensure it's fully visible -->
+    <item
+        android:top="120dp"
+        android:bottom="120dp"
+        android:left="60dp"
+        android:right="60dp">
+        <bitmap
+            android:src="@drawable/splash_logo_rama"
+            android:gravity="center" />
+    </item>
+</layer-list>
