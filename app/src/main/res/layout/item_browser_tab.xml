@@ -6,7 +6,7 @@
     android:layout_margin="8dp"
     app:cardCornerRadius="12dp"
     app:cardElevation="4dp"
-    app:cardBackgroundColor="?attr/cardBackgroundColor"
+    app:cardBackgroundColor="?attr/colorSurface"
     android:id="@+id/tab_card">
 
     <LinearLayout

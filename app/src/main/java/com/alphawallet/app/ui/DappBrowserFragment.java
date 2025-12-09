@@ -1631,7 +1631,7 @@ public class DappBrowserFragment extends BaseFragment implements OnSignTransacti
 
     private void showTabsDialog()
     {
-        if (getContext() == null) return;
+        if (getContext() == null || tabManager == null) return;
         
         // Update current tab before showing dialog
         BrowserTab activeTab = tabManager.getActiveTab();
@@ -1646,6 +1646,9 @@ public class DappBrowserFragment extends BaseFragment implements OnSignTransacti
         builder.setView(dialogView);
         
         AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
         
         // Setup UI elements
         TextView tabsCount = dialogView.findViewById(R.id.tabs_count);

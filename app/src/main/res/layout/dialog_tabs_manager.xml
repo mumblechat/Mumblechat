@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="400dp"
+    android:maxHeight="600dp"
     android:orientation="vertical"
-    android:background="?android:attr/colorBackground">
+    android:background="?attr/colorBackgroundFloating">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -42,16 +45,16 @@
             android:padding="6dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Close"
-            app:tint="@android:color/white"
-            xmlns:app="http://schemas.android.com/apk/res-auto" />
+            app:tint="@android:color/white" />
 
     </RelativeLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/tabs_recycler"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:minHeight="200dp"
+        android:maxHeight="400dp"
         android:padding="8dp"
         android:clipToPadding="false" />
 
@@ -61,7 +64,7 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:gravity="center"
-        android:background="?android:attr/colorBackground">
+        android:background="?attr/colorBackgroundFloating">
 
         <Button
             android:id="@+id/new_tab_button"
@@ -69,6 +72,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="+ New Tab"
+            android:textColor="@android:color/white"
             android:textSize="16sp"
             android:paddingVertical="12dp"
             style="@style/Widget.MaterialComponents.Button" />
@@ -79,6 +83,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:text="Close All"
+            android:textColor="?attr/colorPrimary"
             android:textSize="14sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
