@@ -374,18 +374,18 @@ public class ChatFragment extends BaseFragment implements
         if (info == null)
         {
             // Unknown network - notify failure
-            web3.onWalletActionSuccessful(callbackId, null);
+            web3.onWalletActionSuccessful(callbackId, "null");
         }
         else if (activeNetwork != null && activeNetwork.chainId == info.chainId)
         {
             // Already on this network
-            web3.onWalletActionSuccessful(callbackId, null);
+            web3.onWalletActionSuccessful(callbackId, "null");
         }
         else
         {
             // Switch to the requested network
             loadNewNetwork(info.chainId);
-            web3.onWalletActionSuccessful(callbackId, null);
+            web3.onWalletActionSuccessful(callbackId, "null");
         }
     }
 
@@ -393,7 +393,16 @@ public class ChatFragment extends BaseFragment implements
     @Override
     public void onRequestAccounts(long callbackId)
     {
-        web3.onWalletActionSuccessful(callbackId, "[\"" + wallet.address + "\"]");
+        if (wallet != null && wallet.address != null)
+        {
+            Timber.d("onRequestAccounts: returning address %s", wallet.address);
+            web3.onWalletActionSuccessful(callbackId, "[\"" + wallet.address + "\"]");
+        }
+        else
+        {
+            Timber.e("onRequestAccounts: wallet is null!");
+            web3.onWalletActionSuccessful(callbackId, "[]");
+        }
     }
 
     @Override
@@ -405,12 +414,12 @@ public class ChatFragment extends BaseFragment implements
         if (info == null)
         {
             showErrorDialog(R.string.error_transaction_failed, getString(R.string.title_dialog_error));
-            web3.onWalletActionSuccessful(callbackId, null);
+            web3.onWalletActionSuccessful(callbackId, "null");
         }
         else
         {
             loadNewNetwork(info.chainId);
-            web3.onWalletActionSuccessful(callbackId, null);
+            web3.onWalletActionSuccessful(callbackId, "null");
         }
     }
 
