@@ -1066,14 +1066,8 @@ public class WalletFragment extends BaseFragment implements
     @Override
     public void onToolbarClicked(View view)
     {
-        //can we do it this way?
-        //copy address
-        ClipboardManager clipboard = (ClipboardManager) requireActivity().getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText(KEY_ADDRESS, Keys.toChecksumAddress(viewModel.getWalletAddr()));
-        if (clipboard != null)
-        {
-            clipboard.setPrimaryClip(clip);
-        }
+        // Show wallet switcher - open manage wallets screen
+        viewModel.showManageWallets(getContext(), false);
     }
 
     private static class SendTokenAdapter extends RecyclerView.Adapter<SendTokenAdapter.ViewHolder>

@@ -14,45 +14,65 @@
         android:visibility="gone" />
 
     <LinearLayout
+        android:id="@+id/wallet_switcher_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:orientation="vertical"
-        android:gravity="center">
-
-        <TextView
-            android:id="@+id/toolbar_title"
-            style="@style/Aw.Typography.Toolbar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="Dev" />
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="?attr/selectableItemBackground">
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:visibility="gone"
-            android:id="@+id/toolbar_subtitle_layout">
+            android:orientation="vertical"
+            android:gravity="center">
 
             <TextView
-                android:id="@+id/toolbar_subtitle"
+                android:id="@+id/toolbar_title"
+                style="@style/Aw.Typography.Toolbar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="?android:attr/textColorSecondary"
-                tools:text="0x1234...5678" />
+                tools:text="Dev" />
 
-            <ImageView
-                android:id="@+id/toolbar_copy_icon"
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:layout_marginStart="4dp"
-                android:src="@drawable/ic_content_copy"
-                android:contentDescription="@string/action_copy"
-                app:tint="?android:attr/textColorSecondary" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:visibility="gone"
+                android:id="@+id/toolbar_subtitle_layout">
+
+                <TextView
+                    android:id="@+id/toolbar_subtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    tools:text="0x1234...5678" />
+
+                <ImageView
+                    android:id="@+id/toolbar_copy_icon"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_content_copy"
+                    android:contentDescription="@string/action_copy"
+                    app:tint="?android:attr/textColorSecondary" />
+
+            </LinearLayout>
 
         </LinearLayout>
+
+        <ImageView
+            android:id="@+id/wallet_dropdown_icon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_expand_more"
+            android:contentDescription="@string/toolbar_title_wallets"
+            app:tint="?android:attr/textColorSecondary" />
 
     </LinearLayout>
 
