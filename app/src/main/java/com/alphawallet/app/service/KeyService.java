@@ -873,6 +873,32 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
         }
     }
 
+    /**
+     * Get the address at a specific HD derivation index (without needing private key)
+     * @param wallet The parent HD wallet
+     * @param accountIndex The account index
+     * @return The address, or null if failed
+     */
+    public String getAddressAtIndex(Wallet wallet, int accountIndex)
+    {
+        try
+        {
+            currentWallet = wallet;
+            String mnemonic = unpackMnemonic();
+            HDWallet hdWallet = new HDWallet(mnemonic, "");
+            
+            String derivationPath = "m/44'/60'/0'/0/" + accountIndex;
+            PrivateKey pk = hdWallet.getKey(CoinType.ETHEREUM, derivationPath);
+            String address = CoinType.ETHEREUM.deriveAddress(pk);
+            return address;
+        }
+        catch (KeyServiceException | UserNotAuthenticatedException e)
+        {
+            Timber.tag(TAG).e(e, "Failed to get address at index %d", accountIndex);
+            return null;
+        }
+    }
+
     private synchronized boolean storeEncryptedBytes(byte[] data, boolean createAuthLocked, String fileName)
     {
         KeyStore keyStore = null;

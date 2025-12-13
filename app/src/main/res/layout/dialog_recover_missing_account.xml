@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/background_bottom_sheet"
+    android:paddingBottom="@dimen/base_24">
+
+    <!-- Handle bar -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bottom_sheet_handle" />
+
+    <!-- Header -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="@dimen/cozy_20">
+
+        <ImageView
+            android:id="@+id/back_action"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:padding="4dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="?colorControlNormal"
+            android:background="?selectableItemBackgroundBorderless"
+            android:contentDescription="@string/action_cancel" />
+
+        <TextView
+            android:id="@+id/title"
+            style="@style/Aw.Typography.Title.Large.Bold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="@string/recover_missing_account" />
+
+    </RelativeLayout>
+
+    <!-- Instructions -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"
+        android:paddingHorizontal="@dimen/cozy_20"
+        android:text="@string/recover_missing_account_instructions"
+        android:textColor="?android:textColorSecondary"
+        android:textSize="14sp" />
+
+    <!-- Master Wallet Selector -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:paddingHorizontal="@dimen/cozy_20"
+        android:text="@string/select_master_wallet"
+        android:textColor="?android:textColorPrimary"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <Spinner
+        android:id="@+id/master_wallet_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="@dimen/cozy_20"
+        android:background="@drawable/background_input_box"
+        android:padding="8dp" />
+
+    <!-- Index Input -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:paddingHorizontal="@dimen/cozy_20"
+        android:text="@string/account_index"
+        android:textColor="?android:textColorPrimary"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/index_input"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="@dimen/cozy_20"
+        android:background="@drawable/background_input_box"
+        android:hint="@string/account_index_hint"
+        android:inputType="number"
+        android:padding="12dp"
+        android:textColor="?android:textColorPrimary"
+        android:textColorHint="?android:textColorSecondary" />
+
+    <!-- Info about existing accounts -->
+    <TextView
+        android:id="@+id/existing_accounts_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:paddingHorizontal="@dimen/cozy_20"
+        android:textColor="@color/brand"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <!-- Recover Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/recover_button"
+        style="@style/Aw.Component.Button.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_marginHorizontal="@dimen/cozy_20"
+        android:text="@string/recover_account" />
+
+</LinearLayout>

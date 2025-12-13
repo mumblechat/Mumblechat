@@ -61,8 +61,84 @@
         android:id="@+id/wallet_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxHeight="400dp"
+        android:maxHeight="300dp"
         android:clipToPadding="false"
         android:paddingHorizontal="@dimen/cozy_20" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"
+        android:background="@color/surface_tertiary" />
+
+    <!-- Recover Missing Account Option -->
+    <LinearLayout
+        android:id="@+id/recover_missing_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/cozy_20">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/advanced_options"
+            android:textColor="?android:textColorSecondary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/recover_missing_account"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:background="@drawable/background_wallet_select_item"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_settings_backup"
+                app:tint="@color/brand"
+                android:contentDescription="@null" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/recover_missing_account"
+                    android:textColor="?android:textColorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/recover_missing_account_desc"
+                    android:textColor="?android:textColorSecondary"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="?colorControlNormal"
+                android:contentDescription="@null" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </LinearLayout>

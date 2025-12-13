@@ -844,6 +844,25 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
     }
 
     /**
+     * Add a new account derived from a specific master HD wallet at a specific index
+     * Used for recovering missing accounts
+     * @param activity The calling activity
+     * @param masterWallet The master HD wallet to derive from
+     * @param index The specific index to derive
+     * @param callback Callback for the result
+     */
+    public void addHDAccountFromMasterAtIndex(Activity activity, Wallet masterWallet, int index, CreateWalletCallbackInterface callback)
+    {
+        if (masterWallet == null)
+        {
+            callback.keyFailure("No master wallet specified");
+            return;
+        }
+        
+        keyService.deriveNewHDAccount(masterWallet, index, callback);
+    }
+
+    /**
      * Store a derived HD account
      * @param address The derived account address
      * @param authLevel The authentication level
@@ -864,6 +883,89 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(account -> setNewWallet(wallet), this::onCreateWalletError).isDisposed();
+        }
+    }
+
+    /**
+     * Interface for account discovery callbacks
+     */
+    public interface AccountDiscoveryCallback {
+        void onAccountsDiscovered(java.util.List<Integer> activeIndices);
+        void onDiscoveryFailed(String error);
+    }
+
+    /**
+     * Discover derived accounts that have activity (transactions) on the blockchain
+     * Scans up to 20 consecutive empty accounts before stopping (BIP44 gap limit)
+     * @param masterWallet The master HD wallet
+     * @param callback Callback for discovery results
+     */
+    public void discoverDerivedAccounts(Wallet masterWallet, AccountDiscoveryCallback callback)
+    {
+        final int GAP_LIMIT = 20; // Standard BIP44 gap limit
+        final int MAX_SCAN = 50; // Maximum accounts to scan
+        
+        disposable = io.reactivex.Single.fromCallable(() -> {
+            java.util.List<Integer> activeIndices = new java.util.ArrayList<>();
+            int consecutiveEmpty = 0;
+            
+            for (int index = 0; index < MAX_SCAN && consecutiveEmpty < GAP_LIMIT; index++) {
+                try {
+                    // Derive address at this index
+                    String address = keyService.getAddressAtIndex(masterWallet, index);
+                    if (address != null && !address.isEmpty()) {
+                        // Check if this address has any activity
+                        boolean hasActivity = checkAddressHasActivity(address);
+                        if (hasActivity) {
+                            activeIndices.add(index);
+                            consecutiveEmpty = 0;
+                        } else {
+                            consecutiveEmpty++;
+                        }
+                    } else {
+                        consecutiveEmpty++;
+                    }
+                } catch (Exception e) {
+                    consecutiveEmpty++;
+                }
+            }
+            return activeIndices;
+        })
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe(
+            activeIndices -> callback.onAccountsDiscovered(activeIndices),
+            error -> callback.onDiscoveryFailed(error.getMessage())
+        );
+    }
+
+    /**
+     * Check if an address has any activity (balance or transactions)
+     * @param address The address to check
+     * @return true if the address has activity
+     */
+    private boolean checkAddressHasActivity(String address)
+    {
+        try {
+            // Use a simple balance check on mainnet to determine if account has been used
+            // This is a simplified check - in production you might want to check multiple chains
+            org.web3j.protocol.Web3j web3j = org.web3j.protocol.Web3j.build(
+                new org.web3j.protocol.http.HttpService("https://mainnet.infura.io/v3/da3717f25f824cc1baa32d812386d93f"));
+            
+            org.web3j.protocol.core.methods.response.EthGetBalance balance = 
+                web3j.ethGetBalance(address, org.web3j.protocol.core.DefaultBlockParameterName.LATEST).send();
+            
+            if (balance.getBalance().compareTo(java.math.BigInteger.ZERO) > 0) {
+                return true;
+            }
+            
+            // Also check transaction count
+            org.web3j.protocol.core.methods.response.EthGetTransactionCount txCount = 
+                web3j.ethGetTransactionCount(address, org.web3j.protocol.core.DefaultBlockParameterName.LATEST).send();
+            
+            return txCount.getTransactionCount().compareTo(java.math.BigInteger.ZERO) > 0;
+        } catch (Exception e) {
+            return false;
         }
     }
 }

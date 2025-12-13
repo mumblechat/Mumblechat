@@ -109,6 +109,11 @@ public class AWalletAlertDialog extends Dialog {
         button.setText(context.getResources().getString(resId));
     }
 
+    public void setButtonText(String text) {
+        button.setVisibility(View.VISIBLE);
+        button.setText(text);
+    }
+
     public void setButtonListener(View.OnClickListener listener) {
         button.setOnClickListener(listener);
     }

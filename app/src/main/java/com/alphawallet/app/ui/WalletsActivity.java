@@ -342,9 +342,152 @@ public class WalletsActivity extends BaseActivity implements
                 {
                     //switch to this wallet
                     viewModel.setNewWallet(importedWallet);
+                    
+                    // If it's an HD wallet (seed phrase import), offer to discover existing accounts
+                    if (importedWallet.type == WalletType.HDKEY)
+                    {
+                        showDiscoverAccountsDialog(importedWallet);
+                    }
                 }
             }
         }
+    }
+    
+    private void showDiscoverAccountsDialog(Wallet masterWallet)
+    {
+        // Show dialog asking if user wants to discover existing accounts
+        aDialog = new AWalletAlertDialog(this);
+        aDialog.setTitle(R.string.discover_accounts_title);
+        aDialog.setMessage(getString(R.string.discover_accounts_message));
+        aDialog.setIcon(AWalletAlertDialog.NONE);
+        aDialog.setButtonText(R.string.discover_accounts);
+        aDialog.setButtonListener(v -> {
+            aDialog.dismiss();
+            startAccountDiscovery(masterWallet);
+        });
+        aDialog.setSecondaryButtonText(R.string.skip_discovery);
+        aDialog.setSecondaryButtonListener(v -> aDialog.dismiss());
+        aDialog.show();
+    }
+    
+    private void startAccountDiscovery(Wallet masterWallet)
+    {
+        // Show progress
+        systemView.showProgress(true);
+        
+        // Start discovering accounts
+        viewModel.discoverDerivedAccounts(masterWallet, new WalletsViewModel.AccountDiscoveryCallback() {
+            @Override
+            public void onAccountsDiscovered(java.util.List<Integer> activeIndices) {
+                runOnUiThread(() -> {
+                    systemView.showProgress(false);
+                    if (activeIndices.isEmpty() || activeIndices.size() == 1) {
+                        // Only master wallet found or no additional accounts
+                        Toast.makeText(WalletsActivity.this, R.string.no_accounts_found, Toast.LENGTH_SHORT).show();
+                    } else {
+                        // Found additional accounts (excluding index 0 which is master)
+                        int additionalAccounts = activeIndices.size() - 1;
+                        showDiscoveredAccountsDialog(masterWallet, activeIndices, additionalAccounts);
+                    }
+                });
+            }
+            
+            @Override
+            public void onDiscoveryFailed(String error) {
+                runOnUiThread(() -> {
+                    systemView.showProgress(false);
+                    Toast.makeText(WalletsActivity.this, error, Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+    
+    private void showDiscoveredAccountsDialog(Wallet masterWallet, java.util.List<Integer> activeIndices, int additionalAccounts)
+    {
+        aDialog = new AWalletAlertDialog(this);
+        aDialog.setTitle(getString(R.string.accounts_found, activeIndices.size()));
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append(getString(R.string.discovered_accounts_message)).append("\n\n");
+        for (int index : activeIndices) {
+            sb.append("• Account ").append(index + 1).append(" (index ").append(index).append(")\n");
+        }
+        aDialog.setMessage(sb.toString());
+        aDialog.setIcon(AWalletAlertDialog.NONE);
+        aDialog.setButtonText(getString(R.string.add_all_accounts, additionalAccounts));
+        aDialog.setButtonListener(v -> {
+            aDialog.dismiss();
+            addAllDiscoveredAccounts(masterWallet, activeIndices);
+        });
+        aDialog.setSecondaryButtonText(R.string.add_manually);
+        aDialog.setSecondaryButtonListener(v -> aDialog.dismiss());
+        aDialog.show();
+    }
+    
+    private void addAllDiscoveredAccounts(Wallet masterWallet, java.util.List<Integer> activeIndices)
+    {
+        // Show progress
+        systemView.showProgress(true);
+        
+        // Skip index 0 (master wallet already imported)
+        java.util.List<Integer> indicesToAdd = new java.util.ArrayList<>();
+        for (int index : activeIndices) {
+            if (index > 0) {
+                indicesToAdd.add(index);
+            }
+        }
+        
+        if (indicesToAdd.isEmpty()) {
+            systemView.showProgress(false);
+            return;
+        }
+        
+        // Add accounts one by one
+        addDiscoveredAccountsSequentially(masterWallet, indicesToAdd, 0);
+    }
+    
+    private void addDiscoveredAccountsSequentially(Wallet masterWallet, java.util.List<Integer> indices, int currentPosition)
+    {
+        if (currentPosition >= indices.size()) {
+            // All accounts added
+            runOnUiThread(() -> {
+                systemView.showProgress(false);
+                Toast.makeText(this, getString(R.string.all_accounts_added, indices.size()), Toast.LENGTH_SHORT).show();
+                viewModel.fetchWallets();
+            });
+            return;
+        }
+        
+        int index = indices.get(currentPosition);
+        isDerivingAccount = true;
+        parentWalletAddress = masterWallet.address;
+        derivedAccountIndex = index;
+        
+        viewModel.addHDAccountFromMasterAtIndex(this, masterWallet, index, new CreateWalletCallbackInterface() {
+            @Override
+            public void HDKeyCreated(String address, Context ctx, KeyService.AuthenticationLevel level) {
+                // Store the account
+                viewModel.storeDerivedHDAccount(address, level, parentWalletAddress, derivedAccountIndex);
+                // Continue with next account
+                addDiscoveredAccountsSequentially(masterWallet, indices, currentPosition + 1);
+            }
+            
+            @Override
+            public void keyFailure(String message) {
+                // Continue with next account even if this one fails
+                addDiscoveredAccountsSequentially(masterWallet, indices, currentPosition + 1);
+            }
+            
+            @Override
+            public void cancelAuthentication() {
+                runOnUiThread(() -> {
+                    systemView.showProgress(false);
+                });
+            }
+            
+            @Override
+            public void fetchMnemonic(String mnemonic) {}
+        });
     }
 
     @Override
@@ -459,9 +602,160 @@ public class WalletsActivity extends BaseActivity implements
         );
         walletList.setAdapter(walletAdapter);
         
+        // Set up recover missing account option
+        View recoverMissingContainer = sheetView.findViewById(R.id.recover_missing_container);
+        View recoverMissingAccount = sheetView.findViewById(R.id.recover_missing_account);
+        
+        // Only show recover option if there are HD wallets
+        if (!masterWallets.isEmpty())
+        {
+            recoverMissingContainer.setVisibility(View.VISIBLE);
+            recoverMissingAccount.setOnClickListener(v -> {
+                bottomSheet.dismiss();
+                showRecoverMissingAccountDialog(masterWallets);
+            });
+        }
+        else
+        {
+            recoverMissingContainer.setVisibility(View.GONE);
+        }
+        
         bottomSheet.setCancelable(true);
         bottomSheet.setCanceledOnTouchOutside(true);
         bottomSheet.show();
+    }
+    
+    private void showRecoverMissingAccountDialog(List<Wallet> masterWallets)
+    {
+        BottomSheetDialog bottomSheet = new BottomSheetDialog(this);
+        View sheetView = getLayoutInflater().inflate(R.layout.dialog_recover_missing_account, null);
+        bottomSheet.setContentView(sheetView);
+        
+        // Set up back button
+        ImageView backButton = sheetView.findViewById(R.id.back_action);
+        backButton.setOnClickListener(v -> {
+            bottomSheet.dismiss();
+            showMasterWalletSelectionDialog(masterWallets);
+        });
+        
+        // Set up master wallet spinner
+        android.widget.Spinner masterWalletSpinner = sheetView.findViewById(R.id.master_wallet_spinner);
+        String[] walletNames = new String[masterWallets.size()];
+        for (int i = 0; i < masterWallets.size(); i++)
+        {
+            Wallet wallet = masterWallets.get(i);
+            String name = wallet.name != null && !wallet.name.isEmpty() 
+                ? wallet.name 
+                : getString(R.string.wallet_default_name) + " " + (i + 1);
+            String addressPreview = wallet.address.substring(0, 6) + "..." + wallet.address.substring(wallet.address.length() - 4);
+            walletNames[i] = name + " (" + addressPreview + ")";
+        }
+        android.widget.ArrayAdapter<String> spinnerAdapter = new android.widget.ArrayAdapter<>(
+            this, android.R.layout.simple_spinner_dropdown_item, walletNames);
+        masterWalletSpinner.setAdapter(spinnerAdapter);
+        
+        // Index input and info
+        android.widget.EditText indexInput = sheetView.findViewById(R.id.index_input);
+        TextView existingAccountsInfo = sheetView.findViewById(R.id.existing_accounts_info);
+        
+        // Update existing accounts info when master wallet changes
+        masterWalletSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                Wallet selectedMaster = masterWallets.get(position);
+                Wallet[] allWallets = viewModel.wallets().getValue();
+                
+                // Get existing indices for this master
+                java.util.List<Integer> existingIndices = new java.util.ArrayList<>();
+                if (allWallets != null) {
+                    for (Wallet w : allWallets) {
+                        if (w.type == WalletType.HDKEY) {
+                            if (w.address.equalsIgnoreCase(selectedMaster.address)) {
+                                existingIndices.add(w.hdKeyIndex);
+                            } else if (w.parentAddress != null && w.parentAddress.equalsIgnoreCase(selectedMaster.address)) {
+                                existingIndices.add(w.hdKeyIndex);
+                            }
+                        }
+                    }
+                }
+                
+                if (!existingIndices.isEmpty()) {
+                    java.util.Collections.sort(existingIndices);
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < existingIndices.size(); i++) {
+                        if (i > 0) sb.append(", ");
+                        sb.append(existingIndices.get(i));
+                    }
+                    existingAccountsInfo.setText(getString(R.string.existing_accounts_for_master, sb.toString()));
+                    existingAccountsInfo.setVisibility(View.VISIBLE);
+                } else {
+                    existingAccountsInfo.setVisibility(View.GONE);
+                }
+            }
+            
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+        
+        // Recover button
+        View recoverButton = sheetView.findViewById(R.id.recover_button);
+        recoverButton.setOnClickListener(v -> {
+            String indexStr = indexInput.getText().toString().trim();
+            if (indexStr.isEmpty()) {
+                Toast.makeText(this, R.string.invalid_index, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            int selectedIndex;
+            try {
+                selectedIndex = Integer.parseInt(indexStr);
+                if (selectedIndex < 0) {
+                    Toast.makeText(this, R.string.invalid_index, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, R.string.invalid_index, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            Wallet selectedMaster = masterWallets.get(masterWalletSpinner.getSelectedItemPosition());
+            Wallet[] allWallets = viewModel.wallets().getValue();
+            
+            // Check if index already exists
+            if (allWallets != null) {
+                for (Wallet w : allWallets) {
+                    if (w.type == WalletType.HDKEY) {
+                        boolean belongsToMaster = w.address.equalsIgnoreCase(selectedMaster.address) ||
+                            (w.parentAddress != null && w.parentAddress.equalsIgnoreCase(selectedMaster.address));
+                        if (belongsToMaster && w.hdKeyIndex == selectedIndex) {
+                            Toast.makeText(this, R.string.index_already_exists, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            bottomSheet.dismiss();
+            deriveAccountFromMasterAtIndex(selectedMaster, selectedIndex);
+        });
+        
+        bottomSheet.setCancelable(true);
+        bottomSheet.setCanceledOnTouchOutside(true);
+        bottomSheet.show();
+    }
+    
+    private void deriveAccountFromMasterAtIndex(Wallet masterWallet, int index)
+    {
+        // Show loading indicator
+        systemView.showProgress(true);
+        
+        // Set up for derived account
+        isDerivingAccount = true;
+        parentWalletAddress = masterWallet.address;
+        derivedAccountIndex = index;
+        
+        // Derive account at specific index
+        viewModel.addHDAccountFromMasterAtIndex(this, masterWallet, index, this);
     }
     
     /**
