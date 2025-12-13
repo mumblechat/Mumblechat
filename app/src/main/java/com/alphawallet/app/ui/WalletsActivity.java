@@ -583,6 +583,16 @@ public class WalletsActivity extends BaseActivity implements
         View sheetView = getLayoutInflater().inflate(R.layout.dialog_select_master_wallet, null);
         bottomSheet.setContentView(sheetView);
         
+        // Expand the bottom sheet to show all content
+        bottomSheet.setOnShowListener(dialog -> {
+            BottomSheetDialog d = (BottomSheetDialog) dialog;
+            View bottomSheetInternal = d.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheetInternal)
+                    .setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+        
         // Set up close button
         ImageView closeButton = sheetView.findViewById(R.id.close_action);
         closeButton.setOnClickListener(v -> bottomSheet.dismiss());

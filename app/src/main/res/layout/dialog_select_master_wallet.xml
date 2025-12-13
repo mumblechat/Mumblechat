@@ -56,12 +56,13 @@
         android:textColor="?android:textColorSecondary"
         android:textSize="14sp" />
 
-    <!-- Wallet list container -->
+    <!-- Wallet list container - limited height -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/wallet_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxHeight="300dp"
+        android:maxHeight="200dp"
+        android:nestedScrollingEnabled="true"
         android:clipToPadding="false"
         android:paddingHorizontal="@dimen/cozy_20" />
 
