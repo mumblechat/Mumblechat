@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/futuristic_background">
+    android:background="#0D0D1A">
 
     <!-- Main Content Container -->
     <LinearLayout
@@ -13,20 +14,28 @@
 
         <!-- Logo Container with Animation Layers -->
         <FrameLayout
-            android:layout_width="280dp"
-            android:layout_height="280dp"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
             android:layout_gravity="center">
 
             <!-- Outer Glow Effect -->
             <ImageView
                 android:id="@+id/glow_outer"
+                android:layout_width="300dp"
+                android:layout_height="300dp"
+                android:layout_gravity="center"
+                android:src="@drawable/glow_circle"
+                android:alpha="0.8" />
+
+            <!-- Particle Ring (Fast rotation) -->
+            <ImageView
+                android:id="@+id/ring_particle"
                 android:layout_width="280dp"
                 android:layout_height="280dp"
                 android:layout_gravity="center"
-                android:src="@drawable/glow_circle"
-                android:alpha="0.7" />
+                android:src="@drawable/particle_ring" />
 
-            <!-- Outer Rotating Ring -->
+            <!-- Outer Rotating Ring (Purple) -->
             <ImageView
                 android:id="@+id/ring_outer"
                 android:layout_width="260dp"
@@ -34,46 +43,146 @@
                 android:layout_gravity="center"
                 android:src="@drawable/outer_ring_glow" />
 
-            <!-- Inner Rotating Ring (Gold) -->
+            <!-- Energy Ring (Gold, fast rotation) -->
             <ImageView
-                android:id="@+id/ring_inner"
+                android:id="@+id/ring_energy"
                 android:layout_width="240dp"
                 android:layout_height="240dp"
                 android:layout_gravity="center"
+                android:src="@drawable/energy_ring" />
+
+            <!-- Inner Rotating Ring (Gold gradient) -->
+            <ImageView
+                android:id="@+id/ring_inner"
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_gravity="center"
                 android:src="@drawable/ring_gradient" />
+
+            <!-- Inner Glow behind logo -->
+            <ImageView
+                android:id="@+id/glow_inner"
+                android:layout_width="180dp"
+                android:layout_height="180dp"
+                android:layout_gravity="center"
+                android:src="@drawable/inner_glow" />
 
             <!-- Main Logo -->
             <ImageView
                 android:id="@+id/initial_loader_gif"
-                android:layout_width="180dp"
-                android:layout_height="180dp"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
                 android:layout_gravity="center"
                 android:scaleType="centerCrop"
                 android:contentDescription="@string/app_name" />
 
         </FrameLayout>
 
+        <!-- App Name with glow -->
+        <TextView
+            android:id="@+id/text_app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="@string/app_name"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:fontFamily="sans-serif-light"
+            android:letterSpacing="0.08"
+            android:shadowColor="#80D4AF37"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="20" />
+
         <!-- Loading Text -->
         <TextView
             android:id="@+id/text_loading"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="12dp"
             android:text="@string/loading"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textColor="#808090"
             android:gravity="center"
-            android:fontFamily="sans-serif-light"
-            android:letterSpacing="0.05"
-            android:alpha="0.9" />
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.15" />
+
+        <!-- Animated dots container -->
+        <LinearLayout
+            android:id="@+id/dots_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/dot1"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginHorizontal="6dp"
+                android:background="@drawable/dot_gold" />
+
+            <View
+                android:id="@+id/dot2"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginHorizontal="6dp"
+                android:background="@drawable/dot_gold" />
+
+            <View
+                android:id="@+id/dot3"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginHorizontal="6dp"
+                android:background="@drawable/dot_gold" />
+
+        </LinearLayout>
 
         <!-- Progress View -->
         <com.alphawallet.app.widget.PercentageProgressView
             android:id="@+id/percentage_progress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp" />
+            android:layout_marginTop="30dp" />
+
+    </LinearLayout>
+
+    <!-- Powered by text at bottom -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="50dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:id="@+id/powered_by_container">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Powered by"
+            android:textSize="12sp"
+            android:textColor="#606070"
+            android:letterSpacing="0.1" />
+
+        <TextView
+            android:id="@+id/text_ramestta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Ramestta Network"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#D4AF37"
+            android:letterSpacing="0.05"
+            android:shadowColor="#40D4AF37"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="10" />
 
     </LinearLayout>
 

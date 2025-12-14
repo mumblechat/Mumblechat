@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="288dp"
+            android:height="288dp"
+            android:viewportWidth="288"
+            android:viewportHeight="288">
+            
+            <!-- Outer rotating ring - Purple, full circle -->
+            <group
+                android:name="outerRing"
+                android:pivotX="144"
+                android:pivotY="144">
+                <path
+                    android:name="outerRingPath"
+                    android:pathData="M144,20 A124,124 0 1,1 143.99,20 A124,124 0 1,1 144,20"
+                    android:strokeWidth="6"
+                    android:strokeColor="#8B5CF6"
+                    android:fillColor="#00000000" />
+            </group>
+            
+            <!-- Middle rotating ring - Gold, full circle -->
+            <group
+                android:name="innerRing"
+                android:pivotX="144"
+                android:pivotY="144">
+                <path
+                    android:name="innerRingPath"
+                    android:pathData="M144,40 A104,104 0 1,1 143.99,40 A104,104 0 1,1 144,40"
+                    android:strokeWidth="8"
+                    android:strokeColor="#D4AF37"
+                    android:fillColor="#00000000" />
+            </group>
+            
+            <!-- Inner energy ring - Bright Gold -->
+            <group
+                android:name="energyRing"
+                android:pivotX="144"
+                android:pivotY="144">
+                <path
+                    android:name="energyRingPath"
+                    android:pathData="M144,60 A84,84 0 1,1 143.99,60 A84,84 0 1,1 144,60"
+                    android:strokeWidth="4"
+                    android:strokeColor="#FFD700"
+                    android:fillColor="#00000000" />
+            </group>
+            
+            <!-- Center glow circle -->
+            <group
+                android:name="centerGlow"
+                android:pivotX="144"
+                android:pivotY="144"
+                android:scaleX="1"
+                android:scaleY="1">
+                <path
+                    android:pathData="M144,75 A69,69 0 1,1 143.99,75 A69,69 0 1,1 144,75"
+                    android:fillColor="#30D4AF37" />
+            </group>
+            
+        </vector>
+    </aapt:attr>
+    
+    <!-- Outer ring rotation -->
+    <target android:name="outerRing">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="rotation"
+                android:valueFrom="0"
+                android:valueTo="360"
+                android:duration="4000"
+                android:repeatCount="-1"
+                android:interpolator="@android:interpolator/linear" />
+        </aapt:attr>
+    </target>
+    
+    <!-- Inner ring rotation (reverse) -->
+    <target android:name="innerRing">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="rotation"
+                android:valueFrom="0"
+                android:valueTo="-360"
+                android:duration="3000"
+                android:repeatCount="-1"
+                android:interpolator="@android:interpolator/linear" />
+        </aapt:attr>
+    </target>
+    
+    <!-- Energy ring rotation (fast) -->
+    <target android:name="energyRing">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="rotation"
+                android:valueFrom="0"
+                android:valueTo="360"
+                android:duration="1500"
+                android:repeatCount="-1"
+                android:interpolator="@android:interpolator/linear" />
+        </aapt:attr>
+    </target>
+    
+    <!-- Center glow pulse -->
+    <target android:name="centerGlow">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:propertyName="scaleX"
+                    android:valueFrom="0.9"
+                    android:valueTo="1.1"
+                    android:duration="1000"
+                    android:repeatCount="-1"
+                    android:repeatMode="reverse"
+                    android:interpolator="@android:interpolator/accelerate_decelerate" />
+                <objectAnimator
+                    android:propertyName="scaleY"
+                    android:valueFrom="0.9"
+                    android:valueTo="1.1"
+                    android:duration="1000"
+                    android:repeatCount="-1"
+                    android:repeatMode="reverse"
+                    android:interpolator="@android:interpolator/accelerate_decelerate" />
+            </set>
+        </aapt:attr>
+    </target>
+    
+</animated-vector>

@@ -1,11 +1,16 @@
 package com.alphawallet.app.ui;
 
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.view.inputmethod.EditorInfo;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -41,6 +46,20 @@ public class AppLockActivity extends BaseActivity {
     private TextInputEditText passwordInput;
     private MaterialButton btnUnlock;
     private MaterialButton btnBiometric;
+    
+    // Animation views
+    private ImageView glowOuter;
+    private ImageView ringOuter;
+    private ImageView ringInner;
+    private ImageView particleRing;
+    private ImageView appLogo;
+    
+    // Animators
+    private ObjectAnimator outerRingAnimator;
+    private ObjectAnimator innerRingAnimator;
+    private ObjectAnimator particleRingAnimator;
+    private ObjectAnimator glowPulseAnimator;
+    private ObjectAnimator logoPulseAnimator;
     
     private boolean forTransaction = false;
     private int failedAttempts = 0;
@@ -100,6 +119,16 @@ public class AppLockActivity extends BaseActivity {
         passwordInput = findViewById(R.id.password_input);
         btnUnlock = findViewById(R.id.btn_unlock);
         btnBiometric = findViewById(R.id.btn_biometric);
+        
+        // Animation views
+        glowOuter = findViewById(R.id.glow_outer);
+        ringOuter = findViewById(R.id.ring_outer);
+        ringInner = findViewById(R.id.ring_inner);
+        particleRing = findViewById(R.id.particle_ring);
+        appLogo = findViewById(R.id.app_logo);
+        
+        // Start animations
+        startLogoAnimations();
         
         // Update UI based on whether user is using PIN or password
         if (securityManager.isUsingPin()) {
@@ -231,5 +260,89 @@ public class AppLockActivity extends BaseActivity {
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+    
+    /**
+     * Start all logo animations for the futuristic effect
+     */
+    private void startLogoAnimations() {
+        // Outer ring rotation (clockwise, slow)
+        if (ringOuter != null) {
+            outerRingAnimator = ObjectAnimator.ofFloat(ringOuter, "rotation", 0f, 360f);
+            outerRingAnimator.setDuration(8000);
+            outerRingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+            outerRingAnimator.setInterpolator(new LinearInterpolator());
+            outerRingAnimator.start();
+        }
+        
+        // Inner ring rotation (counter-clockwise, faster)
+        if (ringInner != null) {
+            innerRingAnimator = ObjectAnimator.ofFloat(ringInner, "rotation", 0f, -360f);
+            innerRingAnimator.setDuration(5000);
+            innerRingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+            innerRingAnimator.setInterpolator(new LinearInterpolator());
+            innerRingAnimator.start();
+        }
+        
+        // Particle ring rotation (slow, with different timing)
+        if (particleRing != null) {
+            particleRingAnimator = ObjectAnimator.ofFloat(particleRing, "rotation", 0f, 360f);
+            particleRingAnimator.setDuration(12000);
+            particleRingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+            particleRingAnimator.setInterpolator(new LinearInterpolator());
+            particleRingAnimator.start();
+        }
+        
+        // Glow pulse animation
+        if (glowOuter != null) {
+            glowPulseAnimator = ObjectAnimator.ofFloat(glowOuter, "alpha", 0.3f, 0.7f);
+            glowPulseAnimator.setDuration(2000);
+            glowPulseAnimator.setRepeatCount(ValueAnimator.INFINITE);
+            glowPulseAnimator.setRepeatMode(ValueAnimator.REVERSE);
+            glowPulseAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+            glowPulseAnimator.start();
+        }
+        
+        // Logo subtle pulse (scale)
+        if (appLogo != null) {
+            ObjectAnimator scaleX = ObjectAnimator.ofFloat(appLogo, "scaleX", 1f, 1.05f);
+            ObjectAnimator scaleY = ObjectAnimator.ofFloat(appLogo, "scaleY", 1f, 1.05f);
+            
+            scaleX.setDuration(1500);
+            scaleX.setRepeatCount(ValueAnimator.INFINITE);
+            scaleX.setRepeatMode(ValueAnimator.REVERSE);
+            scaleX.setInterpolator(new AccelerateDecelerateInterpolator());
+            
+            scaleY.setDuration(1500);
+            scaleY.setRepeatCount(ValueAnimator.INFINITE);
+            scaleY.setRepeatMode(ValueAnimator.REVERSE);
+            scaleY.setInterpolator(new AccelerateDecelerateInterpolator());
+            
+            scaleX.start();
+            scaleY.start();
+        }
+    }
+    
+    /**
+     * Stop all animations when the activity is paused
+     */
+    private void stopLogoAnimations() {
+        if (outerRingAnimator != null) outerRingAnimator.cancel();
+        if (innerRingAnimator != null) innerRingAnimator.cancel();
+        if (particleRingAnimator != null) particleRingAnimator.cancel();
+        if (glowPulseAnimator != null) glowPulseAnimator.cancel();
+        if (logoPulseAnimator != null) logoPulseAnimator.cancel();
+    }
+    
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopLogoAnimations();
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startLogoAnimations();
     }
 }

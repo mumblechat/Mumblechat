@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Outer purple ring -->
+    <item
+        android:gravity="center"
+        android:width="280dp"
+        android:height="280dp">
+        <shape android:shape="ring"
+            android:innerRadiusRatio="2.2"
+            android:thicknessRatio="30"
+            android:useLevel="false">
+            <solid android:color="#8B5CF6" />
+        </shape>
+    </item>
+    
+    <!-- Middle gold ring -->
+    <item
+        android:gravity="center"
+        android:width="250dp"
+        android:height="250dp">
+        <shape android:shape="ring"
+            android:innerRadiusRatio="2.3"
+            android:thicknessRatio="20"
+            android:useLevel="false">
+            <solid android:color="#D4AF37" />
+        </shape>
+    </item>
+    
+    <!-- Inner bright gold ring -->
+    <item
+        android:gravity="center"
+        android:width="220dp"
+        android:height="220dp">
+        <shape android:shape="ring"
+            android:innerRadiusRatio="2.5"
+            android:thicknessRatio="35"
+            android:useLevel="false">
+            <solid android:color="#FFD700" />
+        </shape>
+    </item>
+    
+    <!-- Center glow -->
+    <item
+        android:gravity="center"
+        android:width="180dp"
+        android:height="180dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="90dp"
+                android:startColor="#40D4AF37"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+    
+    <!-- Center Logo -->
+    <item
+        android:gravity="center"
+        android:width="160dp"
+        android:height="160dp"
+        android:drawable="@drawable/splash_logo" />
+    
+</layer-list>

@@ -47,6 +47,7 @@ import java.util.Set;
 import dagger.hilt.android.AndroidEntryPoint;
 import io.realm.Realm;
 import io.realm.RealmResults;
+import timber.log.Timber;
 
 /**
  * Created by JB on 26/06/2020.
@@ -128,22 +129,31 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
                 } else {
                     isNetworkAvailable = false;
                 }
-                updateNetworkStatus(isNetworkAvailable);
+                // Post to handler to ensure views are ready
+                handler.post(() -> updateNetworkStatus(isNetworkAvailable));
             }
         } catch (Exception e) {
             // Network monitoring not available
+            isNetworkAvailable = true; // Assume connected if monitoring fails
         }
     }
     
     private void updateNetworkStatus(boolean hasInternet) {
         isNetworkAvailable = hasInternet;
+        Timber.d("Network status update: hasInternet=%s, banner=%s, text=%s", 
+                hasInternet, networkStatusBanner != null, networkStatusText != null);
+        
         if (networkStatusBanner != null && networkStatusText != null) {
             if (!hasInternet) {
                 networkStatusBanner.setVisibility(View.VISIBLE);
                 networkStatusText.setText(R.string.no_internet_connection);
+                Timber.d("Showing network status banner - No internet");
             } else {
                 networkStatusBanner.setVisibility(View.GONE);
+                Timber.d("Hiding network status banner - Internet available");
             }
+        } else {
+            Timber.w("Network status views not initialized yet");
         }
         
         // If we just got internet back, refresh the list

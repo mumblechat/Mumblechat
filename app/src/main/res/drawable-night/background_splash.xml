@@ -5,7 +5,7 @@
     <!-- Dark background for night mode -->
     <item>
         <shape>
-            <solid android:color="@color/cod" />
+            <solid android:color="#0D0D1A" />
         </shape>
     </item>
     

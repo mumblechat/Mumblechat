@@ -3,19 +3,62 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:colorBackground"
+    android:background="@drawable/futuristic_background"
     android:gravity="center"
     android:orientation="vertical"
     android:padding="@dimen/base_24">
 
-    <!-- App Logo -->
-    <ImageView
-        android:id="@+id/app_logo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:src="@drawable/ramapay_wallet_logo" />
+    <!-- Animated Logo Container -->
+    <FrameLayout
+        android:id="@+id/logo_container"
+        android:layout_width="200dp"
+        android:layout_height="200dp">
 
-    <!-- Title -->
+        <!-- Outer Glow Effect -->
+        <ImageView
+            android:id="@+id/glow_outer"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_gravity="center"
+            android:alpha="0.4"
+            android:src="@drawable/inner_glow" />
+
+        <!-- Outer Rotating Ring -->
+        <ImageView
+            android:id="@+id/ring_outer"
+            android:layout_width="180dp"
+            android:layout_height="180dp"
+            android:layout_gravity="center"
+            android:src="@drawable/energy_ring" />
+
+        <!-- Inner Rotating Ring (opposite direction) -->
+        <ImageView
+            android:id="@+id/ring_inner"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:layout_gravity="center"
+            android:src="@drawable/particle_ring" />
+
+        <!-- Particle Ring -->
+        <ImageView
+            android:id="@+id/particle_ring"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_gravity="center"
+            android:alpha="0.6"
+            android:src="@drawable/energy_ring" />
+
+        <!-- Center Logo with Pulse Animation -->
+        <ImageView
+            android:id="@+id/app_logo"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ramapay_wallet_logo" />
+
+    </FrameLayout>
+
+    <!-- Title with Shimmer -->
     <TextView
         android:id="@+id/title"
         style="@style/Aw.Typography.Title.Large.SemiBold"
@@ -23,7 +66,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/base_24"
         android:text="@string/unlock_ramapay"
-        android:textColor="?android:textColorPrimary" />
+        android:textColor="?colorPrimary" />
 
     <!-- Password Input -->
     <com.google.android.material.textfield.TextInputLayout
