@@ -1,7 +1,9 @@
 package com.alphawallet.app.ui.widget.holder;
 
 import android.os.Bundle;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -9,15 +11,24 @@ import androidx.annotation.Nullable;
 
 import com.alphawallet.app.R;
 import com.alphawallet.app.entity.tokendata.TokenGroup;
+import com.alphawallet.app.ui.widget.TokensAdapterCallback;
 
 public class HeaderHolder extends BinderViewHolder<TokenGroup> {
     public static final int VIEW_TYPE = 2022;
 
     private final TextView title;
+    private final ImageButton btnAddToken;
+    private TokensAdapterCallback tokensAdapterCallback;
 
     @Override
     public void bind(@Nullable TokenGroup data, @NonNull Bundle addition) {
         title.setText(groupToHeader(data));
+        // Only show Add Token button for Assets header
+        if (data == TokenGroup.ASSET && tokensAdapterCallback != null) {
+            btnAddToken.setVisibility(View.VISIBLE);
+        } else {
+            btnAddToken.setVisibility(View.GONE);
+        }
     }
 
     private String groupToHeader(TokenGroup data)
@@ -44,5 +55,13 @@ public class HeaderHolder extends BinderViewHolder<TokenGroup> {
     public HeaderHolder(int res_id, ViewGroup parent) {
         super(res_id, parent);
         title = findViewById(R.id.title);
+        btnAddToken = findViewById(R.id.btn_add_token);
+    }
+
+    public void setOnTokenClickListener(TokensAdapterCallback callback) {
+        this.tokensAdapterCallback = callback;
+        if (btnAddToken != null && callback != null) {
+            btnAddToken.setOnClickListener(v -> callback.onAddToken());
+        }
     }
 }

@@ -8,15 +8,19 @@ import static com.alphawallet.app.widget.AWalletAlertDialog.ERROR;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.LongSparseArray;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -46,7 +50,9 @@ import com.alphawallet.app.widget.AWBottomSheetDialog;
 import com.alphawallet.app.widget.AWalletAlertDialog;
 import com.alphawallet.app.widget.FunctionButtonBar;
 import com.alphawallet.app.widget.InputAddress;
+import com.alphawallet.app.widget.PercentageProgressView;
 import com.alphawallet.app.widget.TestNetDialog;
+import com.google.android.material.card.MaterialCardView;
 import com.alphawallet.token.tools.ParseMagicLink;
 
 import java.math.BigInteger;
@@ -72,6 +78,11 @@ public class AddTokenActivity extends BaseActivity implements AddressReadyCallba
     LinearLayout progressLayout;
     private LinearLayout counterLayout;
     private TextView counterText;
+    private PercentageProgressView percentageProgressView;
+    private TextView textScanningStatus;
+    private Handler progressHandler;
+    private Runnable progressAnimator;
+    private int currentProgress = 0;
 
     public InputAddress inputAddressView;
     private String contractAddress;
@@ -84,6 +95,14 @@ public class AddTokenActivity extends BaseActivity implements AddressReadyCallba
     private AWalletAlertDialog aDialog;
     private AWBottomSheetDialog dialog;
     private final LongSparseArray<Token> tokenList = new LongSparseArray<>();
+
+    // Network selector
+    private MaterialCardView cardNetworkSelector;
+    private TextView textSelectedNetwork;
+    private ImageView iconNetwork;
+    private NetworkInfo[] availableNetworks;
+    private NetworkInfo selectedNetwork = null; // null means scan all networks
+    private static final long ALL_NETWORKS = -1;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -107,6 +126,8 @@ public class AddTokenActivity extends BaseActivity implements AddressReadyCallba
         functionBar.revealButtons();
 
         progressLayout = findViewById(R.id.layout_progress);
+        percentageProgressView = findViewById(R.id.percentage_progress);
+        textScanningStatus = findViewById(R.id.text_scanning_status);
         recyclerView = findViewById(R.id.list);
         progressLayout.setVisibility(View.GONE);
 
@@ -157,6 +178,9 @@ public class AddTokenActivity extends BaseActivity implements AddressReadyCallba
         setupNetwork(EthereumNetworkRepository.getOverrideToken().chainId);
         viewModel.prepare();
 
+        // Initialize network selector
+        setupNetworkSelector();
+
         if ( getIntent().getStringExtra(C.EXTRA_QR_CODE) != null) {
             runOnUiThread(() -> onActivityResult(C.BARCODE_READER_REQUEST_CODE, Activity.RESULT_OK, getIntent()));
         }
@@ -200,6 +224,42 @@ public class AddTokenActivity extends BaseActivity implements AddressReadyCallba
         {
             showProgress(false);
         }
+        else
+        {
+            // Ensure progress layout is visible
+            progressLayout.setVisibility(View.VISIBLE);
+            counterLayout.setVisibility(View.VISIBLE);
+            
+            // Update percentage progress
+            if (selectedNetwork != null)
+            {
+                // Single network - animate progress from 0 to show activity
+                if (percentageProgressView != null)
+                {
+                    // Show progress incrementing to indicate activity
+                    percentageProgressView.setProgress(30);
+                    if (textScanningStatus != null)
+                    {
+                        textScanningStatus.setText(getString(R.string.checking_network, selectedNetwork.name));
+                    }
+                }
+            }
+            else
+            {
+                // Scanning all networks - show percentage based on remaining count
+                int totalNetworks = availableNetworks != null ? availableNetworks.length : 1;
+                int scannedNetworks = totalNetworks - count;
+                int percentage = (int) ((scannedNetworks * 100.0f) / totalNetworks);
+                if (percentageProgressView != null)
+                {
+                    percentageProgressView.setProgress(percentage);
+                    if (textScanningStatus != null)
+                    {
+                        textScanningStatus.setText(getString(R.string.scanning_networks_count, count));
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -217,9 +277,56 @@ public class AddTokenActivity extends BaseActivity implements AddressReadyCallba
         if (shouldShowProgress) {
             progressLayout.setVisibility(View.VISIBLE);
             counterLayout.setVisibility(View.VISIBLE);
+            // Reset progress view
+            currentProgress = 0;
+            if (percentageProgressView != null)
+            {
+                percentageProgressView.setProgress(0);
+            }
+            if (textScanningStatus != null)
+            {
+                textScanningStatus.setText(R.string.scanning_network);
+            }
+            // Start progress animation for single network
+            startProgressAnimation();
         } else {
+            // Stop animation
+            stopProgressAnimation();
             progressLayout.setVisibility(View.GONE);
             counterLayout.setVisibility(View.GONE);
+            // Mark progress as complete
+            if (percentageProgressView != null)
+            {
+                percentageProgressView.setProgress(100);
+            }
+        }
+    }
+    
+    private void startProgressAnimation() {
+        if (progressHandler == null) {
+            progressHandler = new Handler(Looper.getMainLooper());
+        }
+        stopProgressAnimation();
+        
+        progressAnimator = new Runnable() {
+            @Override
+            public void run() {
+                if (progressLayout.getVisibility() == View.VISIBLE && percentageProgressView != null) {
+                    // Animate progress up to 90% max (leave room for completion)
+                    if (currentProgress < 90) {
+                        currentProgress += 5;
+                        percentageProgressView.setProgress(currentProgress);
+                    }
+                    progressHandler.postDelayed(this, 300); // Update every 300ms
+                }
+            }
+        };
+        progressHandler.postDelayed(progressAnimator, 300);
+    }
+    
+    private void stopProgressAnimation() {
+        if (progressHandler != null && progressAnimator != null) {
+            progressHandler.removeCallbacks(progressAnimator);
         }
     }
 
@@ -315,8 +422,92 @@ public class AddTokenActivity extends BaseActivity implements AddressReadyCallba
             showProgress(true);
             progressLayout.setVisibility(View.VISIBLE);
             adapter.clear();
-            viewModel.testNetworks(address);
+            
+            // Check if a specific network is selected or scan all networks
+            if (selectedNetwork != null)
+            {
+                viewModel.testNetwork(address, selectedNetwork.chainId);
+            }
+            else
+            {
+                viewModel.testNetworks(address);
+            }
         }
+    }
+
+    private void setupNetworkSelector()
+    {
+        cardNetworkSelector = findViewById(R.id.card_network_selector);
+        textSelectedNetwork = findViewById(R.id.text_selected_network);
+        iconNetwork = findViewById(R.id.icon_network);
+        
+        // Get available networks from ViewModel
+        availableNetworks = viewModel.getAvailableNetworks();
+        
+        // Set default to "All Networks"
+        textSelectedNetwork.setText(R.string.label_all_networks);
+        
+        // Set click listener to show network selection dialog
+        cardNetworkSelector.setOnClickListener(v -> showNetworkSelectionDialog());
+    }
+
+    private void showNetworkSelectionDialog()
+    {
+        // Create list of network names with "All Networks" as first option
+        String[] networkNames = new String[availableNetworks.length + 1];
+        networkNames[0] = getString(R.string.label_all_networks);
+        for (int i = 0; i < availableNetworks.length; i++)
+        {
+            networkNames[i + 1] = availableNetworks[i].name;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.label_select_network);
+        builder.setItems(networkNames, (dialog, which) -> {
+            if (which == 0)
+            {
+                // "All Networks" selected
+                selectedNetwork = null;
+                textSelectedNetwork.setText(R.string.label_all_networks);
+                iconNetwork.setImageResource(R.drawable.ic_ethereum);
+            }
+            else
+            {
+                // Specific network selected
+                selectedNetwork = availableNetworks[which - 1];
+                textSelectedNetwork.setText(selectedNetwork.name);
+                
+                // Set the network icon
+                int iconRes = EthereumNetworkRepository.getChainLogo(selectedNetwork.chainId);
+                iconNetwork.setImageResource(iconRes);
+            }
+            dialog.dismiss();
+            
+            // Re-check if there's already an address entered
+            String currentAddress = inputAddressView.getInputText().toLowerCase().trim();
+            if (currentAddress.length() > 38 && Utils.isAddressValid(currentAddress))
+            {
+                lastCheck = ""; // Reset to allow re-check
+                onCheck(currentAddress);
+            }
+        });
+        builder.show();
+    }
+
+    private int getSelectedNetworkIndex()
+    {
+        if (selectedNetwork == null)
+        {
+            return 0; // "All Networks"
+        }
+        for (int i = 0; i < availableNetworks.length; i++)
+        {
+            if (availableNetworks[i].chainId == selectedNetwork.chainId)
+            {
+                return i + 1;
+            }
+        }
+        return 0;
     }
 
     private void onSave()
@@ -512,6 +703,7 @@ public class AddTokenActivity extends BaseActivity implements AddressReadyCallba
     public void onDestroy()
     {
         super.onDestroy();
+        stopProgressAnimation();
         if (viewModel != null) viewModel.stopScan();
     }
 

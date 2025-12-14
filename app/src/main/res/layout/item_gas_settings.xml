@@ -115,13 +115,31 @@
                 android:layout_height="0dp"
                 android:layout_weight="@integer/widget_label" />
 
-        <ProgressBar
+        <LinearLayout
                 android:id="@+id/gas_fetch_wait"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:progressDrawable="@drawable/progress_bar_spinner"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="@integer/widget_content"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
                 android:visibility="gone"
-                android:layout_weight="@integer/widget_control"/>
+                tools:visibility="visible">
+            
+            <com.alphawallet.app.widget.PercentageProgressView
+                    android:id="@+id/gas_progress_percentage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            
+            <TextView
+                    android:id="@+id/gas_progress_text"
+                    style="@style/Aw.Typography.Sub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/progress_bar_gold"
+                    android:text="@string/calc_gas_limit" />
+
+        </LinearLayout>
 
         <TextView
             android:id="@+id/text_time_estimate"

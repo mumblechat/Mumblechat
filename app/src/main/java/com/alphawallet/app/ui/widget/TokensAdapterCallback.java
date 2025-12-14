@@ -13,6 +13,7 @@ public interface TokensAdapterCallback
     void onLongTokenClick(View view, Token token, List<BigInteger> tokenIds);
     default void reloadTokens() { };
     default void onBuyToken() { }
+    default void onAddToken() { }
     default void onSearchClicked() { };
     default void onSwitchClicked() { };
     default void onWCClicked() { };

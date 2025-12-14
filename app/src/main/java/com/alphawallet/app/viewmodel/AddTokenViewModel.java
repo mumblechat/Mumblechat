@@ -274,6 +274,37 @@ public class AddTokenViewModel extends BaseViewModel
         handler.postDelayed(this::stopScan, 60 * DateUtils.SECOND_IN_MILLIS);
     }
 
+    /**
+     * Test a single specific network for the token contract
+     * @param address The contract address to check
+     * @param chainId The specific chain ID to scan
+     */
+    public void testNetwork(String address, long chainId)
+    {
+        foundNetwork = false;
+        discoveredTokenList.clear();
+        networkCount = 1; // Only scanning one network
+        scanCount.postValue(networkCount);
+
+        TokenInfo tokenInfo = new TokenInfo(address, "", "", 0, true, chainId);
+        Disposable d = fetchTransactionsInteract.queryInterfaceSpec(tokenInfo)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(type -> testNetworkResult(tokenInfo, type), this::onTestError);
+
+        scanThreads.add(d);
+
+        handler.postDelayed(this::stopScan, 30 * DateUtils.SECOND_IN_MILLIS); // Shorter timeout for single network
+    }
+
+    /**
+     * Get list of all available networks for the network selector
+     */
+    public NetworkInfo[] getAvailableNetworks()
+    {
+        return ethereumNetworkRepository.getAvailableNetworkList();
+    }
+
     private void testNetworkResult(final TokenInfo info, final ContractType type)
     {
         if (type != ContractType.OTHER)

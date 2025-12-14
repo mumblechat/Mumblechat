@@ -1,5 +1,10 @@
 package com.alphawallet.app.ui;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,6 +13,8 @@ import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -33,7 +40,9 @@ import com.alphawallet.app.widget.EmptyTransactionsView;
 import com.alphawallet.app.widget.SystemView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import io.realm.Realm;
@@ -56,6 +65,35 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
     private Realm realm;
     private long lastUpdateTime = 0;
     private boolean isVisible = false;
+    private boolean isNetworkAvailable = true;
+    private ConnectivityManager connectivityManager;
+    private View networkStatusBanner;
+    private TextView networkStatusText;
+    
+    private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+        @Override
+        public void onAvailable(@NonNull Network network) {
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> updateNetworkStatus(true));
+            }
+        }
+
+        @Override
+        public void onLost(@NonNull Network network) {
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> updateNetworkStatus(false));
+            }
+        }
+
+        @Override
+        public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities capabilities) {
+            boolean hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                                  capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> updateNetworkStatus(hasInternet));
+            }
+        }
+    };
 
     @Nullable
     @Override
@@ -67,7 +105,51 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
         setToolbarTitle(R.string.activity_label);
         initViewModel();
         initViews(view);
+        setupNetworkMonitoring();
         return view;
+    }
+    
+    private void setupNetworkMonitoring() {
+        try {
+            connectivityManager = (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null) {
+                NetworkRequest networkRequest = new NetworkRequest.Builder()
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .build();
+                connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+                
+                // Check initial network state
+                Network activeNetwork = connectivityManager.getActiveNetwork();
+                if (activeNetwork != null) {
+                    NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
+                    isNetworkAvailable = capabilities != null && 
+                            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                } else {
+                    isNetworkAvailable = false;
+                }
+                updateNetworkStatus(isNetworkAvailable);
+            }
+        } catch (Exception e) {
+            // Network monitoring not available
+        }
+    }
+    
+    private void updateNetworkStatus(boolean hasInternet) {
+        isNetworkAvailable = hasInternet;
+        if (networkStatusBanner != null && networkStatusText != null) {
+            if (!hasInternet) {
+                networkStatusBanner.setVisibility(View.VISIBLE);
+                networkStatusText.setText(R.string.no_internet_connection);
+            } else {
+                networkStatusBanner.setVisibility(View.GONE);
+            }
+        }
+        
+        // If we just got internet back, refresh the list
+        if (hasInternet && adapter != null && adapter.isEmpty()) {
+            refreshTransactionList();
+        }
     }
 
     private void initViewModel()
@@ -143,6 +225,7 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
         // - for any transaction with token transfers; if there's only one token transfer, only show the transfer
         // - for any transaction with more than one token transfer, show the transaction and show the child transfer consequences
         List<ActivityMeta> filteredList = new ArrayList<>();
+        Set<String> seenTransfers = new HashSet<>(); // Track seen transfers to avoid duplicates
 
         for (ActivityMeta am : activityItems)
         {
@@ -153,7 +236,18 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
                 {
                     filteredList.add(am);
                 } //only 1 token transfer ? No need to show the underlying transaction
-                filteredList.addAll(tokenTransfers);
+                
+                // Add transfers but skip duplicates
+                for (TokenTransferData ttd : tokenTransfers)
+                {
+                    // Use hash + tokenAddress + eventName + transferDetail for unique identification
+                    String transferKey = ttd.hash + "_" + ttd.tokenAddress + "_" + ttd.eventName + "_" + ttd.transferDetail;
+                    if (!seenTransfers.contains(transferKey))
+                    {
+                        seenTransfers.add(transferKey);
+                        filteredList.add(ttd);
+                    }
+                }
             }
         }
 
@@ -163,6 +257,8 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
     private List<TokenTransferData> getTokenTransfersForHash(Realm realm, TransactionMeta tm)
     {
         List<TokenTransferData> transferData = new ArrayList<>();
+        Set<String> seenTransferKeys = new HashSet<>(); // Deduplicate at database level
+        
         //summon realm items
         //get matching entries for this transaction
         RealmResults<RealmTransfer> transfers = realm.where(RealmTransfer.class)
@@ -175,10 +271,16 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
             long nextTransferTime = transfers.size() == 1 ? tm.getTimeStamp() : tm.getTimeStamp() - 1; // if there's only 1 transfer, keep the transaction timestamp
             for (RealmTransfer rt : transfers)
             {
-                TokenTransferData ttd = new TokenTransferData(rt.getHash(), tm.chainId,
-                        rt.getTokenAddress(), rt.getEventName(), rt.getTransferDetail(), nextTransferTime);
-                transferData.add(ttd);
-                nextTransferTime--;
+                // Create unique key for this transfer
+                String transferKey = rt.getTokenAddress() + "_" + rt.getEventName() + "_" + rt.getTransferDetail();
+                if (!seenTransferKeys.contains(transferKey))
+                {
+                    seenTransferKeys.add(transferKey);
+                    TokenTransferData ttd = new TokenTransferData(rt.getHash(), tm.chainId,
+                            rt.getTokenAddress(), rt.getEventName(), rt.getTransferDetail(), nextTransferTime);
+                    transferData.add(ttd);
+                    nextTransferTime--;
+                }
             }
         }
 
@@ -198,6 +300,10 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
 
         systemView.attachRecyclerView(listView);
         systemView.attachSwipeRefreshLayout(refreshLayout);
+        
+        // Initialize network status banner
+        networkStatusBanner = view.findViewById(R.id.network_status_banner);
+        networkStatusText = view.findViewById(R.id.network_status_text);
 
         // Show loading on first load
         refreshLayout.setRefreshing(true);
@@ -224,6 +330,16 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
 
     private void refreshTransactionList()
     {
+        // Check network connectivity first
+        if (!isNetworkAvailable) {
+            if (refreshLayout != null) {
+                refreshLayout.setRefreshing(false);
+            }
+            Toast.makeText(requireContext(), R.string.no_internet_connection, Toast.LENGTH_SHORT).show();
+            updateNetworkStatus(false);
+            return;
+        }
+        
         //clear tx list and reload
         adapter.clear();
         // Force fetch latest transactions from API first, then prepare
@@ -259,6 +375,15 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
         if (realm != null && !realm.isClosed()) realm.close();
         if (viewModel != null) viewModel.onDestroy();
         if (adapter != null && listView != null) adapter.onDestroy(listView);
+        
+        // Unregister network callback
+        try {
+            if (connectivityManager != null) {
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            }
+        } catch (Exception e) {
+            // Ignore - callback may not have been registered
+        }
     }
 
     @Override

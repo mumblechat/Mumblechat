@@ -11,12 +11,43 @@
         android:id="@+id/separator"
         style="@style/Aw.Component.Separator"
         android:layout_below="@id/toolbar" />
+    
+    <!-- Network Status Banner -->
+    <LinearLayout
+        android:id="@+id/network_status_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/separator"
+        android:background="#FF5252"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingVertical="8dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+        
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_warning"
+            android:tint="#FFFFFF"
+            android:contentDescription="@string/warning" />
+        
+        <TextView
+            android:id="@+id/network_status_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/no_internet_connection"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/refresh_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/separator">
+        android:layout_below="@id/network_status_banner">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/list"

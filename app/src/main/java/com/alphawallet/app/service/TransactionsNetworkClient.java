@@ -58,6 +58,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
@@ -502,6 +503,18 @@ public class TransactionsNetworkClient implements TransactionsNetworkClientType
         {
            events = OkLinkService.get(httpClient).getEtherscanEvents(networkInfo.chainId, walletAddress, lastBlockFound, tfType);
            eventList = new ArrayList<>(Arrays.asList(events));
+        }
+        else if (networkInfo.chainId == RAMESTTA_MAINNET_ID || networkInfo.chainId == RAMESTTA_TESTNET_ID)
+        {
+            // Use v2 API for Ramestta token transfers - only for ERC-20 type
+            // The v2 API only supports ERC-20 transfers currently
+            if (tfType == TransferFetchType.ERC_20) {
+                events = fetchRamesttaTokenTransfersV2(walletAddress, networkInfo);
+                eventList = new ArrayList<>(Arrays.asList(events));
+            } else {
+                // Return empty for ERC-721 and ERC-1155 as v2 API doesn't support them yet
+                eventList = new ArrayList<>();
+            }
         }
         else
         {
@@ -1115,15 +1128,36 @@ public class TransactionsNetworkClient implements TransactionsNetworkClientType
     {
         for (Map.Entry<String, List<TransferEvent>> entry : transferEventMap.entrySet())
         {
-            RealmTransfer realmPeek = instance.where(RealmTransfer.class)
-                    .equalTo("hash", RealmTransfer.databaseKey(chainId, entry.getKey()))
-                    .findFirst();
+            String hashKey = RealmTransfer.databaseKey(chainId, entry.getKey());
+            
+            // Get all existing transfers for this hash
+            RealmResults<RealmTransfer> existingTransfers = instance.where(RealmTransfer.class)
+                    .equalTo("hash", hashKey)
+                    .findAll();
+            
+            // Build set of existing transfer keys to avoid duplicates
+            Set<String> existingTransferKeys = new HashSet<>();
+            for (RealmTransfer existing : existingTransfers)
+            {
+                String key = existing.getTokenAddress() + "_" + existing.getEventName() + "_" + existing.getTransferDetail();
+                existingTransferKeys.add(key);
+            }
+            
+            // Track keys we're writing in this batch to avoid duplicates within the batch
+            Set<String> batchTransferKeys = new HashSet<>();
 
-            if (realmPeek != null) continue;
-
-            //write each event set
+            //write each event set, but skip duplicates
             for (TransferEvent thisEvent : entry.getValue())
             {
+                String transferKey = thisEvent.contractAddress + "_" + thisEvent.activityName + "_" + thisEvent.valueList;
+                
+                // Skip if already exists in database or already added in this batch
+                if (existingTransferKeys.contains(transferKey) || batchTransferKeys.contains(transferKey))
+                {
+                    continue;
+                }
+                
+                batchTransferKeys.add(transferKey);
                 RealmTransfer realmTransfer = instance.createObject(RealmTransfer.class);
                 realmTransfer.setHashKey(chainId, entry.getKey());
                 realmTransfer.setTokenAddress(thisEvent.contractAddress);
@@ -1280,6 +1314,147 @@ public class TransactionsNetworkClient implements TransactionsNetworkClientType
         });
 
         return txList;
+    }
+
+    /**
+     * Fetch token transfers from Ramestta v2 API
+     * The v2 API uses a different format: /api/v2/addresses/{address}/token-transfers
+     */
+    private EtherscanEvent[] fetchRamesttaTokenTransfersV2(String walletAddress, NetworkInfo networkInfo) {
+        List<EtherscanEvent> eventList = new ArrayList<>();
+        
+        try {
+            // Use the correct Ramestta backend API URL
+            String v2Url = "https://latest-backendapi.ramascan.com/api/v2/addresses/" + walletAddress + "/token-transfers?type=ERC-20";
+            
+            Timber.d("Fetching Ramestta token transfers from v2 API: %s", v2Url);
+            
+            Request request = new Request.Builder()
+                .url(v2Url)
+                .header("User-Agent", "Chrome/74.0.3729.169")
+                .header("Accept", "application/json")
+                .get()
+                .build();
+            
+            try (okhttp3.Response response = httpClient.newCall(request).execute()) {
+                if (response.body() != null && response.code() / 200 == 1) {
+                    String result = response.body().string();
+                    Timber.d("Ramestta v2 token transfers response length: %d", result.length());
+                    
+                    JSONObject jsonResponse = new JSONObject(result);
+                    if (jsonResponse.has("items")) {
+                        JSONArray items = jsonResponse.getJSONArray("items");
+                        Timber.d("Found %d token transfer items", items.length());
+                        
+                        for (int i = 0; i < items.length(); i++) {
+                            JSONObject item = items.getJSONObject(i);
+                            EtherscanEvent event = parseRamesttaV2TokenTransfer(item, networkInfo.chainId);
+                            if (event != null) {
+                                eventList.add(event);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Timber.e(e, "Error fetching Ramestta token transfers from v2 API");
+        }
+        
+        return eventList.toArray(new EtherscanEvent[0]);
+    }
+    
+    /**
+     * Parse a single token transfer from Ramestta v2 API format
+     * V2 format has nested objects for from, to, token, and total
+     * Filters out token_burning events (transfers to 0x000...000)
+     */
+    private EtherscanEvent parseRamesttaV2TokenTransfer(JSONObject item, long chainId) {
+        try {
+            // Check if this is a token_burning event - skip these
+            String eventType = item.optString("type", "");
+            if ("token_burning".equals(eventType)) {
+                Timber.d("Skipping token_burning event");
+                return null;
+            }
+            
+            EtherscanEvent event = new EtherscanEvent();
+            
+            // Parse transaction hash - v2 API uses "transaction_hash" not "tx_hash"
+            event.hash = item.optString("transaction_hash", item.optString("tx_hash", ""));
+            
+            // Parse from address (nested object)
+            if (item.has("from") && item.get("from") instanceof JSONObject) {
+                event.from = item.getJSONObject("from").optString("hash", "");
+            } else {
+                event.from = item.optString("from", "");
+            }
+            
+            // Parse to address (nested object)
+            if (item.has("to") && item.get("to") instanceof JSONObject) {
+                event.to = item.getJSONObject("to").optString("hash", "");
+            } else {
+                event.to = item.optString("to", "");
+            }
+            
+            // Skip burn events (transfers to null address)
+            if (event.to != null && event.to.toLowerCase().equals("0x0000000000000000000000000000000000000000")) {
+                Timber.d("Skipping burn event to null address");
+                return null;
+            }
+            
+            // Parse token info (nested object)
+            if (item.has("token") && item.get("token") instanceof JSONObject) {
+                JSONObject token = item.getJSONObject("token");
+                event.contractAddress = token.optString("address", "");
+                event.tokenName = token.optString("name", "");
+                event.tokenSymbol = token.optString("symbol", "");
+                event.tokenDecimal = token.optString("decimals", "18");
+            }
+            
+            // Parse value from total (nested object)
+            if (item.has("total") && item.get("total") instanceof JSONObject) {
+                JSONObject total = item.getJSONObject("total");
+                event.value = total.optString("value", "0");
+            } else {
+                event.value = item.optString("value", "0");
+            }
+            
+            // Parse block number
+            event.blockNumber = String.valueOf(item.optLong("block_number", item.optLong("block", 1)));
+            if (event.blockNumber.equals("0")) {
+                event.blockNumber = "1"; // Default to 1 to ensure it's processed
+            }
+            
+            // Parse timestamp (ISO 8601 format)
+            String timestamp = item.optString("timestamp", "");
+            if (!TextUtils.isEmpty(timestamp)) {
+                try {
+                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                    sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                    String cleanTimestamp = timestamp.split("\\.")[0];
+                    java.util.Date date = sdf.parse(cleanTimestamp);
+                    if (date != null) {
+                        event.timeStamp = date.getTime() / 1000;
+                    }
+                } catch (Exception e) {
+                    event.timeStamp = System.currentTimeMillis() / 1000;
+                }
+            } else {
+                event.timeStamp = System.currentTimeMillis() / 1000;
+            }
+            
+            // Set nonce (int type)
+            event.nonce = item.optInt("nonce", 0);
+            event.input = "0x"; // Token transfers don't typically have input data in API response
+            
+            Timber.d("Parsed Ramestta v2 token transfer: hash=%s, from=%s, to=%s, token=%s, value=%s", 
+                event.hash, event.from, event.to, event.tokenSymbol, event.value);
+            
+            return event;
+        } catch (Exception e) {
+            Timber.e(e, "Error parsing Ramestta v2 token transfer");
+            return null;
+        }
     }
 
     /**

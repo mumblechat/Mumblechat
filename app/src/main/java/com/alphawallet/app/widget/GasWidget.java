@@ -64,6 +64,9 @@ public class GasWidget extends LinearLayout implements Runnable, GasWidgetInterf
     private final TextView timeEstimate;
     private final LinearLayout gasWarning;
     private final LinearLayout speedWarning;
+    private PercentageProgressView gasProgressView;
+    private Runnable gasProgressAnimator;
+    private int gasProgressValue = 0;
 
     private TXSpeed currentGasSpeedIndex = TXSpeed.STANDARD;
     private long customNonce = -1;
@@ -81,6 +84,7 @@ public class GasWidget extends LinearLayout implements Runnable, GasWidgetInterf
         timeEstimate = findViewById(R.id.text_time_estimate);
         gasWarning = findViewById(R.id.layout_gas_warning);
         speedWarning = findViewById(R.id.layout_speed_warning);
+        gasProgressView = findViewById(R.id.gas_progress_percentage);
     }
 
     //For legacy transaction, either we are sending all or the chain doesn't support EIP1559
@@ -476,6 +480,51 @@ public class GasWidget extends LinearLayout implements Runnable, GasWidgetInterf
     {
         findViewById(R.id.view_spacer).setVisibility(ready ? View.VISIBLE : View.GONE);
         findViewById(R.id.gas_fetch_wait).setVisibility(ready ? View.GONE : View.VISIBLE);
+        
+        if (ready)
+        {
+            stopGasProgressAnimation();
+            if (gasProgressView != null)
+            {
+                gasProgressView.setProgress(100);
+            }
+        }
+        else
+        {
+            startGasProgressAnimation();
+        }
+    }
+    
+    private void startGasProgressAnimation()
+    {
+        gasProgressValue = 0;
+        if (gasProgressView != null)
+        {
+            gasProgressView.setProgress(0);
+        }
+        stopGasProgressAnimation();
+        
+        gasProgressAnimator = new Runnable() {
+            @Override
+            public void run() {
+                if (gasProgressView != null && findViewById(R.id.gas_fetch_wait).getVisibility() == View.VISIBLE) {
+                    if (gasProgressValue < 90) {
+                        gasProgressValue += 5;
+                        gasProgressView.setProgress(gasProgressValue);
+                    }
+                    handler.postDelayed(this, 300);
+                }
+            }
+        };
+        handler.postDelayed(gasProgressAnimator, 300);
+    }
+    
+    private void stopGasProgressAnimation()
+    {
+        if (gasProgressAnimator != null)
+        {
+            handler.removeCallbacks(gasProgressAnimator);
+        }
     }
 
     private void showCustomSpeedWarning(boolean high)

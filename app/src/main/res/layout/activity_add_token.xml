@@ -13,18 +13,83 @@
         android:layout_below="@id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="15dp"
+        android:layout_marginBottom="8dp"
         custom:ens="false"
         custom:hint="@string/contract_address"
         custom:label="@string/contract_address"
         custom:show_header="false" />
+
+    <!-- Network Selector -->
+    <LinearLayout
+        android:id="@+id/layout_network_selector"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/input_address_view"
+        android:layout_marginHorizontal="@dimen/standard_16"
+        android:layout_marginBottom="8dp"
+        android:orientation="vertical">
+
+        <TextView
+                android:id="@+id/network_selector_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/label_select_network"
+                android:textColor="?android:textColorPrimary"
+                android:textSize="14sp"
+                android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_network_selector"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            custom:cardBackgroundColor="?colorSurfaceTertiary"
+            custom:cardCornerRadius="8dp"
+            custom:cardElevation="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/icon_network"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_ethereum"
+                    android:layout_marginEnd="12dp" />
+
+                <TextView
+                    android:id="@+id/text_selected_network"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/select_network"
+                    android:textColor="?android:textColorPrimary"
+                    android:textSize="14sp" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_expand_more"
+                    custom:tint="?android:textColorSecondary" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/layout_progress_counter"
-        android:layout_below="@id/input_address_view" />
+        android:layout_below="@id/layout_network_selector" />
 
     <LinearLayout
         android:id="@+id/layout_progress_counter"
@@ -36,22 +101,22 @@
         android:layout_marginTop="@dimen/dp15"
         tools:visibility="visible"
         android:visibility="gone"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/dp15"
-            android:text="@string/chains_to_scan" />
+        <ProgressBar
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/progress_bar_gold" />
 
         <TextView
             android:id="@+id/text_check_counter"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="@drawable/blue_circle"
-            android:gravity="center"
-            android:textColor="?colorOnPrimary"
-            tools:text="1" />
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/tiny_8"
+            android:textColor="@color/progress_bar_gold"
+            android:text="@string/scanning_network" />
 
     </LinearLayout>
 
@@ -65,18 +130,28 @@
         android:id="@+id/layout_progress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="?android:attr/actionBarSize"
+        android:layout_marginTop="@dimen/dp15"
         android:background="@color/transparent"
-        android:layout_below="@id/input_address_view"
-        android:gravity="top|end"
+        android:layout_below="@id/layout_network_selector"
+        android:gravity="center"
         tools:visibility="visible"
-        android:layout_marginEnd="5dp"
-        android:visibility="gone">
+        android:layout_marginHorizontal="@dimen/standard_16"
+        android:visibility="gone"
+        android:orientation="vertical">
 
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            android:layout_width="30dp"
-            android:layout_height="30dp" />
+        <com.alphawallet.app.widget.PercentageProgressView
+            android:id="@+id/percentage_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/text_scanning_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/tiny_8"
+            android:textColor="@color/progress_bar_gold"
+            android:textSize="14sp"
+            android:text="@string/scanning_network" />
     </LinearLayout>
 
 </RelativeLayout>

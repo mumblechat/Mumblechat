@@ -2,21 +2,79 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@drawable/futuristic_background">
 
-    <ImageView
-        android:id="@+id/initial_loader_gif"
-        android:layout_width="150dp"
-        android:layout_height="150dp"
-        android:layout_centerInParent="true"
-        android:layout_above="@id/percentage_progress"
-        android:layout_marginBottom="24dp"
-        android:contentDescription="@string/app_name" />
+    <!-- Main Content Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical">
 
-    <com.alphawallet.app.widget.PercentageProgressView
-        android:id="@+id/percentage_progress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true" />
+        <!-- Logo Container with Animation Layers -->
+        <FrameLayout
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:layout_gravity="center">
+
+            <!-- Outer Glow Effect -->
+            <ImageView
+                android:id="@+id/glow_outer"
+                android:layout_width="280dp"
+                android:layout_height="280dp"
+                android:layout_gravity="center"
+                android:src="@drawable/glow_circle"
+                android:alpha="0.7" />
+
+            <!-- Outer Rotating Ring -->
+            <ImageView
+                android:id="@+id/ring_outer"
+                android:layout_width="260dp"
+                android:layout_height="260dp"
+                android:layout_gravity="center"
+                android:src="@drawable/outer_ring_glow" />
+
+            <!-- Inner Rotating Ring (Gold) -->
+            <ImageView
+                android:id="@+id/ring_inner"
+                android:layout_width="240dp"
+                android:layout_height="240dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ring_gradient" />
+
+            <!-- Main Logo -->
+            <ImageView
+                android:id="@+id/initial_loader_gif"
+                android:layout_width="180dp"
+                android:layout_height="180dp"
+                android:layout_gravity="center"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/app_name" />
+
+        </FrameLayout>
+
+        <!-- Loading Text -->
+        <TextView
+            android:id="@+id/text_loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/loading"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:fontFamily="sans-serif-light"
+            android:letterSpacing="0.05"
+            android:alpha="0.9" />
+
+        <!-- Progress View -->
+        <com.alphawallet.app.widget.PercentageProgressView
+            android:id="@+id/percentage_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp" />
+
+    </LinearLayout>
 
 </RelativeLayout>

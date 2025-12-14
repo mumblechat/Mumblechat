@@ -106,7 +106,9 @@ public class WalletFragment extends BaseFragment implements
 {
     public static final String SEARCH_FRAGMENT = "w_search";
     private static final String TAG = "WFRAG";
+    private static final int NETWORK_CHECK_INTERVAL = 5000; // Check every 5 seconds
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Handler networkHandler = new Handler(Looper.getMainLooper());
     private WalletViewModel viewModel;
     private SystemView systemView;
     private TokensAdapter adapter;
@@ -124,6 +126,7 @@ public class WalletFragment extends BaseFragment implements
     private boolean hasWCSession = false;
     private TokenCardMeta[] currentMetas = new TokenCardMeta[0];
     private boolean hasKeyError = false; // Track if wallet key verification failed
+    private View networkStatusIndicator;
 
     @Inject
     AWWalletConnectClient awWalletConnectClient;
@@ -330,6 +333,7 @@ public class WalletFragment extends BaseFragment implements
         recyclerView = view.findViewById(R.id.list);
         addressAvatar = view.findViewById(R.id.user_address_blockie);
         addressAvatar.setVisibility(View.VISIBLE);
+        networkStatusIndicator = view.findViewById(R.id.network_status_indicator);
 
         // Use SwipeRefreshLayout for loading indication instead of SystemView overlay
         refreshLayout.setRefreshing(true);
@@ -486,9 +490,37 @@ public class WalletFragment extends BaseFragment implements
     public void onPause()
     {
         super.onPause();
+        // Stop network status monitoring
+        stopNetworkMonitoring();
         if (isVisible)
         {
             viewModel.stopUpdateListener();
+        }
+    }
+
+    private final Runnable networkCheckRunnable = new Runnable() {
+        @Override
+        public void run() {
+            updateNetworkStatus();
+            networkHandler.postDelayed(this, NETWORK_CHECK_INTERVAL);
+        }
+    };
+
+    private void startNetworkMonitoring() {
+        updateNetworkStatus();
+        networkHandler.postDelayed(networkCheckRunnable, NETWORK_CHECK_INTERVAL);
+    }
+
+    private void stopNetworkMonitoring() {
+        networkHandler.removeCallbacks(networkCheckRunnable);
+    }
+
+    private void updateNetworkStatus() {
+        if (networkStatusIndicator != null && getContext() != null) {
+            boolean isOnline = com.alphawallet.app.util.Utils.isNetworkAvailable(getContext());
+            networkStatusIndicator.setBackgroundResource(
+                isOnline ? R.drawable.network_status_dot : R.drawable.network_status_dot_offline
+            );
         }
     }
 
@@ -629,6 +661,13 @@ public class WalletFragment extends BaseFragment implements
         buyRamaDialog.show();
     }
 
+    @Override
+    public void onAddToken()
+    {
+        Intent intent = new Intent(getActivity(), AddTokenActivity.class);
+        startActivity(intent);
+    }
+
     private void showSwapPlaceholder()
     {
         if (!isAdded())
@@ -719,6 +758,9 @@ public class WalletFragment extends BaseFragment implements
             viewModel.startUpdateListener();
             viewModel.getTokensService().startUpdateCycleIfRequired();
         }
+
+        // Start network status monitoring
+        startNetworkMonitoring();
 
         checkWalletConnect();
     }
