@@ -247,7 +247,14 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
         else
         {
             HDWallet newWallet = new HDWallet(seedPhrase, "");
-            storeHDKey(newWallet, false); //store encrypted bytes in case of re-entry
+            boolean stored = storeHDKey(newWallet, false); //store encrypted bytes in case of re-entry
+            if (!stored)
+            {
+                Timber.tag(TAG).e("Failed to store HD key during import - initial storage failed");
+                // Show helpful error dialog with troubleshooting tips
+                keyFailure(context.getString(R.string.key_store_failed));
+                return;
+            }
             checkAuthentication(IMPORT_HD_KEY);
         }
     }
@@ -916,6 +923,40 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
     }
 
     private synchronized boolean storeEncryptedBytes(byte[] data, boolean createAuthLocked, String fileName)
+    {
+        // Try up to 3 times with exponential backoff for transient KeyStore errors
+        int maxRetries = 3;
+        int retryDelayMs = 100;
+        
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            boolean success = attemptStoreEncryptedBytes(data, createAuthLocked, fileName);
+            if (success)
+            {
+                return true;
+            }
+            
+            if (attempt < maxRetries)
+            {
+                Timber.tag(TAG).w("Key storage attempt %d failed, retrying in %dms...", attempt, retryDelayMs);
+                try
+                {
+                    Thread.sleep(retryDelayMs);
+                }
+                catch (InterruptedException e)
+                {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                retryDelayMs *= 2; // Exponential backoff
+            }
+        }
+        
+        Timber.tag(TAG).e("All %d attempts to store key failed for address %s", maxRetries, fileName);
+        return false;
+    }
+    
+    private boolean attemptStoreEncryptedBytes(byte[] data, boolean createAuthLocked, String fileName)
     {
         KeyStore keyStore = null;
         try
