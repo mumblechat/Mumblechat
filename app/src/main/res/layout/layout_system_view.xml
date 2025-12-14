@@ -5,7 +5,7 @@
     android:background="@color/transparent"
     android:orientation="vertical">
 
-    <ProgressBar
+    <com.alphawallet.app.widget.PercentageProgressView
         android:id="@+id/progress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

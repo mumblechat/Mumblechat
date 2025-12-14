@@ -12,6 +12,12 @@
     <color name="button_primary_disabled">@color/mike</color>
     <color name="surface_faded">@color/translucent_light</color>
 
+    <!-- Bottom Navigation Colors - Golden Theme -->
+    <color name="nav_icon_selected">#D4AF37</color>
+    <color name="nav_icon_unselected">#8B7355</color>
+    <color name="progress_bar_gold">#D4AF37</color>
+    <color name="progress_bar_track">#3D3D3D</color>
+
     <!-- Network Palette  -->
     <color name="mainnet">#2986AF</color>
     <color name="xdai">#48A9A6</color>

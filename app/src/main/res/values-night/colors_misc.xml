@@ -4,4 +4,15 @@
     <color name="button_primary_disabled">@color/mine</color>
     <color name="surface_faded">#B3424242</color>
     <color name="translucent_gray">#33FFFFFF</color>
+
+    <!-- Action Button Colors (Buy, Swap, Send, Receive) - Golden like wallet logo -->
+    <color name="action_button_icon">#D4AF37</color>
+    <color name="action_button_text">#D4AF37</color>
+    <color name="action_button_background">#2D2D2D</color>
+
+    <!-- Bottom Navigation Colors - Golden Theme -->
+    <color name="nav_icon_selected">#D4AF37</color>
+    <color name="nav_icon_unselected">#8B7355</color>
+    <color name="progress_bar_gold">#D4AF37</color>
+    <color name="progress_bar_track">#3D3D3D</color>
 </resources>

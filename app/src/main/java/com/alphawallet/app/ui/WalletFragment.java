@@ -331,7 +331,8 @@ public class WalletFragment extends BaseFragment implements
         addressAvatar = view.findViewById(R.id.user_address_blockie);
         addressAvatar.setVisibility(View.VISIBLE);
 
-        systemView.showProgress(true);
+        // Use SwipeRefreshLayout for loading indication instead of SystemView overlay
+        refreshLayout.setRefreshing(true);
 
         systemView.attachRecyclerView(recyclerView);
         systemView.attachSwipeRefreshLayout(refreshLayout);
@@ -673,10 +674,11 @@ public class WalletFragment extends BaseFragment implements
             return tokens;
         }
 
+        // Get all tokens from currentMetas (these are the visible tokens on home screen)
         for (TokenCardMeta meta : currentMetas)
         {
             Token token = viewModel.getTokensService().getToken(meta.getChain(), meta.getAddress());
-            if (token != null && token.tokenInfo != null && token.tokenInfo.isEnabled)
+            if (token != null && token.tokenInfo != null)
             {
                 tokens.add(token);
             }
@@ -737,6 +739,12 @@ public class WalletFragment extends BaseFragment implements
             adapter.setTokens(tokens);
             checkScrollPosition();
             viewModel.calculateFiatValues();
+        }
+        
+        // Stop any loading indicators
+        if (refreshLayout != null && refreshLayout.isRefreshing())
+        {
+            refreshLayout.setRefreshing(false);
         }
         systemView.showProgress(false);
 

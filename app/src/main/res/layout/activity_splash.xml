@@ -246,11 +246,10 @@
             android:padding="40dp"
             android:background="@drawable/loading_bg">
 
-            <ProgressBar
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:indeterminate="true"
-                android:indeterminateTint="#D4AF37" />
+            <com.alphawallet.app.widget.PercentageProgressView
+                android:id="@+id/percentage_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
 
             <TextView
                 android:id="@+id/text_loading"

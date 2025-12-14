@@ -61,6 +61,7 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     private String pendingWalletAddress;
     private KeyService.AuthenticationLevel pendingAuthLevel;
     private View loadingLayout;
+    private com.alphawallet.app.widget.PercentageProgressView percentageProgress;
     private boolean pendingHomeNavigation = false;
     
     // Network status views
@@ -143,6 +144,15 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
         if (loadingLayout != null)
         {
             loadingLayout.setVisibility(show ? View.VISIBLE : View.GONE);
+            if (show && percentageProgress != null)
+            {
+                // Simulate progress over 3 seconds for wallet creation
+                percentageProgress.startSimulation(3000);
+            }
+            else if (!show && percentageProgress != null)
+            {
+                percentageProgress.hide();
+            }
         }
     }
 
@@ -192,8 +202,9 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             });
         }
 
-        // Initialize loading layout
+        // Initialize loading layout and percentage progress
         loadingLayout = findViewById(R.id.layout_loading);
+        percentageProgress = findViewById(R.id.percentage_progress);
         
         // Initialize network status views
         iconNetworkStatus = findViewById(R.id.icon_network_status);

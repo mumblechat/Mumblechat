@@ -6,6 +6,15 @@
     android:layout_width="match_parent"
     android:layout_height="?attr/actionBarSize">
 
+    <ImageView
+        android:id="@+id/wallet_logo"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="@dimen/standard_16"
+        android:src="@drawable/ic_ramapay_wallet"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/app_name" />
+
     <com.alphawallet.app.widget.UserAvatar
         android:id="@+id/user_address_blockie"
         android:layout_width="30dp"

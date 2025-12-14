@@ -50,6 +50,7 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
     private SystemView systemView;
     private ActivityAdapter adapter;
     private RecyclerView listView;
+    private SwipeRefreshLayout refreshLayout;
     private RealmResults<RealmTransaction> realmUpdates;
     private boolean checkTimer;
     private Realm realm;
@@ -82,6 +83,12 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
 
     private void onItemsLoaded(ActivityMeta[] activityItems)
     {
+        // Stop the refresh indicator
+        if (refreshLayout != null && refreshLayout.isRefreshing())
+        {
+            refreshLayout.setRefreshing(false);
+        }
+        
         try (Realm realm = viewModel.getRealmInstance())
         {
             adapter.updateActivityItems(buildTransactionList(realm, activityItems).toArray(new ActivityMeta[0]));
@@ -182,7 +189,7 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
     {
         adapter = new ActivityAdapter(viewModel.getTokensService(), viewModel.provideTransactionsInteract(),
                 viewModel.getAssetDefinitionService(), this);
-        SwipeRefreshLayout refreshLayout = view.findViewById(R.id.refresh_layout);
+        refreshLayout = view.findViewById(R.id.refresh_layout);
         systemView = view.findViewById(R.id.system_view);
         listView = view.findViewById(R.id.list);
         listView.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -192,7 +199,8 @@ public class ActivityFragment extends BaseFragment implements View.OnClickListen
         systemView.attachRecyclerView(listView);
         systemView.attachSwipeRefreshLayout(refreshLayout);
 
-        systemView.showProgress(false);
+        // Show loading on first load
+        refreshLayout.setRefreshing(true);
         refreshLayout.setOnRefreshListener(this::refreshTransactionList);
     }
 

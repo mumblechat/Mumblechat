@@ -47,6 +47,7 @@ public class AWalletAlertDialog extends Dialog {
 
         setContentView(R.layout.dialog_awallet_alert);
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        getWindow().setDimAmount(0f); // Remove overlay/dim behind dialog
         setCanceledOnTouchOutside(true);
         getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 

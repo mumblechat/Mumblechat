@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Percentage Text -->
+    <TextView
+        android:id="@+id/text_percentage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/progress_bar_gold"
+        android:fontFamily="sans-serif-medium"
+        tools:text="75%" />
+
+    <!-- Progress Bar Container -->
+    <FrameLayout
+        android:layout_width="200dp"
+        android:layout_height="8dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/progress_bar_background">
+
+        <!-- Horizontal Progress Bar -->
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/progress_bar_drawable" />
+
+    </FrameLayout>
+
+    <!-- Loading Text -->
+    <TextView
+        android:id="@+id/text_loading_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textSize="14sp"
+        android:textColor="#FFFFFF"
+        android:fontFamily="sans-serif"
+        android:visibility="gone"
+        tools:text="Loading..." />
+
+</LinearLayout>

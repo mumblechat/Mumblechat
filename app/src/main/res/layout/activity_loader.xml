@@ -6,9 +6,17 @@
 
     <ImageView
         android:id="@+id/initial_loader_gif"
-        android:layout_width="250dp"
-        android:layout_height="250dp"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
         android:layout_centerInParent="true"
+        android:layout_above="@id/percentage_progress"
+        android:layout_marginBottom="24dp"
         android:contentDescription="@string/app_name" />
+
+    <com.alphawallet.app.widget.PercentageProgressView
+        android:id="@+id/percentage_progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true" />
 
 </RelativeLayout>

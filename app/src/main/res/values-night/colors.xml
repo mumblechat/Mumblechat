@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark Golden color -->
-    <color name="brand">#B8860B</color>
+    <!-- Use golden colors for brand in night mode to match RamaPay theme -->
+    <color name="brand">@color/dark_golden</color>
     <color name="brand_inverse">@color/white</color>
-    <color name="accent">@color/brand</color>
+    <color name="accent">@color/dark_golden</color>
     <color name="error">@color/danger</color>
     <color name="error_inverse">@color/white</color>
     <color name="background">@color/cod</color>
@@ -17,8 +17,8 @@
     <color name="surface_dark">@color/white</color>
     <color name="background_floating">@color/mine</color>
     <color name="control">@color/white</color>
-    <color name="control_activated">@color/accent</color>
-    <color name="control_highlight">@color/accent</color>
+    <color name="control_activated">@color/dark_golden</color>
+    <color name="control_highlight">#03B8860B</color>
     <color name="text_primary">@color/white</color>
     <color name="text_primary_inverse">@color/cod</color>
     <color name="text_secondary">@color/dusty</color>

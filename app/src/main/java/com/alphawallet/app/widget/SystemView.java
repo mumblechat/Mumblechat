@@ -14,13 +14,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.alphawallet.app.R;
 
 public class SystemView extends FrameLayout implements View.OnClickListener {
-	private ProgressBar progress;
+	private PercentageProgressView progress;
 	private View errorBox;
 	private TextView messageTxt;
 	private View tryAgain;
@@ -78,15 +77,18 @@ public class SystemView extends FrameLayout implements View.OnClickListener {
 		}
 		emptyBox.setVisibility(GONE);
 		errorBox.setVisibility(GONE);
-		progress.setVisibility(GONE);
-		setVisibility(VISIBLE);
+		progress.hide();
+		setVisibility(GONE);
 	}
 
-	// Shows the central progress spinner
+	// Shows the central progress spinner with percentage
 	public void showCentralSpinner()
 	{
-		hideAllComponents();
+		emptyBox.setVisibility(GONE);
+		errorBox.setVisibility(GONE);
+		setVisibility(VISIBLE);
 		progress.setVisibility(VISIBLE);
+		progress.startSimulation(5000); // 5 second simulation
 	}
 
 	public void showProgress(boolean shouldShow) {
@@ -101,8 +103,11 @@ public class SystemView extends FrameLayout implements View.OnClickListener {
 				hide();
 				swipeRefreshLayout.setRefreshing(true);
 			} else {
-				hideAllComponents();
+				emptyBox.setVisibility(GONE);
+				errorBox.setVisibility(GONE);
+				setVisibility(VISIBLE);
 				progress.setVisibility(VISIBLE);
+				progress.startSimulation(5000); // 5 second simulation
 			}
 		} else {
 			hide();
@@ -116,7 +121,9 @@ public class SystemView extends FrameLayout implements View.OnClickListener {
 
 	public void showProgress()
 	{
+		setVisibility(VISIBLE);
 		progress.setVisibility(VISIBLE);
+		progress.startSimulation(5000); // 5 second simulation
 	}
 
 	public void showError(@Nullable String message, @Nullable OnClickListener onTryAgainClickListener) {
@@ -155,6 +162,7 @@ public class SystemView extends FrameLayout implements View.OnClickListener {
 		LayoutParams lp = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		lp.gravity = Gravity.CENTER_VERTICAL;
 		view.setLayoutParams(lp);
+		setVisibility(VISIBLE);  // Make SystemView visible
 		emptyBox.setVisibility(VISIBLE);
 		emptyBox.removeAllViews();
 		emptyBox.addView(view);

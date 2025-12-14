@@ -134,8 +134,8 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
                     // Authentication successful - refresh session and continue
                     appSecurityManager.refreshSession();
                     
-                    // Reset window background to proper splash drawable
-                    getWindow().setBackgroundDrawableResource(R.drawable.background_splash);
+                    // Set window background to solid color (removes any splash/gradient overlays)
+                    getWindow().setBackgroundDrawableResource(android.R.color.transparent);
                     
                     // Force complete view hierarchy refresh after unlock
                     View pager = findViewById(R.id.view_pager);
@@ -273,6 +273,9 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
         viewModel.setCurrencyAndLocale(this);
         viewModel.tryToShowWhatsNewDialog(this);
         setContentView(R.layout.activity_home);
+        
+        // Clear any splash/gradient background - use transparent to show content properly
+        getWindow().setBackgroundDrawableResource(android.R.color.transparent);
 
         initViews();
         toolbar();
