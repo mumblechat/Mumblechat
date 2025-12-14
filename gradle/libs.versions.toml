@@ -55,6 +55,7 @@ webkit = "1.12.0"
 workRuntimeKtx = "2.9.1"
 zxingAndroidEmbedded = "4.3.0"
 annotations = "15.0"
+sceneview = "2.2.1"
 
 [libraries]
 walletConnect-bom = { module = "com.walletconnect:android-bom", version.ref = "walletConnectBom" }
@@ -114,6 +115,7 @@ webkit = { module = "androidx.webkit:webkit", version.ref = "webkit" }
 work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
 annotations = { group = "org.jetbrains", name = "annotations", version.ref = "annotations" }
+sceneview = { module = "io.github.sceneview:sceneview", version.ref = "sceneview" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
