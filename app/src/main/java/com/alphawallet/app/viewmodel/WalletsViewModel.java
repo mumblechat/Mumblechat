@@ -846,7 +846,7 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
         
         // Get the next available hdKeyIndex (max existing index + 1)
         int nextIndex = getNextHDKeyIndexForMaster(currentWallets, masterWallet.address);
-        keyService.deriveNewHDAccount(masterWallet, nextIndex, callback);
+        keyService.deriveNewHDAccount(masterWallet, nextIndex, activity, callback);
     }
 
     /**
@@ -865,7 +865,7 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
             return;
         }
         
-        keyService.deriveNewHDAccount(masterWallet, index, callback);
+        keyService.deriveNewHDAccount(masterWallet, index, activity, callback);
     }
 
     /**

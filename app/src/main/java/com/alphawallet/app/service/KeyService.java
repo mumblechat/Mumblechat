@@ -140,6 +140,7 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
 
     //Used for keeping the Ethereum account information between re-entrant calls
     private Wallet currentWallet;
+    private int derivingAccountIndex = -1; //Used for HD account derivation after authentication
 
     private AuthenticationLevel authLevel;
     private SignTransactionDialog signDialog;
@@ -797,53 +798,68 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
      * 
      * @param parentWallet The parent HD wallet containing the seed phrase
      * @param accountIndex The account index to derive (0, 1, 2, etc.)
+     * @param callingActivity The activity for showing authentication dialog
      * @param callback Callback to return the derived wallet address
      */
-    public void deriveNewHDAccount(Wallet parentWallet, int accountIndex, CreateWalletCallbackInterface callback)
+    public void deriveNewHDAccount(Wallet parentWallet, int accountIndex, Activity callingActivity, CreateWalletCallbackInterface callback)
     {
         callbackInterface = callback;
+        currentWallet = parentWallet;
+        derivingAccountIndex = accountIndex;
+        activity = callingActivity;
+        
         try
         {
-            currentWallet = parentWallet;
-            String mnemonic = unpackMnemonic();
-            HDWallet hdWallet = new HDWallet(mnemonic, "");
-            
-            // Derive key at the specified index using BIP44 path
-            // m/44'/60'/0'/0/{index}
-            String derivationPath = "m/44'/60'/0'/0/" + accountIndex;
-            PrivateKey pk = hdWallet.getKey(CoinType.ETHEREUM, derivationPath);
-            String newAddress = CoinType.ETHEREUM.deriveAddress(pk);
-            
-            Timber.tag(TAG).d("Derived HD account at index %d: %s", accountIndex, newAddress);
-            
-            // Callback must be invoked on main thread for UI operations
-            if (callback != null)
-            {
-                if (activity != null)
-                {
-                    activity.runOnUiThread(() -> 
-                        callback.HDKeyCreated(newAddress, context, authLevel));
-                }
-                else
-                {
-                    callback.HDKeyCreated(newAddress, context, authLevel);
-                }
-            }
+            performHDAccountDerivation();
         }
-        catch (KeyServiceException | UserNotAuthenticatedException e)
+        catch (KeyServiceException e)
         {
             Timber.tag(TAG).e(e, "Failed to derive HD account");
-            if (callback != null)
+            keyFailure(e.getMessage());
+        }
+        catch (UserNotAuthenticatedException e)
+        {
+            Timber.tag(TAG).d("Authentication required for HD account derivation");
+            // Need to get authentication first, then retry
+            if (activity != null)
             {
-                if (activity != null)
-                {
-                    activity.runOnUiThread(() -> 
-                        callback.keyFailure(e.getMessage()));
-                }
-                else
-                {
-                    callback.keyFailure(e.getMessage());
-                }
+                activity.runOnUiThread(() ->
+                        checkAuthentication(Operation.DERIVE_HD_ACCOUNT));
+            }
+            else
+            {
+                keyFailure(context.getString(R.string.authentication_error));
+            }
+        }
+    }
+    
+    /**
+     * Perform the actual HD account derivation after authentication (if needed)
+     */
+    private void performHDAccountDerivation() throws KeyServiceException, UserNotAuthenticatedException
+    {
+        String mnemonic = unpackMnemonic();
+        HDWallet hdWallet = new HDWallet(mnemonic, "");
+        
+        // Derive key at the specified index using BIP44 path
+        // m/44'/60'/0'/0/{index}
+        String derivationPath = "m/44'/60'/0'/0/" + derivingAccountIndex;
+        PrivateKey pk = hdWallet.getKey(CoinType.ETHEREUM, derivationPath);
+        String newAddress = CoinType.ETHEREUM.deriveAddress(pk);
+        
+        Timber.tag(TAG).d("Derived HD account at index %d: %s", derivingAccountIndex, newAddress);
+        
+        // Callback must be invoked on main thread for UI operations
+        if (callbackInterface != null)
+        {
+            if (activity != null)
+            {
+                activity.runOnUiThread(() -> 
+                    callbackInterface.HDKeyCreated(newAddress, context, authLevel));
+            }
+            else
+            {
+                callbackInterface.HDKeyCreated(newAddress, context, authLevel);
             }
         }
     }
@@ -909,6 +925,16 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
 
             String encryptedHDKeyPath = getFilePath(context, fileName);
             KeyGenerator keyGenerator = getMaxSecurityKeyGenerator(fileName, createAuthLocked);
+            
+            // Check if keyGenerator was successfully initialized
+            if (keyGenerator == null)
+            {
+                Timber.tag(TAG).e("KeyGenerator is null - hardware keystore unavailable for address %s", fileName);
+                throw new ServiceErrorException(
+                        ServiceErrorException.ServiceErrorCode.KEY_STORE_ERROR,
+                        "Unable to create secure key storage. Please ensure your device has a screen lock set up.");
+            }
+            
             final SecretKey secretKey = keyGenerator.generateKey();
             final Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey);
@@ -939,10 +965,16 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
 
             return true;
         }
+        catch (ServiceErrorException ex)
+        {
+            deleteKey(fileName);
+            Timber.tag(TAG).e(ex, "Key store service error");
+            // Don't re-throw, just return false - error will be handled by caller
+        }
         catch (Exception ex)
         {
             deleteKey(fileName);
-            Timber.tag(TAG).d(ex, "Key store error");
+            Timber.tag(TAG).e(ex, "Key store error: %s", ex.getMessage());
         }
 
         return false;
@@ -951,6 +983,7 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
     private KeyGenerator getMaxSecurityKeyGenerator(String keyAddress, boolean useAuthentication)
     {
         KeyGenerator keyGenerator = null;
+        boolean keyInitialized = false;
 
         try
         {
@@ -962,34 +995,85 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             {
                 if (useAuthentication) authLevel = AuthenticationLevel.STRONGBOX_AUTHENTICATION;
                 else authLevel = STRONGBOX_NO_AUTHENTICATION;
+                keyInitialized = true;
             }
             else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && tryInitStrongBoxKey(keyGenerator, keyAddress, false))
             {
                 authLevel = STRONGBOX_NO_AUTHENTICATION;
+                keyInitialized = true;
             }
             else if (tryInitTEEKey(keyGenerator, keyAddress, useAuthentication))
             {
                 //fallback to non Strongbox
                 if (useAuthentication) authLevel = AuthenticationLevel.TEE_AUTHENTICATION;
                 else authLevel = TEE_NO_AUTHENTICATION;
+                keyInitialized = true;
             }
             else if (tryInitTEEKey(keyGenerator, keyAddress, false))
             {
                 authLevel = TEE_NO_AUTHENTICATION;
+                keyInitialized = true;
+            }
+            
+            // Final fallback: try software-only key without user authentication
+            // This is less secure but ensures the wallet can still be created on devices
+            // with problematic hardware keystore implementations
+            if (!keyInitialized)
+            {
+                Timber.tag(TAG).w("Hardware-backed keystore failed, trying software fallback");
+                if (tryInitSoftwareKey(keyGenerator, keyAddress))
+                {
+                    authLevel = TEE_NO_AUTHENTICATION; // Treat as no-auth for compatibility
+                    keyInitialized = true;
+                    Timber.tag(TAG).i("Software key fallback successful for address %s", keyAddress);
+                }
+            }
+            
+            if (!keyInitialized)
+            {
+                Timber.tag(TAG).e("Failed to initialize any key type for address %s", keyAddress);
+                return null;
             }
         }
         catch (NoSuchAlgorithmException | NoSuchProviderException ex)
         {
-            ex.printStackTrace();
+            Timber.tag(TAG).e(ex, "KeyGenerator not available");
             return null;
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            Timber.tag(TAG).e(e, "Unexpected error in getMaxSecurityKeyGenerator");
             authLevel = AuthenticationLevel.NOT_SET;
+            return null;
         }
 
         return keyGenerator;
+    }
+    
+    /**
+     * Software-only key as final fallback when hardware keystore is unavailable
+     * This is less secure than TEE/StrongBox but ensures basic functionality
+     */
+    private boolean tryInitSoftwareKey(KeyGenerator keyGenerator, String keyAddress)
+    {
+        try
+        {
+            keyGenerator.init(new KeyGenParameterSpec.Builder(
+                    keyAddress,
+                    KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                    .setBlockModes(BLOCK_MODE)
+                    .setKeySize(256)
+                    .setUserAuthenticationRequired(false)
+                    .setRandomizedEncryptionRequired(true)
+                    .setEncryptionPaddings(PADDING)
+                    .build());
+            return true;
+        }
+        catch (Exception e)
+        {
+            Timber.tag(TAG).e(e, "Software key fallback also failed");
+            return false;
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.P)
@@ -1068,6 +1152,7 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             case CREATE_KEYSTORE_KEY:
             case IMPORT_HD_KEY:
             case CREATE_HD_KEY:
+            case DERIVE_HD_ACCOUNT:
                 //always unlock for these conditions
                 dialogTitle = context.getString(R.string.provide_authentication);
                 break;
@@ -1137,6 +1222,16 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             case CREATE_KEYSTORE_KEY:
             case CREATE_PRIVATE_KEY:
                 createPassword(operation);
+                break;
+            case DERIVE_HD_ACCOUNT:
+                try
+                {
+                    performHDAccountDerivation();
+                }
+                catch (Exception e)
+                {
+                    keyFailure(e.getMessage());
+                }
                 break;
             default:
                 break;

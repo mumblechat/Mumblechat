@@ -302,6 +302,15 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
         }
         else if (requestCode == IMPORT_REQUEST_CODE)
         {
+            if (resultCode == RESULT_OK && data != null)
+            {
+                // Mark the imported wallet as new so HomeActivity can show security setup
+                Wallet importedWallet = data.getParcelableExtra(WALLET);
+                if (importedWallet != null)
+                {
+                    viewModel.markWalletAsNew(importedWallet.address);
+                }
+            }
             viewModel.fetchWallets();
         }
     }

@@ -113,6 +113,14 @@ public class SplashViewModel extends BaseViewModel
 
         preferenceRepository.setNewWallet(address, true);
     }
+    
+    /**
+     * Mark a wallet as new (for triggering security setup after import)
+     */
+    public void markWalletAsNew(String address)
+    {
+        preferenceRepository.setNewWallet(address, true);
+    }
 
     public void completeAuthentication(Operation taskCode)
     {
