@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D0D1A">
+
+    <!-- Center Logo with Rings -->
+    <FrameLayout
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_gravity="center">
+
+        <!-- Outer Ring - Purple -->
+        <ImageView
+            android:id="@+id/ring_outer"
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:layout_gravity="center"
+            android:src="@drawable/outer_ring_glow" />
+
+        <!-- Middle Ring - Gold -->
+        <ImageView
+            android:id="@+id/ring_middle"
+            android:layout_width="240dp"
+            android:layout_height="240dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ring_gradient" />
+
+        <!-- Inner Ring -->
+        <ImageView
+            android:id="@+id/ring_inner"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_gravity="center"
+            android:src="@drawable/energy_ring" />
+
+        <!-- Center Logo -->
+        <ImageView
+            android:id="@+id/center_logo"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:layout_gravity="center"
+            android:src="@drawable/splash_logo" />
+
+    </FrameLayout>
+
+    <!-- Moving Squirrel - will be animated with sensor -->
+    <ImageView
+        android:id="@+id/squirrel"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="40dp"
+        android:layout_marginBottom="150dp"
+        android:src="@drawable/squirrel_cute" />
+
+</FrameLayout>

@@ -27,13 +27,18 @@
         android:theme="@style/AppTheme.NoActionBar"
         tools:replace="android:name">
 
-        <activity android:name="com.alphawallet.app.ui.HomeActivity"
+        <!-- Interactive Loader with Squirrel - Shows first -->
+        <activity android:name="com.alphawallet.app.ui.InteractiveLoaderActivity"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity android:name="com.alphawallet.app.ui.HomeActivity"
+                android:exported="true">
         </activity>
     </application>
 

@@ -54,7 +54,7 @@
         </shape>
     </item>
     
-    <!-- Center Logo -->
+    <!-- Center Logo - Original RAMESTTA wheel -->
     <item
         android:gravity="center"
         android:width="160dp"
