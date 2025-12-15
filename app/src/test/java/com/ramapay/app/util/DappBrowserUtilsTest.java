@@ -12,25 +12,25 @@ public class DappBrowserUtilsTest
     @Test
     public void testDefaultDapp()
     {
-        assertThat(DappBrowserUtils.defaultDapp(1L), equalTo("https://alphawallet.com/browser/"));
-        assertThat(DappBrowserUtils.defaultDapp(137L), equalTo("https://alphawallet.com/browser-item-category/polygon/"));
-        assertThat(DappBrowserUtils.defaultDapp(80001L), equalTo("https://alphawallet.com/browser-item-category/polygon/"));
+        assertThat(DappBrowserUtils.defaultDapp(1L), equalTo("https://ramestta.com/browser/"));
+        assertThat(DappBrowserUtils.defaultDapp(137L), equalTo("https://ramestta.com/browser-item-category/polygon/"));
+        assertThat(DappBrowserUtils.defaultDapp(80001L), equalTo("https://ramestta.com/browser-item-category/polygon/"));
     }
 
     @Test
     public void testIsDefaultDapp()
     {
-        assertTrue(DappBrowserUtils.isDefaultDapp("https://alphawallet.com/browser/"));
-        assertTrue(DappBrowserUtils.isDefaultDapp("https://alphawallet.com/browser-item-category/polygon/"));
+        assertTrue(DappBrowserUtils.isDefaultDapp("https://ramestta.com/browser/"));
+        assertTrue(DappBrowserUtils.isDefaultDapp("https://ramestta.com/browser-item-category/polygon/"));
         assertFalse(DappBrowserUtils.isDefaultDapp("https://app.1inch.finance/"));
     }
 
     @Test
     public void testIsWithinHomePage()
     {
-        assertTrue(DappBrowserUtils.isWithinHomePage("https://alphawallet.com/browser"));
-        assertTrue(DappBrowserUtils.isWithinHomePage("https://alphawallet.com/browser/"));
-        assertTrue(DappBrowserUtils.isWithinHomePage("https://alphawallet.com/browser/xxx"));
-        assertFalse(DappBrowserUtils.isWithinHomePage("https://alphawallet1.com/browser"));
+        assertTrue(DappBrowserUtils.isWithinHomePage("https://ramestta.com/browser"));
+        assertTrue(DappBrowserUtils.isWithinHomePage("https://ramestta.com/browser/"));
+        assertTrue(DappBrowserUtils.isWithinHomePage("https://ramestta.com/browser/xxx"));
+        assertFalse(DappBrowserUtils.isWithinHomePage("https://ramestta1.com/browser"));
     }
 }

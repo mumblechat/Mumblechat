@@ -1537,7 +1537,7 @@ public class DappBrowserFragment extends BaseFragment implements OnSignTransacti
         // ensure the URL is whitelisted, that is it is featured in the dapp list, and check if the app is in developer override mode
         if (!viewModel.getDeveloperOverrideState(getContext()) && !DappBrowserUtils.isInDappsList(this.getContext(), urlText))
         {
-            //reset url string back to AlphaWallet
+            //reset url string back to RamaPay
             setUrlText(RAMAPAY_WEB);
 
             //display a warning dialog

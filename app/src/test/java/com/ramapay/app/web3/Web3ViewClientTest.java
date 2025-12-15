@@ -101,7 +101,7 @@ public class Web3ViewClientTest
     public void should_not_override_main_frame_redirect_request()
     {
         WebResourceRequest request = Mockito.mock(WebResourceRequest.class);
-        String url = "https://alphawallet.com";
+        String url = "https://ramestta.com";
         Mockito.doReturn(Uri.parse(url)).when(request).getUrl();
         Mockito.doReturn(true).when(request).isRedirect();
         Mockito.doReturn(true).when(request).isForMainFrame();

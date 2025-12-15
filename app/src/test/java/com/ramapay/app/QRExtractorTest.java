@@ -210,11 +210,11 @@ public class QRExtractorTest {
         result = parser.parse("https://rinkeby.aw.app/AQAHoSBfnM-scRdqGWp_UEFOHl90fBDj0M9-ItcPWPUGu2LCYyzBDW7mt9VVyoPkHIk1ElL9xCQM90jeMiYJMYA4l4-JtVQ-UGijRcbFEaCZLSvSsCuXGpApc4zCehw=");
         assertTrue(result.type == EIP681Type.MAGIC_LINK);
 
-        result = parser.parse("https://www.alphawallet.com");
+        result = parser.parse("https://www.ramestta.com");
         System.out.println(result.getAddress());
         assertTrue(result.type == EIP681Type.URL);
 
-        result = parser.parse("http://www.alphawallet.com");
+        result = parser.parse("http://www.ramestta.com");
         System.out.println(result.getAddress());
         assertTrue(result.type == EIP681Type.URL);
     }

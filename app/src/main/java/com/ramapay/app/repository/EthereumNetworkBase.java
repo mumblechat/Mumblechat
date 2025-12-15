@@ -100,7 +100,7 @@ public abstract class EthereumNetworkBase implements EthereumNetworkRepositoryTy
 
     public static final String DEFAULT_INFURA_KEY = "da3717f25f824cc1baa32d812386d93f";
     /* constructing URLs from BuildConfig. In the below area you will see hardcoded key like da3717...
-       These hardcoded keys are fallbacks used by AlphaWallet forks.
+       These hardcoded keys are fallbacks used by RamaPay forks.
 
        Also note: If you are running your own node and wish to use that; currently it must be hardcoded here
        If you wish your node to be the primary node that AW checks then replace the relevant ..._RPC_URL below
@@ -169,7 +169,7 @@ public abstract class EthereumNetworkBase implements EthereumNetworkRepositoryTy
     public static final String BASE_TEST_RPC = usesProductionKey ? "https://base-sepolia.infura.io/v3/" + keyProvider.getInfuraKey() : BASE_FREE_TESTNET_RPC;
     public static final String BASE_TEST_FALLBACK_RPC = usesProductionKey ? BASE_FREE_TESTNET_RPC : "https://sepolia.base.org";
 
-    //Note that AlphaWallet now uses a double node configuration. See class AWHttpService comment 'try primary node'.
+    //Note that RamaPay now uses a double node configuration. See class AWHttpService comment 'try primary node'.
     //If you supply a main RPC and secondary it will try the secondary if the primary node times out after 10 seconds.
     //See the declaration of NetworkInfo - it has a member backupNodeUrl. Put your secondary node here.
 

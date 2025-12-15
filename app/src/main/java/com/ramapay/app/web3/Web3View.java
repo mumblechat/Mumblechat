@@ -186,7 +186,7 @@ public class Web3View extends WebView {
         getSettings().setDomStorageEnabled(true);
         getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
         getSettings().setUserAgentString(getSettings().getUserAgentString()
-                + "AlphaWallet(Platform=Android&AppVersion=" + BuildConfig.VERSION_NAME + ")");
+                + "RamaPay(Platform=Android&AppVersion=" + BuildConfig.VERSION_NAME + ")");
         WebView.setWebContentsDebuggingEnabled(true); //so devs can debug their scripts/pages
         setInitialScale(0);
         getSettings().setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NORMAL);

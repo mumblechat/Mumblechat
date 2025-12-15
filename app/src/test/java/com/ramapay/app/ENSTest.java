@@ -106,7 +106,7 @@ public class ENSTest
     public void testAvatarResolve() throws Exception
     {
         assertEquals(
-            ensResolver.resolveAvatar("alphaid.eth"), ("https://drive.google.com/a/alphawallet.com/file/d/129glXWa1Y2nOZQNwvx8sA5fR1KuGAW4m/view?usp=drivesdk"));
+            ensResolver.resolveAvatar("alphaid.eth"), ("https://drive.google.com/a/ramestta.com/file/d/129glXWa1Y2nOZQNwvx8sA5fR1KuGAW4m/view?usp=drivesdk"));
     }
 
     @Test

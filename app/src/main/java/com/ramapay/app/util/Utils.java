@@ -97,10 +97,10 @@ public class Utils
     private static final String ICON_REPO_ADDRESS_TOKEN = "[TOKEN]";
     private static final String CHAIN_REPO_ADDRESS_TOKEN = "[CHAIN]";
     private static final String TOKEN_LOGO = "/logo.png";
-    public static final String RAMAPAY_REPO_NAME = "https://raw.githubusercontent.com/alphawallet/iconassets/master/";
+    public static final String RAMAPAY_REPO_NAME = "https://raw.githubusercontent.com/obidua/iconassets/master/";
     public static final String TRUST_ICON_REPO_BASE = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/";
     private static final String TRUST_ICON_REPO = TRUST_ICON_REPO_BASE + CHAIN_REPO_ADDRESS_TOKEN + "/assets/" + ICON_REPO_ADDRESS_TOKEN + TOKEN_LOGO;
-    private static final String ALPHAWALLET_ICON_REPO = RAMAPAY_REPO_NAME + ICON_REPO_ADDRESS_TOKEN + TOKEN_LOGO;
+    private static final String RAMAPAY_ICON_REPO = RAMAPAY_REPO_NAME + ICON_REPO_ADDRESS_TOKEN + TOKEN_LOGO;
     private static final String ATTESTATION_PREFIX = "#attestation=";
     private static final String SMART_PASS_PREFIX = "ticket=";
     private static final String TOKEN_ID_CODE = "{id}";
@@ -972,7 +972,7 @@ public class Utils
     @NotNull
     public static String getTokenImageUrl(String address)
     {
-        return ALPHAWALLET_ICON_REPO.replace(ICON_REPO_ADDRESS_TOKEN, address.toLowerCase());
+        return RAMAPAY_ICON_REPO.replace(ICON_REPO_ADDRESS_TOKEN, address.toLowerCase());
     }
 
     public static boolean isContractCall(Context context, String operationName)
@@ -982,7 +982,7 @@ public class Utils
 
     private static final String IPFS_PREFIX = "ipfs://";
     private static final String IPFS_DESIGNATOR = "/ipfs/";
-    public static final String IPFS_INFURA_RESOLVER = "https://alphawallet.infura-ipfs.io";
+    public static final String IPFS_INFURA_RESOLVER = "https://ramapay.infura-ipfs.io";
     public static final String IPFS_MATCHER = "^Qm[1-9A-Za-z]{44}(\\/.*)?$";
 
     public static boolean isIPFS(String url)
@@ -1236,9 +1236,9 @@ public class Utils
         return string != null ? string.replace("\"", "") : null;
     }
 
-    public static boolean isAlphaWallet(Context context)
+    public static boolean isRamaPay(Context context)
     {
-        return context.getPackageName().equals("com.ramapay.wallet");
+        return context.getPackageName().equals("com.ramapay.app");
     }
 
     //Decode heuristic:

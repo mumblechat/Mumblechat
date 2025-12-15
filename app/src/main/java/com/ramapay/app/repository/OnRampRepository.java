@@ -73,7 +73,7 @@ public class OnRampRepository implements OnRampRepositoryType
                 .authority("buy.ramp.network")
                 .appendQueryParameter("hostApiKey", keyProvider.getRampKey())
                 .appendQueryParameter("hostLogoUrl", C.RAMAPAY_LOGO_URI)
-                .appendQueryParameter("hostAppName", "AlphaWallet")
+                .appendQueryParameter("hostAppName", "RamaPay")
                 .appendQueryParameter("userAddress", address);
 
         if (!symbol.isEmpty())

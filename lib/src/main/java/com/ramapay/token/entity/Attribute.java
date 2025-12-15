@@ -385,7 +385,7 @@ public class Attribute {
                 else
                 {
                     return null; // have to revert to this behaviour due to values being zero when tokens are created
-                    //refer to 'AlphaWallet meetup indices' where 'Match' mapping is null but for FIFA is not.
+                    //refer to 'RamaPay meetup indices' where 'Match' mapping is null but for FIFA is not.
                     //throw new NullPointerException("Key " + data.toString() + " can't be mapped.");
                 }
 

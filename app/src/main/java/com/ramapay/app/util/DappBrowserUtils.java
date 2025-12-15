@@ -36,7 +36,7 @@ public class DappBrowserUtils
     private static final String MY_DAPPS_FILE = "mydapps";
     private static final String DAPPS_HISTORY_FILE = "dappshistory";
     private static final String DEFAULT_HOMEPAGE = "https://ramestta.com";
-    private static final String POLYGON_HOMEPAGE = "https://alphawallet.com/browser-item-category/polygon/";
+    private static final String POLYGON_HOMEPAGE = "https://ramestta.com/ecosystem/";
 
     //TODO: Move to database
     public static void saveToPrefs(Context context, List<DApp> myDapps)

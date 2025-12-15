@@ -104,7 +104,7 @@ public class TickerService
     private static final String CURRENCY_CONV = "currency";
     private static final boolean ALLOW_UNVERIFIED_TICKERS = false; //allows verified:false tickers from DEX.GURU. Not recommended
     public static final long TICKER_TIMEOUT = DateUtils.WEEK_IN_MILLIS; //remove ticker if not seen in one week
-    public static final long TICKER_STALE_TIMEOUT = 30 * DateUtils.MINUTE_IN_MILLIS; //Use market API if AlphaWallet market oracle not updating
+    public static final long TICKER_STALE_TIMEOUT = 30 * DateUtils.MINUTE_IN_MILLIS; //Use market API if RamaPay market oracle not updating
     private final KeyProvider keyProvider = KeyProviderFactory.get();
     private final OkHttpClient httpClient;
     private final PreferenceRepositoryType sharedPrefs;

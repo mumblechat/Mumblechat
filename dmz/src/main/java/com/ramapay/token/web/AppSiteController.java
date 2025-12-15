@@ -72,7 +72,7 @@ public class AppSiteController implements AttributeInterface
             "    \"apps\": [],\n" +
             "    \"details\": [\n" +
             "      {\n" +
-            "        \"appID\": \"LRAW5PL536.com.stormbird.alphawallet\",\n" +
+            "        \"appID\": \"LRAW5PL536.com.ramapay.app\",\n" +
             "        \"paths\": [ \"*\" ]\n" +
             "      }\n" +
             "    ]\n" +
@@ -114,7 +114,7 @@ public class AppSiteController implements AttributeInterface
 
     @GetMapping("/")
     public RedirectView home(RedirectAttributes attributes){
-        return new RedirectView("http://alphawallet.com");
+        return new RedirectView("https://ramestta.com");
     }
 
     @GetMapping(value = "/{UniversalLink}")
@@ -127,7 +127,7 @@ public class AppSiteController implements AttributeInterface
     {
         if (universalLink.equals("wc"))
         {
-            return "If you are using AlphaWallet with WalletConnect and facing issues please take the following steps:<br/><br/>\nTry using WalletConnect V2 (or latest version)<br/>\nTry launching the application from within AlphaWallet app's Browser tab.<br/>";
+            return "If you are using RamaPay with WalletConnect and facing issues please take the following steps:<br/><br/>\nTry using WalletConnect V2 (or latest version)<br/>\nTry launching the application from within RamaPay app's Browser tab.<br/>";
         }
         String domain = request.getServerName();
         ParseMagicLink parser = new ParseMagicLink(cryptoFunctions, null);

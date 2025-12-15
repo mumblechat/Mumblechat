@@ -199,7 +199,7 @@ public class AssetDefinitionService implements ParseResult, AttributeInterface
     /**
      * Load all TokenScripts
      * <p>
-     * This order has to be observed because it's an expected developer override order. If a script is placed in the /AlphaWallet directory
+     * This order has to be observed because it's an expected developer override order. If a script is placed in the /RamaPay directory
      * it is expected to override the one fetched from the repo server.
      * If a developer clicks on a script intent this script is expected to override the one fetched from the server.
      */
@@ -227,9 +227,9 @@ public class AssetDefinitionService implements ParseResult, AttributeInterface
     {
         //1. Signed files downloaded from server.
         //2. Files placed in the Android OS external directory (Android/data/<App Package Name>/files)
-        //3. Files placed in the /AlphaWallet directory.
+        //3. Files placed in the /RamaPay directory.
         //Depending on the order placed, files can be overridden. A file downloaded from the server is
-        //overridden by a script for the same token placed in the /AlphaWallet directory.
+        //overridden by a script for the same token placed in the /RamaPay directory.
 
         //First check all the previously parsed scripts to check for any changes
         List<String> handledHashes = new ArrayList<>();
@@ -467,16 +467,16 @@ public class AssetDefinitionService implements ParseResult, AttributeInterface
         try
         {
             File[] files;
-            //first include the files in the AlphaWallet directory - these have the highest priority
+            //first include the files in the RamaPay directory - these have the highest priority
             if (checkReadPermission())
             {
-                File alphaWalletDir = new File(
+                File ramaPayDir = new File(
                         Environment.getExternalStorageDirectory()
                                 + File.separator + HomeViewModel.RAMAPAY_DIR);
 
-                if (alphaWalletDir.exists())
+                if (ramaPayDir.exists())
                 {
-                    files = alphaWalletDir.listFiles();
+                    files = ramaPayDir.listFiles();
                     if (files != null) fileList.addAll(Arrays.asList(files));
                 }
             }
@@ -1586,7 +1586,7 @@ public class AssetDefinitionService implements ParseResult, AttributeInterface
 
         return new String[] {
                 "Accept", "text/xml; charset=UTF-8",
-                "X-Client-Name", "AlphaWallet",
+                "X-Client-Name", "RamaPay",
                 "X-Client-Version", appVersion,
                 "X-Platform-Name", "Android",
                 "X-Platform-Version", OSVersion,
@@ -1643,8 +1643,8 @@ public class AssetDefinitionService implements ParseResult, AttributeInterface
                     XMLDsigDescriptor AWSig = new XMLDsigDescriptor();
                     String hash = tsf.calcMD5();
                     AWSig.result = "pass";
-                    AWSig.issuer = "AlphaWallet";
-                    AWSig.keyName = "AlphaWallet";
+                    AWSig.issuer = "RamaPay";
+                    AWSig.keyName = "RamaPay";
                     AWSig.type = SigReturnType.SIGNATURE_PASS;
                     tsf.determineSignatureType(AWSig);
                     storeCertificateData(hash, AWSig);

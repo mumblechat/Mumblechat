@@ -44,7 +44,7 @@ public class TrustAddressGenerator {
     }
 
     // this won't make sense at all if you didn't read security.md
-    // https://github.com/AlphaWallet/TokenScript/blob/master/doc/security.md
+    // https://github.com/RamaPay/TokenScript/blob/master/doc/security.md
     public static String preimageToAddress(byte[] preimage) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
         Security.addProvider(new BouncyCastleProvider());
 

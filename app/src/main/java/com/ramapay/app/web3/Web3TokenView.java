@@ -122,7 +122,7 @@ public class Web3TokenView extends WebView
         webSettings.setUseWideViewPort(false);
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUserAgentString(webSettings.getUserAgentString()
-                                               + "AlphaWallet(Platform=Android&AppVersion=" + BuildConfig.VERSION_NAME + ")");
+                                               + "RamaPay(Platform=Android&AppVersion=" + BuildConfig.VERSION_NAME + ")");
         WebView.setWebContentsDebuggingEnabled(true);
 
         if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING))

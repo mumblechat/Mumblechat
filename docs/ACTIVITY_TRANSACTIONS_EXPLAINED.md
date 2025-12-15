@@ -12,7 +12,7 @@ The **Activity** tab in RamaPay shows all received and sent transactions for all
 #### A. Frontend (UI Layer)
 - **`ActivityFragment.java`** - Main UI component that displays the activity list
 - **`ActivityAdapter.java`** - RecyclerView adapter that renders transaction items
-- **Location**: `app/src/main/java/com/alphawallet/app/ui/ActivityFragment.java`
+- **Location**: `app/src/main/java/com/ramapay/app/ui/ActivityFragment.java`
 
 #### B. Data Fetching Layer
 - **`TransactionsService.java`** - Orchestrates transaction fetching across all networks
@@ -72,7 +72,7 @@ new NetworkInfo(
 
 ### Ramestta Configuration (Already Implemented ✅)
 
-**Location**: `app/src/main/java/com/alphawallet/app/repository/EthereumNetworkBase.java` (Line 644-653)
+**Location**: `app/src/main/java/com/ramapay/app/repository/EthereumNetworkBase.java` (Line 644-653)
 
 ```java
 // Ramestta Mainnet
@@ -399,7 +399,7 @@ The Activity window will automatically show all transactions (sent/received) for
 
 ### Core Transaction Files:
 ```
-app/src/main/java/com/alphawallet/app/
+app/src/main/java/com/ramapay/app/
 ├── ui/
 │   ├── ActivityFragment.java          # Main Activity UI
 │   └── widget/adapter/

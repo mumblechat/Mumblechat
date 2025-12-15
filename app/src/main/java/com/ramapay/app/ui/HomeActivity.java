@@ -203,7 +203,7 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
             case ON_CREATE:
                 break;
             case ON_START:
-                Timber.tag("LIFE").d("AlphaWallet into foreground");
+                Timber.tag("LIFE").d("RamaPay into foreground");
                 handler.postDelayed(() -> {
                     if (viewModel != null)
                     {
@@ -216,7 +216,7 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
             case ON_PAUSE:
                 break;
             case ON_STOP:
-                Timber.tag("LIFE").d("AlphaWallet into background");
+                Timber.tag("LIFE").d("RamaPay into background");
                 if (viewModel != null && !tokenClicked) viewModel.stopTransactionUpdate();
                 if (viewModel != null) viewModel.outOfFocus();
                 isForeground = false;
@@ -959,9 +959,9 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
             if (warns < 3)
             {
                 AWalletConfirmationDialog cDialog = new AWalletConfirmationDialog(this);
-                cDialog.setTitle(R.string.alphawallet_update);
+                cDialog.setTitle(R.string.ramapay_update);
                 cDialog.setCancelable(true);
-                cDialog.setSmallText("Using an old version of Alphawallet. Please update from the Play Store or Alphawallet website.");
+                cDialog.setSmallText("Using an old version of RamaPay. Please update from the Play Store or RamaPay website.");
                 cDialog.setPrimaryButtonText(R.string.ok);
                 cDialog.setPrimaryButtonListener(v ->
                 {

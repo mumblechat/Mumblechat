@@ -67,7 +67,7 @@ public class DappBrowserTest extends BaseE2ETest
         waitUntilLoaded();
         onView(withId(R.id.url_tv)).perform(pressKey(KeyEvent.KEYCODE_ENTER));
         Helper.wait(2);
-        assertUrlContains("alphawallet.app.entity.DApp@");
+        assertUrlContains("ramapay.app.entity.DApp@");
     }
 
     @Test
