@@ -84,6 +84,7 @@ public class NewSettingsFragment extends BaseFragment
     private SettingsItemView supportSetting;
     private SettingsItemView aboutRamaPaySetting;
     private SettingsItemView walletConnectSetting;
+    private SettingsItemView posSetting;
     private SettingsItemView showSeedPhrase;
     private SettingsItemView showPrivateKey;
     private SettingsItemView nameThisWallet;
@@ -330,6 +331,14 @@ public class NewSettingsFragment extends BaseFragment
                         .withListener(this::onWalletConnectSettingClicked)
                         .build();
 
+        posSetting =
+                new SettingsItemView.Builder(getContext())
+                        .withIcon(R.drawable.ic_qr_rounded_white)
+                        .withTitle(R.string.pos_title)
+                        .withSubtitle(R.string.pos_enter_amount)
+                        .withListener(this::onPosSettingClicked)
+                        .build();
+
         notificationsSetting =
                 new SettingsItemView.Builder(getContext())
                         .withIcon(R.drawable.ic_settings_notifications)
@@ -422,6 +431,8 @@ public class NewSettingsFragment extends BaseFragment
         walletSettingsLayout.addView(nameThisWallet, walletIndex++);
 
         walletSettingsLayout.addView(walletConnectSetting, walletIndex++);
+
+        walletSettingsLayout.addView(posSetting, walletIndex++);
 
         if (CustomViewSettings.getLockedChains().size() == 0)
             systemSettingsLayout.addView(selectNetworksSetting, systemIndex++);
@@ -785,6 +796,13 @@ public class NewSettingsFragment extends BaseFragment
     private void onWalletConnectSettingClicked()
     {
         Intent intent = new Intent(getActivity(), WalletConnectSessionActivity.class);
+        startActivity(intent);
+    }
+
+    private void onPosSettingClicked()
+    {
+        Intent intent = new Intent(getActivity(), PosActivity.class);
+        intent.putExtra(C.Key.WALLET, viewModel.defaultWallet().getValue());
         startActivity(intent);
     }
 

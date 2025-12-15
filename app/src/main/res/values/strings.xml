@@ -1345,4 +1345,61 @@
     <string name="buy_from_ramaswap_desc">Swap other cryptocurrencies for RAMA directly in the decentralized RAMA Swap platform.</string>
     <string name="buy_from_ramaswap_detail_title">🔄 RAMA Swap</string>
     <string name="buy_from_ramaswap_detail_content"><b>What is RAMA Swap?</b>\n\nRAMA Swap is a decentralized exchange (DEX) built on the Ramestta Network for swapping tokens.\n\n<b>How it works:</b>\n1. Connect your wallet to RAMA Swap\n2. Select token to swap FROM\n3. Select RAMA as the token TO\n4. Enter amount and review rate\n5. Approve and confirm transaction\n6. RAMA arrives in your wallet!\n\n<b>Advantages:</b>\n• No registration or KYC required\n• Non-custodial (you keep your keys)\n• Instant swaps on-chain\n• Transparent pricing via AMM\n• Low fees on Ramestta Network\n\n<b>Requirements:</b>\n• Tokens to swap (USDT, ETH, etc.)\n• Small RAMA for gas fees\n• Connected wallet\n\n<b>Tip:</b> Check slippage settings for large trades to avoid price impact.</string>
+
+    <!-- Point of Sale (PoS) -->
+    <string name="pos_title">Point of Sale</string>
+    <string name="pos_enter_amount">Enter Amount</string>
+    <string name="pos_amount">Amount</string>
+    <string name="pos_receive_in">Receive Payment In</string>
+    <string name="pos_customer_pays">Customer Pays:</string>
+    <string name="pos_generate_qr">Generate Payment QR</string>
+    <string name="pos_scan_to_pay">Scan to Pay</string>
+    <string name="pos_waiting_for_payment">Waiting for payment…</string>
+    <string name="pos_payment_received">Payment Received!</string>
+    <string name="pos_new_payment">New Payment</string>
+    <string name="pos_invoice">Invoice: %1$s</string>
+    <string name="pos_select_currency">Select Currency</string>
+    <string name="pos_select_token">Select Token</string>
+    <string name="pos_no_exchange_rate">Exchange rate not available</string>
+    <string name="pos_enter_valid_amount">Please enter a valid amount</string>
+    <string name="pos_payment_history">Payment History</string>
+    <string name="pos_no_payments">No payments yet</string>
+    <string name="pos_select_category">Payment For</string>
+    <string name="pos_add_remark">Add Remark (Optional)</string>
+    <string name="pos_remark_hint">e.g., Order #123, Customer name</string>
+    <string name="pos_payment_timeout">Payment timed out. Tap to retry.</string>
+    
+    <!-- Business Profile -->
+    <string name="business_profile">Business Profile</string>
+    <string name="business_logo">Business Logo</string>
+    <string name="change_logo">Change Logo</string>
+    <string name="business_information">Business Information</string>
+    <string name="business_name">Business Name *</string>
+    <string name="business_type">Business Type</string>
+    <string name="owner_name">Owner Name</string>
+    <string name="contact_information">Contact Information</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="email_optional">Email (Optional)</string>
+    <string name="address_information">Address</string>
+    <string name="street_address">Street Address</string>
+    <string name="city">City</string>
+    <string name="state">State</string>
+    <string name="country">Country</string>
+    <string name="pincode">PIN Code</string>
+    <string name="tax_information">Tax Information</string>
+    <string name="gst_number_optional">GST/Tax Number (Optional)</string>
+    <string name="default_currency">Default Currency</string>
+    <string name="save_profile">Save Profile</string>
+    <string name="profile_saved">Profile saved successfully</string>
+    <string name="error_saving_profile">Error saving profile</string>
+    <string name="business_name_required">Business name is required</string>
+    <string name="setup_business_profile">Setup Business Profile</string>
+    <string name="feature_coming_soon">Feature coming soon</string>
+    
+    <!-- Payment Confirmation -->
+    <string name="payment_to">Payment To</string>
+    <string name="payment_for">Payment For</string>
+    <string name="payment_amount">Amount</string>
+    <string name="payment_confirm">Confirm Payment</string>
+    <string name="merchant_verified">Verified Merchant</string>
 </resources>

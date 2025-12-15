@@ -204,6 +204,14 @@
         <activity
                 android:name=".ui.MyAddressActivity"
                 android:label="@string/title_my_address" />
+        <activity
+                android:name=".ui.PosActivity"
+                android:label="@string/pos_title"
+                android:screenOrientation="portrait" />
+        <activity
+                android:name=".ui.BusinessProfileActivity"
+                android:label="@string/business_profile"
+                android:screenOrientation="portrait" />
 
         <activity
                 android:name=".ui.SendActivity"

@@ -520,6 +520,66 @@ public class AWRealmMigration implements RealmMigration
             }
             oldVersion = 55;
         }
+
+        // Version 56: Add PoS Invoice tracking
+        if (oldVersion == 55)
+        {
+            RealmObjectSchema realmPosInvoice = schema.get("RealmPosInvoice");
+            if (realmPosInvoice == null)
+            {
+                schema.create("RealmPosInvoice")
+                        .addField("invoiceId", String.class, FieldAttribute.PRIMARY_KEY)
+                        .addField("invoiceHash", String.class)
+                        .addField("merchantAddress", String.class)
+                        .addField("merchantName", String.class)
+                        .addField("cryptoAmount", String.class)
+                        .addField("tokenDecimals", int.class)
+                        .addField("tokenAddress", String.class)
+                        .addField("tokenSymbol", String.class)
+                        .addField("chainId", long.class)
+                        .addField("fiatAmount", String.class)
+                        .addField("fiatCurrency", String.class)
+                        .addField("exchangeRate", double.class)
+                        .addField("status", String.class)
+                        .addField("createdAt", long.class)
+                        .addField("expiresAt", long.class)
+                        .addField("paidAt", long.class)
+                        .addField("txHash", String.class)
+                        .addField("payerAddress", String.class)
+                        .addField("note", String.class)
+                        .addField("itemsJson", String.class)
+                        .addField("category", String.class)
+                        .addField("businessLogoUrl", String.class);
+            }
+            oldVersion = 56;
+        }
+
+        // Version 57: Add Business Profile for PoS merchants
+        if (oldVersion == 56)
+        {
+            RealmObjectSchema realmBusinessProfile = schema.get("RealmBusinessProfile");
+            if (realmBusinessProfile == null)
+            {
+                schema.create("RealmBusinessProfile")
+                        .addField("walletAddress", String.class, FieldAttribute.PRIMARY_KEY)
+                        .addField("businessName", String.class)
+                        .addField("businessType", String.class)
+                        .addField("ownerName", String.class)
+                        .addField("phoneNumber", String.class)
+                        .addField("email", String.class)
+                        .addField("address", String.class)
+                        .addField("city", String.class)
+                        .addField("state", String.class)
+                        .addField("country", String.class)
+                        .addField("pincode", String.class)
+                        .addField("gstNumber", String.class)
+                        .addField("logoUrl", String.class)
+                        .addField("defaultCurrency", String.class)
+                        .addField("createdAt", long.class)
+                        .addField("updatedAt", long.class);
+            }
+            oldVersion = 57;
+        }
     }
 
     @Override

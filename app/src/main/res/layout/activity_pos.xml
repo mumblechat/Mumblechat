@@ -1,0 +1,497 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:colorBackground">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:popupTheme="@style/ThemeOverlay.MaterialComponents.Light"
+            app:navigationIcon="@drawable/ic_arrow_back" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Header -->
+            <TextView
+                android:id="@+id/text_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/pos_title"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="?android:textColorPrimary"
+                android:gravity="center"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Amount Input Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_amount_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pos_enter_amount"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <!-- Currency Selector -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/button_currency"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="56dp"
+                            android:text="INR"
+                            android:textSize="16sp"
+                            app:icon="@drawable/ic_arrow_drop_down"
+                            app:iconGravity="end"
+                            android:layout_marginEnd="8dp" />
+
+                        <!-- Fiat Amount Input -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/layout_fiat_amount"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:hint="@string/pos_amount">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/edit_fiat_amount"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="numberDecimal"
+                                android:textSize="24sp"
+                                android:gravity="end" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Token Selection -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_token_selection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pos_receive_in"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="8dp" />
+
+                    <LinearLayout
+                        android:id="@+id/layout_token_selector"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="?attr/selectableItemBackground"
+                        android:padding="8dp">
+
+                        <ImageView
+                            android:id="@+id/image_token"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_rama_logo"
+                            android:layout_marginEnd="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/text_token_symbol"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="RAMA"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="?android:textColorPrimary" />
+
+                            <TextView
+                                android:id="@+id/text_token_name"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Ramestta"
+                                android:textSize="14sp"
+                                android:textColor="?android:textColorSecondary" />
+
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_arrow_drop_down"
+                            app:tint="?android:textColorSecondary" />
+
+                    </LinearLayout>
+
+                    <!-- Converted Amount Display -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="12dp"
+                        android:padding="8dp"
+                        android:background="@drawable/background_rounded_subtle">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/pos_customer_pays"
+                            android:textSize="14sp"
+                            android:textColor="?android:textColorSecondary" />
+
+                        <TextView
+                            android:id="@+id/text_crypto_amount"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="0.00 RAMA"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/brand"
+                            android:gravity="end" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Payment Category and Remark -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_payment_details"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Category Selector -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pos_select_category"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="8dp" />
+
+                    <LinearLayout
+                        android:id="@+id/layout_category_selector"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/background_rounded_subtle"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:id="@+id/text_category"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="📋 Select Category"
+                            android:textSize="16sp"
+                            android:textColor="?android:textColorPrimary" />
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_arrow_drop_down"
+                            app:tint="?android:textColorSecondary" />
+
+                    </LinearLayout>
+
+                    <!-- Remark Input -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_remark"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/pos_add_remark">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/input_remark"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:maxLines="2" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- QR Code Display (Initially Hidden) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_qr_code"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pos_scan_to_pay"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:textColorPrimary"
+                        android:layout_marginBottom="16dp" />
+
+                    <ImageView
+                        android:id="@+id/image_qr_code"
+                        android:layout_width="250dp"
+                        android:layout_height="250dp"
+                        android:scaleType="fitCenter"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Amount Display on QR Screen -->
+                    <TextView
+                        android:id="@+id/text_qr_fiat_amount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹500.00"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:textColorPrimary" />
+
+                    <TextView
+                        android:id="@+id/text_qr_crypto_amount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="≈ 10.00 RAMA"
+                        android:textSize="18sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginTop="4dp" />
+
+                    <!-- Invoice ID -->
+                    <TextView
+                        android:id="@+id/text_invoice_id"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Invoice: ABC123"
+                        android:textSize="12sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginTop="16dp" />
+
+                    <!-- Waiting indicator -->
+                    <LinearLayout
+                        android:id="@+id/layout_waiting"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="16dp">
+
+                        <ProgressBar
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/text_waiting_status"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/pos_waiting_for_payment"
+                            android:textSize="14sp"
+                            android:textColor="?android:textColorSecondary" />
+
+                    </LinearLayout>
+
+                    <!-- Timer Display -->
+                    <TextView
+                        android:id="@+id/text_timer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="5:00"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/brand"
+                        android:layout_marginTop="8dp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Payment Success (Initially Hidden) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_payment_success"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/positive"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:src="@drawable/ic_check_circle"
+                        app:tint="@android:color/white"
+                        android:layout_marginBottom="16dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pos_payment_received"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/text_success_amount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹500.00"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:id="@+id/text_success_crypto"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="10.00 RAMA"
+                        android:textSize="18sp"
+                        android:textColor="@android:color/white"
+                        android:alpha="0.9"
+                        android:layout_marginTop="4dp" />
+
+                    <TextView
+                        android:id="@+id/text_success_tx"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TX: 0xabc..."
+                        android:textSize="12sp"
+                        android:textColor="@android:color/white"
+                        android:alpha="0.7"
+                        android:layout_marginTop="16dp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Generate QR Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_generate_qr"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/pos_generate_qr"
+                android:textSize="16sp"
+                app:cornerRadius="12dp"
+                android:layout_marginTop="16dp" />
+
+            <!-- New Payment Button (Initially Hidden) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_new_payment"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/pos_new_payment"
+                android:textSize="16sp"
+                app:cornerRadius="12dp"
+                android:visibility="gone"
+                android:layout_marginTop="8dp" />
+
+            <!-- Cancel Payment Button (Initially Hidden) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_cancel"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="@string/action_cancel"
+                android:textSize="14sp"
+                android:visibility="gone"
+                android:layout_marginTop="8dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
