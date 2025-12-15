@@ -422,6 +422,11 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
         {
             viewModel.setNewWallet(wallet.address, false);
             
+            // Launch network selection for new wallets
+            Intent intent = new Intent(this, NetworkToggleActivity.class);
+            intent.putExtra(C.EXTRA_SINGLE_ITEM, false);
+            networkSettingsHandler.launch(intent);
+            
             // Verify wallet key is properly stored before showing success
             // For derived HD accounts, this checks the parent wallet's keystore
             // Use a delayed verification to allow keystore operations to complete
@@ -458,9 +463,6 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
                     }, 500);
                 }
             }, 300);
-            
-            // Network selection is already handled in WalletActionsActivity
-            // So we don't need to launch NetworkToggleActivity here again
         }
     }
     
