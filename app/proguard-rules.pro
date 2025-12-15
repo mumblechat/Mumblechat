@@ -66,12 +66,12 @@
 -keep class wallet.core.jni.proto.** { *; }
 
 #entities, jsInterface & listeners
--keep class com.alphawallet.token.** { *; }
--keep class com.alphawallet.app.walletconnect.** { *; }
--keep class com.alphawallet.app.web3.** { *; }
--keep class com.alphawallet.app.web3j.** { *; }
--keep class com.alphawallet.app.entity.** { *; }
--keep class io.stormbird.wallet.model.api.** { *; }
+-keep class com.ramapay.token.** { *; }
+-keep class com.ramapay.app.walletconnect.** { *; }
+-keep class com.ramapay.app.web3.** { *; }
+-keep class com.ramapay.app.web3j.** { *; }
+-keep class com.ramapay.app.entity.** { *; }
+-keep class com.ramapay.wallet.model.api.** { *; }
 
 -keep public class java.beans.* { *; }
 -keep class jnr.unixsocket.* { *; }

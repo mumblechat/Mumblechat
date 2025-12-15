@@ -31,7 +31,7 @@
 
     </FrameLayout>
 
-    <com.alphawallet.app.widget.UserAvatar
+    <com.ramapay.app.widget.UserAvatar
         android:id="@+id/user_address_blockie"
         android:layout_width="24dp"
         android:layout_height="24dp"

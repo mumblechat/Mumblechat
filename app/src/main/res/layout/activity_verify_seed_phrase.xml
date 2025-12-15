@@ -254,7 +254,7 @@
 
     </ScrollView>
 
-    <com.alphawallet.app.widget.FunctionButtonBar
+    <com.ramapay.app.widget.FunctionButtonBar
         android:id="@+id/layoutButtons"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

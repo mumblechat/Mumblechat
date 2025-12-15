@@ -39,6 +39,6 @@ dependencies {
 }
 
 bootRun {
-	main = 'com.alphawallet.token.web.AppSiteController'
+	main = 'com.ramapay.token.web.AppSiteController'
 }
 

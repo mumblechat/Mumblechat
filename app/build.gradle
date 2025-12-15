@@ -33,13 +33,13 @@ detekt {
 android_lint_reporter {
     lintFilePath = "./build/reports/lint-results-analyticsDebug.xml"
     detektFilePath = "./build/reports/detekt/detekt.xml"
-    githubOwner = "AlphaWallet"
-    githubRepositoryName = "alpha-wallet-android"
+    githubOwner = "obidua"
+    githubRepositoryName = "RamaPay-android"
     showLog = true // optional - default to false, show extra information, will slow things down
 }
 
 android {
-    namespace 'com.alphawallet.app'
+    namespace 'com.ramapay.app'
     compileSdk 34
 
     sourceSets {

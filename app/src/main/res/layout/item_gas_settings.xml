@@ -125,7 +125,7 @@
                 android:visibility="gone"
                 tools:visibility="visible">
             
-            <com.alphawallet.app.widget.PercentageProgressView
+            <com.ramapay.app.widget.PercentageProgressView
                     android:id="@+id/gas_progress_percentage"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />

@@ -1,0 +1,67 @@
+package com.ramapay.app.ui.widget.holder;
+
+import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.ramapay.app.R;
+import com.ramapay.app.entity.tokendata.TokenGroup;
+import com.ramapay.app.ui.widget.TokensAdapterCallback;
+
+public class HeaderHolder extends BinderViewHolder<TokenGroup> {
+    public static final int VIEW_TYPE = 2022;
+
+    private final TextView title;
+    private final ImageButton btnAddToken;
+    private TokensAdapterCallback tokensAdapterCallback;
+
+    @Override
+    public void bind(@Nullable TokenGroup data, @NonNull Bundle addition) {
+        title.setText(groupToHeader(data));
+        // Only show Add Token button for Assets header
+        if (data == TokenGroup.ASSET && tokensAdapterCallback != null) {
+            btnAddToken.setVisibility(View.VISIBLE);
+        } else {
+            btnAddToken.setVisibility(View.GONE);
+        }
+    }
+
+    private String groupToHeader(TokenGroup data)
+    {
+        if (data == null) return getString(R.string.assets);
+        switch (data)
+        {
+            case ASSET:
+            default:
+                return getString(R.string.assets);
+            case DEFI:
+                return getString(R.string.defi_header);
+            case GOVERNANCE:
+                return getString(R.string.governance_header);
+            case NFT:
+                return getString(R.string.collectibles_header);
+            case SPAM:
+                return getString(R.string.spam_header);
+            case ATTESTATION:
+                return getString(R.string.attestations_header);
+        }
+    }
+
+    public HeaderHolder(int res_id, ViewGroup parent) {
+        super(res_id, parent);
+        title = findViewById(R.id.title);
+        btnAddToken = findViewById(R.id.btn_add_token);
+    }
+
+    public void setOnTokenClickListener(TokensAdapterCallback callback) {
+        this.tokensAdapterCallback = callback;
+        if (btnAddToken != null && callback != null) {
+            btnAddToken.setOnClickListener(v -> callback.onAddToken());
+        }
+    }
+}

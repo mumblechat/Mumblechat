@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:padding="@dimen/standard_16">
 
-    <com.alphawallet.app.widget.BottomSheetHandleView
+    <com.ramapay.app.widget.BottomSheetHandleView
         android:layout_width="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_height="wrap_content" />

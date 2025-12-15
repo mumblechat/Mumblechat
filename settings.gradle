@@ -41,5 +41,5 @@ private static String getPAT() {
     new String(firstEncode.decodeBase64())
 }
 
-rootProject.name = "AlphaWallet"
+rootProject.name = "RamaPay"
 include ':app', ':lib', ':hardware_stub' //, ':dmz' //TODO: Fix DMZ for Gradle 8

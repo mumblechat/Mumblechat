@@ -142,7 +142,7 @@
         </LinearLayout>
 
         <!-- Progress View -->
-        <com.alphawallet.app.widget.PercentageProgressView
+        <com.ramapay.app.widget.PercentageProgressView
             android:id="@+id/percentage_progress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

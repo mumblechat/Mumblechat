@@ -8,7 +8,7 @@
 
     <include layout="@layout/layout_simple_toolbar" />
 
-    <com.alphawallet.app.widget.InputAddress
+    <com.ramapay.app.widget.InputAddress
         android:id="@+id/input_address_view"
         android:layout_below="@id/toolbar"
         android:layout_width="match_parent"
@@ -120,7 +120,7 @@
 
     </LinearLayout>
 
-    <com.alphawallet.app.widget.FunctionButtonBar
+    <com.ramapay.app.widget.FunctionButtonBar
         android:id="@+id/layoutButtons"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -139,7 +139,7 @@
         android:visibility="gone"
         android:orientation="vertical">
 
-        <com.alphawallet.app.widget.PercentageProgressView
+        <com.ramapay.app.widget.PercentageProgressView
             android:id="@+id/percentage_progress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
