@@ -97,6 +97,9 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
     private final MutableLiveData<Boolean> noWalletsError = new MutableLiveData<>();
     private final MutableLiveData<Map<String, Token[]>> baseTokens = new MutableLiveData<>();
     private final MutableLiveData<String> getPublicKey = new MutableLiveData<>();
+    private final MutableLiveData<Wallet> discoveryAuthComplete = new MutableLiveData<>();
+    private Wallet pendingDiscoveryWallet;
+    private volatile String currentScanningNetwork = "";
     private NetworkInfo currentNetwork;
     private final Map<String, Wallet> walletBalances = new HashMap<>();
     private final Map<String, TokensService> walletServices = new ConcurrentHashMap<>();
@@ -194,6 +197,11 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
     public LiveData<String> getPublicKey()
     {
         return getPublicKey;
+    }
+
+    public LiveData<Wallet> discoveryAuthComplete()
+    {
+        return discoveryAuthComplete;
     }
 
     public void setDefaultWallet(Wallet wallet)
@@ -531,12 +539,33 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
     
     public void requestAuthentication(Activity activity, Wallet wallet, Operation operation)
     {
-        keyService.requestAuthentication(activity, wallet, operation);
+        if (operation == Operation.DISCOVER_ACCOUNTS)
+        {
+            pendingDiscoveryWallet = wallet;
+            // Use callback version to handle biometric auth success path
+            keyService.requestAuthenticationWithCallback(activity, wallet, operation, () -> {
+                // This runs when biometric auth succeeds
+                if (pendingDiscoveryWallet != null)
+                {
+                    discoveryAuthComplete.postValue(pendingDiscoveryWallet);
+                    pendingDiscoveryWallet = null;
+                }
+            });
+        }
+        else
+        {
+            keyService.requestAuthentication(activity, wallet, operation);
+        }
     }
 
     public void completeAuthentication(Operation taskCode)
     {
         keyService.completeAuthentication(taskCode);
+        if (taskCode == Operation.DISCOVER_ACCOUNTS && pendingDiscoveryWallet != null)
+        {
+            discoveryAuthComplete.postValue(pendingDiscoveryWallet);
+            pendingDiscoveryWallet = null;
+        }
     }
 
     public void failedAuthentication(Operation taskCode)
@@ -899,12 +928,67 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
     }
 
     /**
+     * Callback interface for wallet store operations
+     */
+    public interface WalletStoreCallback {
+        void onWalletStored(Wallet wallet);
+        void onStoreFailed(String error);
+    }
+
+    /**
+     * Store a derived HD account with callback for sequential operations
+     * Waits for store to complete before calling callback
+     * @param address The derived account address
+     * @param authLevel The authentication level
+     * @param parentAddress The parent HD wallet address
+     * @param hdKeyIndex The derivation index
+     * @param callback Callback when store completes or fails
+     */
+    public void storeDerivedHDAccountWithCallback(String address, KeyService.AuthenticationLevel authLevel, 
+                                                   String parentAddress, int hdKeyIndex, WalletStoreCallback callback)
+    {
+        if (address == null || address.equals(ZERO_ADDRESS))
+        {
+            if (callback != null) {
+                callback.onStoreFailed("Invalid wallet address");
+            }
+            return;
+        }
+        
+        Wallet wallet = new Wallet(address);
+        wallet.type = WalletType.HDKEY;
+        wallet.authLevel = authLevel;
+        wallet.parentAddress = parentAddress;
+        wallet.hdKeyIndex = hdKeyIndex;
+        
+        android.util.Log.d("WalletsViewModel", "Storing wallet at index " + hdKeyIndex + ": " + address);
+        
+        fetchWalletsInteract.storeWallet(wallet)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                    account -> {
+                        android.util.Log.d("WalletsViewModel", "Successfully stored wallet at index " + hdKeyIndex + ": " + address);
+                        if (callback != null) {
+                            callback.onWalletStored(wallet);
+                        }
+                    }, 
+                    error -> {
+                        android.util.Log.e("WalletsViewModel", "Failed to store wallet at index " + hdKeyIndex + ": " + error.getMessage());
+                        if (callback != null) {
+                            callback.onStoreFailed(error.getMessage());
+                        }
+                    }
+                ).isDisposed();
+    }
+
+    /**
      * Interface for account discovery callbacks
      */
     public interface AccountDiscoveryCallback {
         void onAccountsDiscovered(java.util.List<Integer> activeIndices);
         void onDiscoveryFailed(String error);
-        void onProgress(int current, int total, String currentAddress, int foundCount);
+        void onProgress(int current, int total, String currentAddress, int foundCount, String networkName);
         void onAuthenticationRequired();
     }
 
@@ -917,7 +1001,7 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
     public void discoverDerivedAccounts(Wallet masterWallet, AccountDiscoveryCallback callback)
     {
         final int GAP_LIMIT = 20; // Standard BIP44 gap limit
-        final int MAX_SCAN = 50; // Maximum accounts to scan
+        final int MAX_SCAN = 20; // Maximum accounts to scan
         
         disposable = io.reactivex.Observable.create((io.reactivex.ObservableEmitter<java.util.List<Integer>> emitter) -> {
             java.util.List<Integer> activeIndices = new java.util.ArrayList<>();
@@ -933,17 +1017,18 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
                         final int currentIndex = index;
                         final String currentAddr = address;
                         final int currentFoundCount = activeIndices.size();
+                        final String scanningNetwork = currentScanningNetwork;
                         AndroidSchedulers.mainThread().scheduleDirect(() -> 
-                            callback.onProgress(currentIndex + 1, MAX_SCAN, currentAddr, currentFoundCount));
+                            callback.onProgress(currentIndex + 1, MAX_SCAN, currentAddr, currentFoundCount, scanningNetwork));
                         
                         android.util.Log.d("WalletsViewModel", "Checking address at index " + index + ": " + address);
                         
-                        // Check if this address has any activity on multiple chains
-                        boolean hasActivity = checkAddressHasActivity(address);
-                        if (hasActivity) {
+                        // Check if this address has any activity on ETH, BNB, RAMA chains
+                        NetworkResult result = checkAddressHasActivity(address);
+                        if (result.hasActivity) {
                             activeIndices.add(index);
                             consecutiveEmpty = 0;
-                            android.util.Log.d("WalletsViewModel", "Found active account at index " + index + ": " + address);
+                            android.util.Log.d("WalletsViewModel", "Found active account at index " + index + ": " + address + " on " + result.networkName);
                         } else {
                             consecutiveEmpty++;
                         }
@@ -992,24 +1077,25 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
 
     /**
      * Check if an address has any activity (balance or transactions)
-     * Checks multiple chains to ensure comprehensive discovery
+     * Checks ETH, BNB, and RAMA chains
      * @param address The address to check
-     * @return true if the address has activity
+     * @return NetworkResult with activity status and network name
      */
-    private boolean checkAddressHasActivity(String address)
+    private NetworkResult checkAddressHasActivity(String address)
     {
-        // List of RPC endpoints to check
-        String[] rpcEndpoints = {
-            "https://mainnet.infura.io/v3/da3717f25f824cc1baa32d812386d93f", // Ethereum Mainnet
-            "https://polygon-rpc.com", // Polygon
-            "https://bsc-dataseed.binance.org", // BSC
-            "https://arb1.arbitrum.io/rpc", // Arbitrum
-            "https://blockchain.ramestta.com" // Ramesta
+        // List of RPC endpoints to check with network names
+        String[][] networks = {
+            {"https://mainnet.infura.io/v3/da3717f25f824cc1baa32d812386d93f", "Ethereum"},
+            {"https://bsc-dataseed.binance.org", "BNB Chain"},
+            {"https://blockchain.ramestta.com", "RAMA Network"}
         };
         
-        for (String endpoint : rpcEndpoints) {
+        for (String[] network : networks) {
+            String endpoint = network[0];
+            String networkName = network[1];
             try {
-                android.util.Log.d("WalletsViewModel", "Checking address " + address + " on " + endpoint);
+                android.util.Log.d("WalletsViewModel", "Checking address " + address + " on " + networkName);
+                currentScanningNetwork = networkName;
                 org.web3j.protocol.Web3j web3j = org.web3j.protocol.Web3j.build(
                     new org.web3j.protocol.http.HttpService(endpoint));
                 
@@ -1018,9 +1104,9 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
                     web3j.ethGetTransactionCount(address, org.web3j.protocol.core.DefaultBlockParameterName.LATEST).send();
                 
                 if (txCount.getTransactionCount().compareTo(java.math.BigInteger.ZERO) > 0) {
-                    android.util.Log.d("WalletsViewModel", "Found activity on " + endpoint + ": tx count = " + txCount.getTransactionCount());
+                    android.util.Log.d("WalletsViewModel", "Found activity on " + networkName + ": tx count = " + txCount.getTransactionCount());
                     web3j.shutdown();
-                    return true;
+                    return new NetworkResult(true, networkName);
                 }
                 
                 // Check balance
@@ -1030,16 +1116,29 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
                 web3j.shutdown();
                 
                 if (balance.getBalance().compareTo(java.math.BigInteger.ZERO) > 0) {
-                    android.util.Log.d("WalletsViewModel", "Found activity on " + endpoint + ": balance = " + balance.getBalance());
-                    return true;
+                    android.util.Log.d("WalletsViewModel", "Found activity on " + networkName + ": balance = " + balance.getBalance());
+                    return new NetworkResult(true, networkName);
                 }
             } catch (Exception e) {
-                android.util.Log.w("WalletsViewModel", "Failed to check " + endpoint + ": " + e.getMessage());
-                // Continue to next endpoint
+                android.util.Log.w("WalletsViewModel", "Failed to check " + networkName + ": " + e.getMessage());
+                // Continue to next network
                 continue;
             }
         }
         
-        return false;
+        return new NetworkResult(false, null);
+    }
+    
+    /**
+     * Result class for network checking
+     */
+    public static class NetworkResult {
+        public final boolean hasActivity;
+        public final String networkName;
+        
+        public NetworkResult(boolean hasActivity, String networkName) {
+            this.hasActivity = hasActivity;
+            this.networkName = networkName;
+        }
     }
 }

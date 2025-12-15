@@ -148,6 +148,7 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
     private CreateWalletCallbackInterface callbackInterface;
     private ImportWalletCallback importCallback;
     private SignAuthenticationCallback signCallback;
+    private Runnable discoveryCallback; // Callback for DISCOVER_ACCOUNTS operation
     private final AnalyticsServiceType<AnalyticsProperties> analyticsService;
     private boolean requireAuthentication = false;
 
@@ -1207,6 +1208,25 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
     {
         this.activity = activity;
         this.currentWallet = wallet;
+        this.discoveryCallback = null; // Clear any previous callback
+        checkAuthentication(operation);
+    }
+    
+    /**
+     * Request authentication for discovery with callback
+     * @param activity The activity context
+     * @param wallet The wallet context
+     * @param operation The operation requiring authentication
+     * @param callback Callback to run when authentication completes successfully
+     */
+    public void requestAuthenticationWithCallback(Activity activity, Wallet wallet, Operation operation, Runnable callback)
+    {
+        this.activity = activity;
+        this.currentWallet = wallet;
+        if (operation == Operation.DISCOVER_ACCOUNTS)
+        {
+            this.discoveryCallback = callback;
+        }
         checkAuthentication(operation);
     }
 
@@ -1308,6 +1328,15 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
                 catch (Exception e)
                 {
                     keyFailure(e.getMessage());
+                }
+                break;
+            case DISCOVER_ACCOUNTS:
+                // Call the discovery callback if set (for biometric auth path)
+                if (discoveryCallback != null)
+                {
+                    Runnable callback = discoveryCallback;
+                    discoveryCallback = null;
+                    callback.run();
                 }
                 break;
             default:

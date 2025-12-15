@@ -73,6 +73,16 @@
         android:singleLine="true" />
 
     <TextView
+        android:id="@+id/network_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Scanning on Ethereum..."
+        android:textSize="12sp"
+        android:textColor="@color/brand"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/found_count"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

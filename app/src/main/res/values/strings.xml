@@ -146,6 +146,13 @@
     <string name="add_next_account">Add Next Account</string>
     <string name="add_next_account_description">Create the next sequential derived account</string>
     <string name="discover_all_accounts">Discover All Accounts</string>
+    <string name="add_bulk_wallets">Add Bulk Wallets</string>
+    <string name="add_bulk_wallets_desc">Add multiple wallets at once</string>
+    <string name="how_many_wallets">How many wallets to add?</string>
+    <string name="bulk_add_message">Enter the number of wallets you want to add (1–20). They will be created from index %1$d onwards.</string>
+    <string name="add_wallets">Add %d Wallets</string>
+    <string name="adding_wallets_progress">Adding wallet %1$d of %2$d...</string>
+    <string name="wallets_added_success">Successfully added %d wallets</string>
     <string name="discover_all_accounts_description">Scan blockchain for accounts with transaction history</string>
     <string name="discover_all_accounts_desc_multi">Scan all master wallets for active accounts</string>
     <string name="recover_missing_account">Recover Missing Account</string>
@@ -163,11 +170,12 @@
     <string name="discovering_accounts">Discovering Accounts</string>
     <string name="scanning_blockchain_for_activity">Scanning blockchain for account activity across multiple networks...</string>
     <string name="scanning_account">Scanning account %1$d of %2$d...</string>
+    <string name="checking_on_network">Checking on %s</string>
     <string name="accounts_found_so_far">Found %d accounts with activity</string>
     <string name="accounts_found">Found %d accounts with activity</string>
     <string name="no_accounts_found">No new accounts found with blockchain activity</string>
     <string name="all_accounts_already_imported">Found %d accounts with activity, but all are already imported.</string>
-    <string name="discovery_explanation">The discovery scans Ethereum, Polygon, BSC, Arbitrum, and Ramesta networks for accounts with transactions or balance.</string>
+    <string name="discovery_explanation">The discovery scans Ethereum, BNB Chain, and RAMA Network for accounts with transactions or balance.</string>
     <string name="add_all_accounts">Add All %d Accounts</string>
     <string name="add_manually">Add Manually One by One</string>
     <string name="skip_discovery">Skip</string>

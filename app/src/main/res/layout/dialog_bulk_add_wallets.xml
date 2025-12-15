@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/background_bottom_sheet">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/add_bulk_wallets"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/wallet_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Master Wallet 1"
+        android:textSize="14sp"
+        android:textColor="@color/brand"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/message_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/bulk_add_message"
+        android:textSize="14sp"
+        android:textColor="?android:textColorSecondary"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/how_many_wallets"
+        android:textSize="14sp"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/count_input"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/background_password_entry"
+        android:hint="5"
+        android:inputType="number"
+        android:maxLength="2"
+        android:paddingHorizontal="16dp"
+        android:textColor="?android:textColorPrimary"
+        android:textColorHint="?android:textColorTertiary"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/cancel_button"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="@string/action_cancel"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/add_button"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/add_wallets"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/brand" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/add_button_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+
+</LinearLayout>

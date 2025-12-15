@@ -182,6 +182,7 @@ public class WalletsActivity extends BaseActivity implements
             viewModel.createWalletError().observe(this, this::onCreateWalletError);
             viewModel.noWalletsError().observe(this, this::noWallets);
             viewModel.baseTokens().observe(this, this::updateBaseTokens);
+            viewModel.discoveryAuthComplete().observe(this, this::onDiscoveryAuthComplete);
         }
 
         disposable = viewModel.getWalletInteract().find()
@@ -329,12 +330,7 @@ public class WalletsActivity extends BaseActivity implements
             if (resultCode == RESULT_OK)
             {
                 viewModel.completeAuthentication(taskCode);
-                
-                // If this was discovery authentication, start the actual discovery
-                if (taskCode == Operation.DISCOVER_ACCOUNTS && pendingDiscoveryWallet != null)
-                {
-                    performAccountDiscovery(pendingDiscoveryWallet);
-                }
+                // Discovery will be started via LiveData observer in onDiscoveryAuthComplete
             }
             else
             {
@@ -400,6 +396,17 @@ public class WalletsActivity extends BaseActivity implements
     }
     
     /**
+     * Called when discovery authentication completes via LiveData (handles both biometric and device credential)
+     */
+    private void onDiscoveryAuthComplete(Wallet wallet)
+    {
+        if (wallet != null)
+        {
+            performAccountDiscovery(wallet);
+        }
+    }
+    
+    /**
      * Actually start the discovery process after authentication succeeds
      */
     private void performAccountDiscovery(Wallet masterWallet)
@@ -414,10 +421,10 @@ public class WalletsActivity extends BaseActivity implements
         // Start discovering accounts
         viewModel.discoverDerivedAccounts(masterWallet, new WalletsViewModel.AccountDiscoveryCallback() {
             @Override
-            public void onProgress(int current, int total, String currentAddress, int foundCount) {
+            public void onProgress(int current, int total, String currentAddress, int foundCount, String networkName) {
                 runOnUiThread(() -> {
                     if (discoveryProgressDialog != null && discoveryProgressDialog.isShowing()) {
-                        updateProgressDialog(discoveryProgressDialog, current, total, currentAddress, foundCount);
+                        updateProgressDialog(discoveryProgressDialog, current, total, currentAddress, foundCount, networkName);
                     }
                 });
             }
@@ -469,7 +476,7 @@ public class WalletsActivity extends BaseActivity implements
                         } else {
                             aDialog = new AWalletAlertDialog(WalletsActivity.this);
                             aDialog.setTitle(R.string.discover_all_accounts);
-                            aDialog.setMessage(getString(R.string.no_accounts_found) + "\\n\\n" + getString(R.string.discovery_explanation));
+                            aDialog.setMessage(getString(R.string.no_accounts_found) + "\n\n" + getString(R.string.discovery_explanation));
                             aDialog.setIcon(AWalletAlertDialog.NONE);
                             aDialog.setButtonText(R.string.dialog_ok);
                             aDialog.setButtonListener(v -> aDialog.dismiss());
@@ -521,7 +528,7 @@ public class WalletsActivity extends BaseActivity implements
         return dialog;
     }
     
-    private void updateProgressDialog(android.app.AlertDialog dialog, int current, int total, String address, int foundCount)
+    private void updateProgressDialog(android.app.AlertDialog dialog, int current, int total, String address, int foundCount, String networkName)
     {
         if (dialog != null && dialog.isShowing()) {
             View dialogView = dialog.findViewById(android.R.id.content);
@@ -531,6 +538,7 @@ public class WalletsActivity extends BaseActivity implements
                 TextView percentageText = dialogView.findViewById(R.id.percentage_text);
                 TextView currentAddress = dialogView.findViewById(R.id.current_address);
                 TextView foundCountText = dialogView.findViewById(R.id.found_count);
+                TextView networkText = dialogView.findViewById(R.id.network_text);
                 
                 int percentage = (int) ((current / (float) total) * 100);
                 
@@ -548,6 +556,11 @@ public class WalletsActivity extends BaseActivity implements
                 
                 if (currentAddress != null && address != null) {
                     currentAddress.setText(address.substring(0, 10) + "..." + address.substring(address.length() - 8));
+                }
+                
+                if (networkText != null && networkName != null && !networkName.isEmpty()) {
+                    networkText.setVisibility(View.VISIBLE);
+                    networkText.setText(getString(R.string.checking_on_network, networkName));
                 }
                 
                 if (foundCountText != null && foundCount > 0) {
@@ -860,12 +873,12 @@ public class WalletsActivity extends BaseActivity implements
         );
         walletList.setAdapter(walletAdapter);
         
-        // Set up discover all accounts option
-        View discoverAllAccounts = sheetView.findViewById(R.id.discover_all_accounts);
-        if (discoverAllAccounts != null) {
-            discoverAllAccounts.setOnClickListener(v -> {
+        // Set up add bulk wallets option
+        View addBulkWallets = sheetView.findViewById(R.id.add_bulk_wallets);
+        if (addBulkWallets != null) {
+            addBulkWallets.setOnClickListener(v -> {
                 bottomSheet.dismiss();
-                showMultiWalletDiscoveryDialog(masterWallets);
+                showBulkAddWalletDialog(masterWallets);
             });
         }
         
@@ -894,6 +907,273 @@ public class WalletsActivity extends BaseActivity implements
             e.printStackTrace();
             Toast.makeText(this, "Error showing wallet selection: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+    
+    private void showBulkAddWalletDialog(List<Wallet> masterWallets)
+    {
+        try {
+            if (masterWallets == null || masterWallets.isEmpty()) {
+                Toast.makeText(this, "No master wallets found", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // If only one master wallet, go directly to count input
+            if (masterWallets.size() == 1) {
+                showBulkAddCountDialog(masterWallets.get(0));
+                return;
+            }
+            
+            // Multiple master wallets - show selection first
+            BottomSheetDialog bottomSheet = new BottomSheetDialog(this);
+            View sheetView = getLayoutInflater().inflate(R.layout.dialog_select_wallet_discover, null);
+            bottomSheet.setContentView(sheetView);
+            
+            // Update title
+            TextView title = sheetView.findViewById(R.id.title);
+            if (title != null) {
+                title.setText(R.string.add_bulk_wallets);
+            }
+            
+            ImageView backButton = sheetView.findViewById(R.id.back_action);
+            backButton.setOnClickListener(v -> {
+                bottomSheet.dismiss();
+                showMasterWalletSelectionDialog(masterWallets);
+            });
+            
+            RecyclerView walletList = sheetView.findViewById(R.id.wallet_list);
+            walletList.setLayoutManager(new LinearLayoutManager(this));
+            
+            MasterWalletSelectAdapter adapter = new MasterWalletSelectAdapter(
+                masterWallets,
+                viewModel.wallets().getValue(),
+                wallet -> {
+                    bottomSheet.dismiss();
+                    showBulkAddCountDialog(wallet);
+                }
+            );
+            walletList.setAdapter(adapter);
+            
+            bottomSheet.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void showBulkAddCountDialog(Wallet masterWallet)
+    {
+        // Get the next available index for this master wallet
+        Wallet[] allWallets = viewModel.wallets().getValue();
+        int nextIndex = viewModel.getNextHDKeyIndexForMaster(allWallets, masterWallet.address);
+        
+        // Create dialog with input field
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_bulk_add_wallets, null);
+        builder.setView(dialogView);
+        
+        TextView messageText = dialogView.findViewById(R.id.message_text);
+        android.widget.EditText countInput = dialogView.findViewById(R.id.count_input);
+        TextView walletNameText = dialogView.findViewById(R.id.wallet_name);
+        
+        // Set wallet name
+        String walletName = masterWallet.name != null && !masterWallet.name.isEmpty() 
+            ? masterWallet.name 
+            : getString(R.string.master_wallet) + " 1";
+        walletNameText.setText(walletName);
+        
+        // Set message with next index info
+        messageText.setText(getString(R.string.bulk_add_message, nextIndex));
+        
+        // Set default value
+        countInput.setText("5");
+        countInput.setSelection(countInput.getText().length());
+        
+        android.app.AlertDialog dialog = builder.create();
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        
+        // Setup buttons
+        android.widget.Button addButton = dialogView.findViewById(R.id.add_button);
+        android.widget.Button cancelButton = dialogView.findViewById(R.id.cancel_button);
+        
+        // Update button text based on input
+        addButton.setText(getString(R.string.add_wallets, 5));
+        countInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                try {
+                    int count = Integer.parseInt(s.toString());
+                    if (count > 0 && count <= 50) {
+                        addButton.setText(getString(R.string.add_wallets, count));
+                    }
+                } catch (NumberFormatException e) {
+                    // Ignore
+                }
+            }
+        });
+        
+        addButton.setOnClickListener(v -> {
+            String countStr = countInput.getText().toString().trim();
+            if (countStr.isEmpty()) {
+                Toast.makeText(this, "Please enter a number", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            int count;
+            try {
+                count = Integer.parseInt(countStr);
+                if (count < 1 || count > 50) {
+                    Toast.makeText(this, "Please enter a number between 1 and 50", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "Please enter a valid number", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            dialog.dismiss();
+            startBulkAddWallets(masterWallet, nextIndex, count);
+        });
+        
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
+        
+        dialog.show();
+    }
+    
+    private void startBulkAddWallets(Wallet masterWallet, int startIndex, int count)
+    {
+        // Show progress
+        aDialog = new AWalletAlertDialog(this);
+        aDialog.setTitle(R.string.add_bulk_wallets);
+        aDialog.setMessage(getString(R.string.adding_wallets_progress, 1, count));
+        aDialog.setProgressMode();
+        aDialog.setCancelable(false);
+        aDialog.show();
+        
+        // Create list of indices to add
+        java.util.List<Integer> indicesToAdd = new java.util.ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            indicesToAdd.add(startIndex + i);
+        }
+        
+        // Start adding wallets sequentially
+        addBulkWalletsSequentially(masterWallet, indicesToAdd, 0, count, 0);
+    }
+    
+    private void addBulkWalletsSequentially(Wallet masterWallet, java.util.List<Integer> indices, int currentPosition, int totalCount, int successCount)
+    {
+        if (currentPosition >= indices.size()) {
+            // All wallets added
+            runOnUiThread(() -> {
+                if (aDialog != null) {
+                    aDialog.dismiss();
+                }
+                Toast.makeText(this, getString(R.string.wallets_added_success, successCount), Toast.LENGTH_SHORT).show();
+                viewModel.fetchWallets();
+            });
+            return;
+        }
+        
+        int index = indices.get(currentPosition);
+        final int position = currentPosition;
+        
+        // Update progress dialog with detailed status
+        runOnUiThread(() -> {
+            if (aDialog != null) {
+                aDialog.setMessage("Adding wallet index " + index + "... (" + (position + 1) + "/" + totalCount + ")");
+            }
+        });
+        
+        android.util.Log.d("WalletsActivity", "Adding wallet index " + index + "...");
+        
+        // Set up for derived account
+        isDerivingAccount = true;
+        parentWalletAddress = masterWallet.address;
+        derivedAccountIndex = index;
+        
+        // Derive the account - use callback to continue to next
+        viewModel.addHDAccountFromMasterAtIndex(this, masterWallet, index, new CreateWalletCallbackInterface() {
+            @Override
+            public void HDKeyCreated(String address, android.content.Context ctx, KeyService.AuthenticationLevel level) {
+                android.util.Log.d("WalletsActivity", "Wallet index " + index + " derived: " + address + ", storing...");
+                
+                // Update progress to show storing
+                runOnUiThread(() -> {
+                    if (aDialog != null) {
+                        aDialog.setMessage("Saving wallet index " + index + "... (" + (position + 1) + "/" + totalCount + ")");
+                    }
+                });
+                
+                // Store the derived account with callback to wait for completion
+                viewModel.storeDerivedHDAccountWithCallback(address, level, masterWallet.address, index, 
+                    new WalletsViewModel.WalletStoreCallback() {
+                        @Override
+                        public void onWalletStored(Wallet wallet) {
+                            android.util.Log.d("WalletsActivity", "Wallet index " + index + " saved successfully: " + wallet.address);
+                            
+                            runOnUiThread(() -> {
+                                Toast.makeText(WalletsActivity.this, 
+                                    "Wallet " + (position + 1) + " saved successfully", Toast.LENGTH_SHORT).show();
+                            });
+                            
+                            // Continue to next wallet after successful save
+                            addBulkWalletsSequentially(masterWallet, indices, currentPosition + 1, totalCount, successCount + 1);
+                        }
+                        
+                        @Override
+                        public void onStoreFailed(String error) {
+                            android.util.Log.e("WalletsActivity", "Failed to save wallet index " + index + ": " + error);
+                            
+                            runOnUiThread(() -> {
+                                Toast.makeText(WalletsActivity.this, 
+                                    "Failed to save wallet " + (position + 1) + ": " + error, Toast.LENGTH_SHORT).show();
+                            });
+                            
+                            // Continue to next wallet even if this one fails
+                            addBulkWalletsSequentially(masterWallet, indices, currentPosition + 1, totalCount, successCount);
+                        }
+                    });
+            }
+            
+            @Override
+            public void keyFailure(String message) {
+                android.util.Log.e("WalletsActivity", "Failed to derive wallet index " + index + ": " + message);
+                runOnUiThread(() -> {
+                    if (aDialog != null) {
+                        aDialog.dismiss();
+                    }
+                    Toast.makeText(WalletsActivity.this, "Error adding wallet at index " + index + ": " + message, Toast.LENGTH_SHORT).show();
+                    // Still refresh to show any wallets that were added
+                    viewModel.fetchWallets();
+                });
+            }
+            
+            @Override
+            public void cancelAuthentication() {
+                android.util.Log.d("WalletsActivity", "Authentication cancelled at wallet index " + index);
+                runOnUiThread(() -> {
+                    if (aDialog != null) {
+                        aDialog.dismiss();
+                    }
+                    if (successCount > 0) {
+                        Toast.makeText(WalletsActivity.this, 
+                            getString(R.string.wallets_added_success, successCount), Toast.LENGTH_SHORT).show();
+                    }
+                    viewModel.fetchWallets();
+                });
+            }
+            
+            @Override
+            public void fetchMnemonic(String mnemonic) {}
+            
+            @Override
+            public void keyUpgraded(KeyService.UpgradeKeyResult result) {}
+        });
     }
     
     private void showMultiWalletDiscoveryDialog(List<Wallet> masterWallets)
