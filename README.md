@@ -92,9 +92,72 @@ You can submit feedback and report bugs as GitHub issues. Please include:
 | Mainnet | 1370 | https://blockchain.rfrm.io | https://ramascan.com |
 | Testnet | 1377 | https://testnet.rfrm.io | https://pingaksha.ramascan.com |
 
+## Fork & Customize Your Own Wallet
+
+RamaPay is designed to be easily forked and customized. Create your own branded blockchain wallet in minutes!
+
+### Quick Start for Forking
+
+1. **Fork this repository** on GitHub
+
+2. **Clone your fork:**
+```bash
+git clone https://github.com/YOUR_USERNAME/RamaPay-android.git
+cd RamaPay-android
+```
+
+3. **Customize branding** - Edit these key files:
+
+| File | What to Change |
+|------|----------------|
+| `app/build.gradle` | `applicationId` (e.g., `com.yourapp.wallet`) |
+| `app/src/main/res/values/strings.xml` | App name and strings |
+| `app/src/main/res/mipmap-*` | App icons (all sizes) |
+| `app/src/main/java/com/ramapay/app/entity/MediaLinks.java` | Social media links |
+| `app/src/main/java/com/ramapay/app/C.java` | URLs and constants |
+| `app/src/main/res/raw/` | Splash animation (Lottie JSON) |
+
+4. **Add your own blockchain network** in:
+```
+lib/src/main/java/com/ramapay/ethereum/EthereumNetworkBase.java
+```
+
+5. **Build and publish:**
+```bash
+./gradlew assembleRelease
+```
+
+### Keeping Your Fork Updated
+
+Stay up-to-date with RamaPay improvements:
+
+```bash
+# Add RamaPay as upstream (one time only)
+git remote add upstream https://github.com/obidua/RamaPay-android.git
+
+# Fetch and merge updates
+git fetch upstream
+git merge upstream/master
+
+# Resolve any conflicts and push
+git push origin master
+```
+
+### Full Rebrand (Optional)
+
+If you want to completely rebrand the package names:
+
+1. Rename directories: `com/ramapay` → `com/yourpackage`
+2. Update all `package` declarations and `import` statements
+3. Update `namespace` in all `build.gradle` files
+4. Rebuild `hardware_stub` AAR: `./gradlew :hardware_stub:assembleDebug`
+5. Copy new AAR to `app/libs/`
+
+> 💡 **Tip:** Use find-and-replace across the entire project for package renaming.
+
 ## Credits
 
-RamaPay is based on [RamaPay](https://github.com/RamaPay/alpha-wallet-android), an open source Ethereum wallet. We thank the RamaPay team for their excellent foundation.
+RamaPay is based on [AlphaWallet](https://github.com/AlphaWallet/alpha-wallet-android), an open source Ethereum wallet. We thank the AlphaWallet team for their excellent foundation.
 
 ## License
 
