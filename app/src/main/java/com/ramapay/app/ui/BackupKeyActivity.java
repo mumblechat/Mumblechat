@@ -61,6 +61,7 @@ import java.util.List;
 import java.util.Objects;
 
 import dagger.hilt.android.AndroidEntryPoint;
+import timber.log.Timber;
 
 @AndroidEntryPoint
 public class BackupKeyActivity extends BaseActivity implements
@@ -317,15 +318,22 @@ public class BackupKeyActivity extends BaseActivity implements
     private void showEnableScreenLockDialog()
     {
         AWalletAlertDialog dialog = new AWalletAlertDialog(this);
-        dialog.setTitle(R.string.key_error);
-        dialog.setIcon(AWalletAlertDialog.ERROR);
+        dialog.setTitle(R.string.setup_required);
+        dialog.setIcon(AWalletAlertDialog.WARNING);
         dialog.setMessage(getString(R.string.enable_screenlock));
-        dialog.setButtonText(R.string.action_continue);
+        dialog.setButtonText(R.string.action_open_settings);
         dialog.setSecondaryButtonText(R.string.action_close);
         dialog.setButtonListener(v -> {
-            // User will enable screen lock manually, then try again
+            // Open device security settings
             dialog.dismiss();
-            finish();
+            try {
+                Intent intent = new Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS);
+                startActivity(intent);
+            } catch (Exception e) {
+                // Fallback to general settings
+                Intent intent = new Intent(android.provider.Settings.ACTION_SETTINGS);
+                startActivity(intent);
+            }
         });
         dialog.setSecondaryButtonListener(v -> {
             dialog.dismiss();
@@ -1107,7 +1115,19 @@ public class BackupKeyActivity extends BaseActivity implements
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             ClipData clip = ClipData.newPlainText("Seed Phrase", seedPhrase.toString());
             clipboard.setPrimaryClip(clip);
-            Toast.makeText(this, R.string.seed_phrase_copied, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.seed_phrase_copied_auto_clear, Toast.LENGTH_LONG).show();
+            
+            // Auto-clear clipboard after 60 seconds for security
+            handler.postDelayed(() -> {
+                try {
+                    ClipboardManager cb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cb != null) {
+                        cb.setPrimaryClip(ClipData.newPlainText("", ""));
+                    }
+                } catch (Exception e) {
+                    Timber.e(e, "Error clearing clipboard");
+                }
+            }, 60000); // 60 seconds
         }
     }
 
@@ -1513,7 +1533,7 @@ public class BackupKeyActivity extends BaseActivity implements
 
     private void secureWindow()
     {
-        // Screenshots enabled for user convenience
-        // getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        // Prevent screenshots to protect seed phrase
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
     }
 }

@@ -62,8 +62,6 @@ public class AppLockActivity extends BaseActivity {
     private ObjectAnimator logoPulseAnimator;
     
     private boolean forTransaction = false;
-    private int failedAttempts = 0;
-    private static final int MAX_FAILED_ATTEMPTS = 5;
     
     public static Intent createIntent(Context context) {
         return new Intent(context, AppLockActivity.class);
@@ -140,6 +138,27 @@ public class AppLockActivity extends BaseActivity {
             passwordInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | 
                     android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         }
+        
+        // Check if currently locked out
+        checkLockoutState();
+    }
+    
+    private void checkLockoutState() {
+        if (securityManager.isLockedOut()) {
+            long remainingMs = securityManager.getRemainingLockoutTime();
+            int remainingSec = (int) (remainingMs / 1000);
+            passwordLayout.setError(getString(R.string.locked_out_seconds, remainingSec));
+            btnUnlock.setEnabled(false);
+            // Re-check when lockout expires
+            btnUnlock.postDelayed(() -> {
+                if (!securityManager.isLockedOut()) {
+                    btnUnlock.setEnabled(true);
+                    passwordLayout.setError(null);
+                } else {
+                    checkLockoutState(); // Recurse if still locked
+                }
+            }, Math.min(remainingMs + 100, 5000)); // Check at most every 5 seconds
+        }
     }
     
     private void setupListeners() {
@@ -157,6 +176,22 @@ public class AppLockActivity extends BaseActivity {
     }
     
     private void verifyCredential() {
+        // Check if locked out
+        if (securityManager.isLockedOut()) {
+            long remainingMs = securityManager.getRemainingLockoutTime();
+            int remainingSec = (int) (remainingMs / 1000);
+            passwordLayout.setError(getString(R.string.locked_out_seconds, remainingSec));
+            btnUnlock.setEnabled(false);
+            // Re-check after remaining time
+            btnUnlock.postDelayed(() -> {
+                if (!securityManager.isLockedOut()) {
+                    btnUnlock.setEnabled(true);
+                    passwordLayout.setError(null);
+                }
+            }, remainingMs + 100);
+            return;
+        }
+        
         String credential = passwordInput.getText() != null ? passwordInput.getText().toString() : "";
         
         if (credential.isEmpty()) {
@@ -173,20 +208,27 @@ public class AppLockActivity extends BaseActivity {
         }
         
         if (verified) {
+            securityManager.resetFailedAttempts();
             onAuthenticationSuccess();
         } else {
-            failedAttempts++;
-            if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-                passwordLayout.setError(getString(R.string.too_many_fails));
+            int attempts = securityManager.incrementFailedAttempts();
+            
+            if (securityManager.isLockedOut()) {
+                long remainingMs = securityManager.getRemainingLockoutTime();
+                int remainingSec = (int) (remainingMs / 1000);
+                passwordLayout.setError(getString(R.string.locked_out_seconds, remainingSec));
                 btnUnlock.setEnabled(false);
-                // Re-enable after 30 seconds
+                // Re-enable after lockout expires
                 btnUnlock.postDelayed(() -> {
-                    btnUnlock.setEnabled(true);
-                    failedAttempts = 0;
-                }, 30000);
+                    if (!securityManager.isLockedOut()) {
+                        btnUnlock.setEnabled(true);
+                        passwordLayout.setError(null);
+                    }
+                }, remainingMs + 100);
             } else {
-                passwordLayout.setError(securityManager.isUsingPin() ? 
-                        getString(R.string.incorrect_pin) : getString(R.string.incorrect_password));
+                int remaining = 5 - (attempts % 5);
+                if (remaining == 0) remaining = 5;
+                passwordLayout.setError(getString(R.string.incorrect_attempts_remaining, remaining));
             }
             passwordInput.setText("");
         }

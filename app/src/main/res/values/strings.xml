@@ -307,8 +307,9 @@
     <string name="dialog_marketplace_success">Your tickets have been put up for sale in the Marketplace</string>
     <string name="dialog_process_error">Trade not processed</string>
     <string name="dialog_ok">OK</string>
-    <string name="wallet_key_not_found">Wallet key not found in secure storage.\n\nYour wallet data may have been lost due to device security changes or app reinstallation.\n\nPlease re-import your wallet using your recovery phrase.</string>
+    <string name="wallet_key_not_found">Wallet key not found in secure storage.\n\nThis can happen if:\n• You haven\'t set up a device PIN/password yet\n• Device security settings changed\n• App was reinstalled\n\nTo fix this:\n1. Go to My Wallets\n2. Remove this wallet\n3. Re-import using your recovery phrase</string>
     <string name="suggest_reimport_wallet">Please try re-importing your wallet using your seed phrase or keystore backup.</string>
+    <string name="setup_device_security_first">To lock your seed phrase, you need to set up device security first (PIN, password, or biometric).\n\nGo to your phone Settings → Security → Screen Lock to enable it.</string>
     <string name="action_my_wallets">My Wallets</string>
     <string name="action_try_again">Try Again</string>
     <string name="action_finish">Finish</string>
@@ -648,6 +649,8 @@
     <string name="title_enable_debug">Local Scripts Not Enabled</string>
     <string name="need_to_enable_debug">To use local TokenScripts you need to enable TokenScript override. Go to Settings, then click \'Enable TokenScript Override\'.</string>
     <string name="too_many_fails">Too many fingerprint fails. Use PIN or wait 30 seconds</string>
+    <string name="locked_out_seconds">Account locked. Try again in %1$d seconds</string>
+    <string name="incorrect_attempts_remaining">Incorrect. %1$d attempts remaining</string>
     <string name="no_fingerprint_enrolled">No fingerprints Enrolled. Use PIN</string>
     <string name="cannot_process_fingerprint">Unable to process fingerprint. Use PIN</string>
     <string name="action_receive">Receive</string>
@@ -981,6 +984,7 @@
     <string name="copy_seed_phrase">Copy Recovery Phrase</string>
     <string name="paste_seed_phrase">Paste from Clipboard</string>
     <string name="seed_phrase_copied">Recovery phrase copied to clipboard</string>
+    <string name="seed_phrase_copied_auto_clear">Recovery phrase copied! Will auto-clear in 60 seconds for security.</string>
     <string name="seed_phrase_pasted">Recovery phrase pasted</string>
     <string name="clipboard_empty">Clipboard is empty</string>
     <string name="keystore_pasted">Keystore pasted from clipboard</string>
@@ -1124,7 +1128,7 @@
     <string name="asset_number_of_owners">Owners</string>
     <string name="asset_owner">Owner</string>
     <string name="asset_last_sale">Last Sale</string>
-    <string name="enable_screenlock">Unable to upgrade key: Enable screenlock on phone</string>
+    <string name="enable_screenlock">To lock your seed phrase for extra security, you need to enable screen lock on your phone.\n\nSteps:\n1. Open phone Settings\n2. Go to Security or Lock Screen\n3. Set up PIN, Password, or Biometric\n4. Come back and try again</string>
     <string name="unable_to_upgrade_key">Unable to upgrade key: %1$s</string>
     <string name="no_key_found">No Key found</string>
     <string name="unable_store_key">Unable to store wallet key: %1$s\n\nPlease try again or re-import your wallet using your seed phrase or keystore file.</string>
@@ -1136,6 +1140,7 @@
     <string name="error_transaction_timeout">Transaction Timeout</string>
     <string name="label_slippage">Slippage</string>
     <string name="action_open_settings">Open Settings</string>
+    <string name="setup_required">Setup Required</string>
     <string name="message_no_connections_found">No connections found for this chain.</string>
     <string name="label_gas_fees">Gas Fee</string>
     <string name="label_other_fees">Other Fees</string>
@@ -1368,6 +1373,12 @@
     <string name="pos_add_remark">Add Remark (Optional)</string>
     <string name="pos_remark_hint">e.g., Order #123, Customer name</string>
     <string name="pos_payment_timeout">Payment timed out. Tap to retry.</string>
+    <string name="pos_history_title">Transaction History</string>
+    <string name="pos_no_history">No Transactions Yet</string>
+    <string name="pos_no_history_subtitle">Your payment requests will appear here</string>
+    <string name="pos_view_history">View History</string>
+    <string name="pos_receiving_address">Receiving Address</string>
+    <string name="pos_address_copied">Address copied to clipboard</string>
     
     <!-- Business Profile -->
     <string name="business_profile">Business Profile</string>

@@ -386,6 +386,62 @@
                         android:textColor="@color/brand"
                         android:layout_marginTop="8dp" />
 
+                    <!-- Receiving Address Section -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?android:dividerHorizontal"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="12dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pos_receiving_address"
+                        android:textSize="12sp"
+                        android:textColor="?android:textColorSecondary" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="4dp"
+                        android:padding="8dp"
+                        android:background="@drawable/background_rounded_subtle">
+
+                        <TextView
+                            android:id="@+id/text_receiving_address"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="0x1234...5678"
+                            android:textSize="13sp"
+                            android:textColor="?android:textColorPrimary"
+                            android:fontFamily="monospace"
+                            android:ellipsize="middle"
+                            android:singleLine="true" />
+
+                        <ImageButton
+                            android:id="@+id/button_copy_address"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_copy"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/action_copy"
+                            app:tint="@color/brand" />
+
+                        <ImageButton
+                            android:id="@+id/button_share_address"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_share"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/action_share"
+                            app:tint="@color/brand" />
+
+                    </LinearLayout>
+
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>

@@ -65,6 +65,8 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     private boolean pendingHomeNavigation = false;
     private boolean isNavigatingToHome = false; // Flag to prevent double navigation
     private boolean walletCreationInProgress = false; // Flag to track wallet creation flow
+    private boolean pendingSecuritySetup = false; // Flag to track security setup before backup
+    private boolean pendingImportNavigation = false; // Flag to proceed to home after security for imports
     
     // Network status views
     private ImageView iconNetworkStatus;
@@ -117,6 +119,27 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             } else {
                 // User cancelled authentication - close app
                 finishAffinity();
+            }
+        }
+    );
+    
+    private final ActivityResultLauncher<Intent> securitySetupHandler = registerForActivityResult(
+        new ActivityResultContracts.StartActivityForResult(),
+        result -> {
+            // Security setup completed or skipped
+            pendingSecuritySetup = false;
+            
+            if (pendingImportNavigation)
+            {
+                // This was from an import, proceed to home
+                pendingImportNavigation = false;
+                isNavigatingToHome = true;
+                viewModel.fetchWallets();
+            }
+            else if (pendingWalletAddress != null && pendingAuthLevel != null)
+            {
+                // This was from wallet creation, proceed to backup flow
+                launchBackupFlow();
             }
         }
     );
@@ -328,17 +351,30 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             walletCreationInProgress = false;
             if (resultCode == RESULT_OK && data != null)
             {
-                // Mark that we're navigating to home to prevent double navigation
-                isNavigatingToHome = true;
-                
-                // Mark the imported wallet as new so HomeActivity can show security setup
+                // Mark the imported wallet as new so HomeActivity shows network selection
                 Wallet importedWallet = data.getParcelableExtra(WALLET);
                 if (importedWallet != null)
                 {
                     viewModel.markWalletAsNew(importedWallet.address);
                 }
-                // Fetch wallets and navigate - the isNavigatingToHome flag will ensure direct navigation
-                viewModel.fetchWallets();
+                
+                // Check if security is already set up or skipped
+                if (appSecurityManager != null && 
+                    !appSecurityManager.isSecurityEnabled() && 
+                    !appSecurityManager.isSecuritySetupSkipped())
+                {
+                    // Show security setup FIRST before proceeding to home
+                    pendingSecuritySetup = true;
+                    pendingImportNavigation = true; // Flag to proceed to home after security
+                    Intent securityIntent = SetupSecurityActivity.createIntent(this, false, true);
+                    securitySetupHandler.launch(securityIntent);
+                }
+                else
+                {
+                    // Security already set up or skipped, proceed to home
+                    isNavigatingToHome = true;
+                    viewModel.fetchWallets();
+                }
             }
             else
             {
@@ -351,14 +387,41 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     @Override
     public void HDKeyCreated(String address, Context ctx, KeyService.AuthenticationLevel level)
     {
-        // Store wallet details temporarily and launch backup flow
+        // Store wallet details temporarily
         pendingWalletAddress = address;
         pendingAuthLevel = level;
         
+        // Check if security is already set up or skipped
+        if (appSecurityManager != null && 
+            !appSecurityManager.isSecurityEnabled() && 
+            !appSecurityManager.isSecuritySetupSkipped())
+        {
+            // Show security setup FIRST before showing seed phrase
+            pendingSecuritySetup = true;
+            Intent securityIntent = SetupSecurityActivity.createIntent(this, false, true);
+            securitySetupHandler.launch(securityIntent);
+        }
+        else
+        {
+            // Security already set up or skipped, proceed to backup flow
+            launchBackupFlow();
+        }
+    }
+    
+    /**
+     * Launch the backup flow to show seed phrase and verify
+     */
+    private void launchBackupFlow()
+    {
+        if (pendingWalletAddress == null || pendingAuthLevel == null)
+        {
+            return;
+        }
+        
         // Create temporary wallet for backup
-        Wallet tempWallet = new Wallet(address);
+        Wallet tempWallet = new Wallet(pendingWalletAddress);
         tempWallet.type = com.ramapay.app.entity.WalletType.HDKEY;
-        tempWallet.authLevel = level;
+        tempWallet.authLevel = pendingAuthLevel;
         
         // Launch backup activity for seed phrase verification
         Intent intent = new Intent(this, BackupKeyActivity.class);

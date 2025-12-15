@@ -22,6 +22,7 @@ import com.ramapay.app.service.RealmManager;
 import com.ramapay.app.service.TickerService;
 import com.ramapay.app.service.TokensService;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -30,6 +31,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import javax.inject.Inject;
 
@@ -74,7 +81,11 @@ public class PosViewModel extends BaseViewModel
     private Disposable timerDisposable;
     private BigDecimal expectedCryptoAmount;
     private BigDecimal initialBalance; // Balance when monitoring started
+    private BigDecimal lastKnownBalance; // Last checked balance for detecting incremental changes
+    private long monitoringStartBlock; // Block number when monitoring started
     private long paymentStartTime;
+    
+    private static final String RAMASCAN_API_BASE = "https://latest-backendapi.ramascan.com/api/v2";
     
     // Payment monitoring constants
     private static final long PAYMENT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -358,16 +369,32 @@ public class PosViewModel extends BaseViewModel
         
         Timber.d("Starting payment monitoring for invoice: %s", invoice.getInvoiceId());
         
-        // Store initial balance for comparison (fetch from RPC on background thread)
-        io.reactivex.Single.fromCallable(this::fetchCurrentBalance)
+        // Fetch starting block number and initial balance (for Ramascan API filtering)
+        io.reactivex.Single.fromCallable(() -> {
+            // Get current block number
+            try {
+                long chainId = selectedToken.tokenInfo.chainId;
+                Web3j web3j = TokenRepository.getWeb3jService(chainId);
+                monitoringStartBlock = web3j.ethBlockNumber().send().getBlockNumber().longValue();
+                Timber.d("Monitoring start block: %d", monitoringStartBlock);
+            } catch (Exception e) {
+                Timber.e(e, "Error fetching block number");
+                monitoringStartBlock = 0;
+            }
+            return fetchCurrentBalance();
+        })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(balance -> {
                     initialBalance = balance;
-                    Timber.d("Initial balance: %s", initialBalance != null ? initialBalance.toPlainString() : "null");
+                    lastKnownBalance = balance; // Initialize lastKnownBalance for incremental tracking
+                    Timber.d("Initial balance: %s, Start block: %d", 
+                            initialBalance != null ? initialBalance.toPlainString() : "null",
+                            monitoringStartBlock);
                 }, error -> {
                     Timber.e(error, "Error fetching initial balance");
                     initialBalance = BigDecimal.ZERO;
+                    lastKnownBalance = BigDecimal.ZERO;
                 });
         
         // Timer that updates every second for countdown display
@@ -405,64 +432,153 @@ public class PosViewModel extends BaseViewModel
     }
 
     /**
-     * Check if payment has been received by looking at token balance change via RPC
+     * Check if payment has been received using Ramascan API coin-balance-history
+     * This gives us exact transaction deltas instead of comparing balances
      * Called on IO thread
      */
     private void checkForPaymentAsync(RealmPosInvoice invoice)
     {
-        if (selectedToken == null || defaultWallet.getValue() == null || initialBalance == null) return;
+        if (selectedToken == null || defaultWallet.getValue() == null) return;
         
-        Timber.d("Checking for payment... (tick)");
+        Timber.d("Checking for payment via Ramascan API... (tick)");
         
-        // Fetch current balance directly from blockchain via RPC
+        String walletAddress = defaultWallet.getValue().address;
+        
+        // Convert expected amount to wei for comparison
+        BigInteger expectedWei = expectedCryptoAmount
+                .multiply(BigDecimal.TEN.pow(18))
+                .toBigInteger();
+        
+        // 1% tolerance
+        BigInteger toleranceWei = expectedWei.divide(BigInteger.valueOf(100));
+        BigInteger minAcceptableWei = expectedWei.subtract(toleranceWei);
+        BigInteger maxAcceptableWei = expectedWei.add(toleranceWei);
+        
+        Timber.d("Expected: %s wei, Min: %s, Max: %s", 
+                expectedWei.toString(), minAcceptableWei.toString(), maxAcceptableWei.toString());
+        
+        try
+        {
+            // Call Ramascan API for coin balance history
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .connectTimeout(10, TimeUnit.SECONDS)
+                    .readTimeout(10, TimeUnit.SECONDS)
+                    .build();
+            
+            String url = RAMASCAN_API_BASE + "/addresses/" + walletAddress + "/coin-balance-history";
+            Request request = new Request.Builder()
+                    .url(url)
+                    .header("accept", "application/json")
+                    .get()
+                    .build();
+            
+            Response response = client.newCall(request).execute();
+            
+            if (response.isSuccessful() && response.body() != null)
+            {
+                String responseBody = response.body().string();
+                JSONObject json = new JSONObject(responseBody);
+                JSONArray items = json.optJSONArray("items");
+                
+                if (items != null && items.length() > 0)
+                {
+                    // Check recent transactions (after monitoring started)
+                    for (int i = 0; i < items.length(); i++)
+                    {
+                        JSONObject item = items.getJSONObject(i);
+                        long blockNumber = item.optLong("block_number", 0);
+                        String deltaStr = item.optString("delta", "0");
+                        String txHash = item.optString("transaction_hash", "");
+                        
+                        // Only check transactions after monitoring started
+                        if (blockNumber <= monitoringStartBlock)
+                        {
+                            Timber.d("Skipping old transaction at block %d (started at %d)", 
+                                    blockNumber, monitoringStartBlock);
+                            continue;
+                        }
+                        
+                        // Parse delta (can be negative for outgoing)
+                        BigInteger delta = new BigInteger(deltaStr);
+                        
+                        // Only check incoming transactions (positive delta)
+                        if (delta.compareTo(BigInteger.ZERO) > 0)
+                        {
+                            Timber.d("Found incoming tx: block=%d, delta=%s wei, hash=%s", 
+                                    blockNumber, delta.toString(), txHash);
+                            
+                            // Check if this delta matches expected amount within ±1%
+                            if (delta.compareTo(minAcceptableWei) >= 0 && delta.compareTo(maxAcceptableWei) <= 0)
+                            {
+                                // Payment received with correct amount!
+                                BigDecimal receivedAmount = new BigDecimal(delta)
+                                        .divide(BigDecimal.TEN.pow(18), 18, RoundingMode.DOWN);
+                                
+                                Timber.d("Payment received! Amount: %s RAMA (expected: %s), TX: %s", 
+                                        receivedAmount.toPlainString(), 
+                                        expectedCryptoAmount.toPlainString(),
+                                        txHash);
+                                
+                                // Store tx hash in invoice
+                                invoice.setTxHash(txHash);
+                                
+                                onPaymentDetected(invoice, receivedAmount);
+                                return;
+                            }
+                            else
+                            {
+                                Timber.d("Different amount: %s wei (expected: %s ±1%%) - ignoring", 
+                                        delta.toString(), expectedWei.toString());
+                            }
+                        }
+                    }
+                }
+                
+                Timber.d("No matching payment found yet");
+            }
+            else
+            {
+                Timber.w("Ramascan API error: %d", response.code());
+                // Fallback to RPC balance check if API fails
+                checkForPaymentViaRpc(invoice);
+            }
+        }
+        catch (Exception e)
+        {
+            Timber.e(e, "Error checking Ramascan API");
+            // Fallback to RPC balance check
+            checkForPaymentViaRpc(invoice);
+        }
+    }
+    
+    /**
+     * Fallback: Check payment via RPC balance comparison
+     */
+    private void checkForPaymentViaRpc(RealmPosInvoice invoice)
+    {
+        if (lastKnownBalance == null) return;
+        
         BigDecimal currentBalance = fetchCurrentBalance();
         
         if (currentBalance != null && currentBalance.compareTo(BigDecimal.ZERO) >= 0)
         {
-            BigDecimal received = currentBalance.subtract(initialBalance);
+            BigDecimal incrementalChange = currentBalance.subtract(lastKnownBalance);
             
-            Timber.d("Balance check - Initial: %s, Current: %s, Expected: %s, Received: %s",
-                    initialBalance.toPlainString(),
-                    currentBalance.toPlainString(),
-                    expectedCryptoAmount.toPlainString(),
-                    received.toPlainString());
-            
-            // Check if received amount matches expected amount within ±1% tolerance ONLY
-            // Reject random larger deposits - must be close to expected amount
-            if (received.compareTo(BigDecimal.ZERO) > 0)
+            if (incrementalChange.compareTo(BigDecimal.ZERO) > 0)
             {
-                // 1% tolerance to account for minor variations
                 BigDecimal tolerancePercent = new BigDecimal("0.01");
                 BigDecimal tolerance = expectedCryptoAmount.multiply(tolerancePercent);
                 BigDecimal minAcceptable = expectedCryptoAmount.subtract(tolerance);
                 BigDecimal maxAcceptable = expectedCryptoAmount.add(tolerance);
                 
-                Timber.d("Payment validation - Min: %s, Max: %s, Expected: %s, Received: %s",
-                        minAcceptable.toPlainString(),
-                        maxAcceptable.toPlainString(),
-                        expectedCryptoAmount.toPlainString(),
-                        received.toPlainString());
-                
-                // Accept ONLY if received amount is within ±1% of expected amount
-                if (received.compareTo(minAcceptable) >= 0 && received.compareTo(maxAcceptable) <= 0)
+                if (incrementalChange.compareTo(minAcceptable) >= 0 && incrementalChange.compareTo(maxAcceptable) <= 0)
                 {
-                    // Payment received with correct amount!
-                    Timber.d("Payment received! Amount: %s (expected: %s)", 
-                            received.toPlainString(), expectedCryptoAmount.toPlainString());
-                    onPaymentDetected(invoice, received);
-                    return;
-                }
-                else if (received.compareTo(maxAcceptable) > 0)
-                {
-                    // Received more than expected+1% - ignore, could be unrelated deposit
-                    Timber.d("Different amount received: %s (expected: %s ±1%%) - ignoring", 
-                            received.toPlainString(), expectedCryptoAmount.toPlainString());
+                    Timber.d("Payment received via RPC! Amount: %s", incrementalChange.toPlainString());
+                    onPaymentDetected(invoice, incrementalChange);
                 }
                 else
                 {
-                    // Received less than expected - partial payment, don't accept yet
-                    Timber.d("Partial payment detected: %s (need: %s)", 
-                            received.toPlainString(), expectedCryptoAmount.toPlainString());
+                    lastKnownBalance = currentBalance;
                 }
             }
         }

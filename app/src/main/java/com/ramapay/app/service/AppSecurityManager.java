@@ -47,6 +47,8 @@ public class AppSecurityManager {
     private static final String KEY_PIN_HASH = "pin_hash";
     private static final String KEY_PIN_SALT = "pin_salt";
     private static final String KEY_USING_PIN = "using_pin";  // true = PIN, false = password
+    private static final String KEY_FAILED_ATTEMPTS = "failed_attempts";
+    private static final String KEY_LOCKOUT_END_TIME = "lockout_end_time";
     
     // Timeout options in milliseconds
     public static final long TIMEOUT_1_MIN = 1 * 60 * 1000;
@@ -131,6 +133,68 @@ public class AppSecurityManager {
      */
     public void setSecuritySetupSkipped(boolean skipped) {
         securePrefs.edit().putBoolean(KEY_SECURITY_SETUP_SKIPPED, skipped).apply();
+    }
+    
+    // ==================== Failed Attempts Management ====================
+    
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final long[] LOCKOUT_DURATIONS = {
+        30 * 1000,      // 30 seconds after 5 attempts
+        60 * 1000,      // 1 minute after 10 attempts
+        5 * 60 * 1000,  // 5 minutes after 15 attempts
+        30 * 60 * 1000  // 30 minutes after 20+ attempts
+    };
+    
+    /**
+     * Get current failed attempts count (persisted)
+     */
+    public int getFailedAttempts() {
+        return securePrefs.getInt(KEY_FAILED_ATTEMPTS, 0);
+    }
+    
+    /**
+     * Increment failed attempts and return the new count
+     */
+    public int incrementFailedAttempts() {
+        int attempts = getFailedAttempts() + 1;
+        securePrefs.edit().putInt(KEY_FAILED_ATTEMPTS, attempts).apply();
+        
+        // Set lockout if needed
+        if (attempts >= MAX_FAILED_ATTEMPTS && attempts % MAX_FAILED_ATTEMPTS == 0) {
+            int lockoutIndex = Math.min((attempts / MAX_FAILED_ATTEMPTS) - 1, LOCKOUT_DURATIONS.length - 1);
+            long lockoutDuration = LOCKOUT_DURATIONS[lockoutIndex];
+            long lockoutEndTime = System.currentTimeMillis() + lockoutDuration;
+            securePrefs.edit().putLong(KEY_LOCKOUT_END_TIME, lockoutEndTime).apply();
+        }
+        
+        return attempts;
+    }
+    
+    /**
+     * Reset failed attempts on successful authentication
+     */
+    public void resetFailedAttempts() {
+        securePrefs.edit()
+            .putInt(KEY_FAILED_ATTEMPTS, 0)
+            .putLong(KEY_LOCKOUT_END_TIME, 0)
+            .apply();
+    }
+    
+    /**
+     * Check if account is currently locked out
+     */
+    public boolean isLockedOut() {
+        long lockoutEndTime = securePrefs.getLong(KEY_LOCKOUT_END_TIME, 0);
+        return lockoutEndTime > System.currentTimeMillis();
+    }
+    
+    /**
+     * Get remaining lockout time in milliseconds
+     */
+    public long getRemainingLockoutTime() {
+        long lockoutEndTime = securePrefs.getLong(KEY_LOCKOUT_END_TIME, 0);
+        long remaining = lockoutEndTime - System.currentTimeMillis();
+        return remaining > 0 ? remaining : 0;
     }
     
     /**

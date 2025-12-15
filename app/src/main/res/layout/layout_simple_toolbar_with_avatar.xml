@@ -4,100 +4,112 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/toolbar"
     android:layout_width="match_parent"
-    android:layout_height="?attr/actionBarSize">
-
-    <FrameLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/standard_16">
-
-        <ImageView
-            android:id="@+id/wallet_logo"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_ramapay_wallet"
-            android:scaleType="fitCenter"
-            android:contentDescription="@string/app_name" />
-
-        <!-- Network Status Indicator (green=online, red=offline) -->
-        <View
-            android:id="@+id/network_status_indicator"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
-            android:layout_gravity="bottom|end"
-            android:background="@drawable/network_status_dot"
-            android:layout_marginEnd="-2dp"
-            android:layout_marginBottom="-2dp" />
-
-    </FrameLayout>
-
-    <com.ramapay.app.widget.UserAvatar
-        android:id="@+id/user_address_blockie"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:layout_marginHorizontal="@dimen/tiny_8"
-        android:visibility="gone" />
+    android:layout_height="?attr/actionBarSize"
+    android:contentInsetStart="0dp"
+    android:contentInsetStartWithNavigation="0dp"
+    app:contentInsetStart="0dp"
+    app:contentInsetStartWithNavigation="0dp">
 
     <LinearLayout
-        android:id="@+id/wallet_switcher_layout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:orientation="horizontal"
-        android:gravity="center"
-        android:padding="8dp"
-        android:background="?attr/selectableItemBackground">
+        android:gravity="center_vertical">
 
-        <LinearLayout
+        <FrameLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center">
+            android:layout_marginStart="@dimen/standard_16">
 
-            <TextView
-                android:id="@+id/toolbar_title"
-                style="@style/Aw.Typography.Toolbar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="Dev" />
+            <ImageView
+                android:id="@+id/wallet_logo"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_ramapay_wallet"
+                android:scaleType="fitCenter"
+                android:contentDescription="@string/app_name" />
+
+            <!-- Network Status Indicator (green=online, red=offline) -->
+            <View
+                android:id="@+id/network_status_indicator"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_gravity="bottom|end"
+                android:background="@drawable/network_status_dot"
+                android:layout_marginEnd="-2dp"
+                android:layout_marginBottom="-2dp" />
+
+        </FrameLayout>
+
+        <com.ramapay.app.widget.UserAvatar
+            android:id="@+id/user_address_blockie"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginHorizontal="@dimen/tiny_8"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/wallet_switcher_layout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackground">
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:visibility="gone"
-                android:id="@+id/toolbar_subtitle_layout">
+                android:orientation="vertical"
+                android:gravity="center">
 
                 <TextView
-                    android:id="@+id/toolbar_subtitle"
+                    android:id="@+id/toolbar_title"
+                    style="@style/Aw.Typography.Toolbar"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary"
-                    tools:text="0x1234...5678" />
+                    tools:text="Dev" />
 
-                <ImageView
-                    android:id="@+id/toolbar_copy_icon"
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:layout_marginStart="4dp"
-                    android:src="@drawable/ic_content_copy"
-                    android:contentDescription="@string/action_copy"
-                    app:tint="?android:attr/textColorSecondary" />
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:id="@+id/toolbar_subtitle_layout">
+
+                    <TextView
+                        android:id="@+id/toolbar_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="12sp"
+                        android:textColor="?android:attr/textColorSecondary"
+                        tools:text="0x1234...5678" />
+
+                    <ImageView
+                        android:id="@+id/toolbar_copy_icon"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="4dp"
+                        android:src="@drawable/ic_content_copy"
+                        android:contentDescription="@string/action_copy"
+                        app:tint="?android:attr/textColorSecondary" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
-        </LinearLayout>
+            <ImageView
+                android:id="@+id/wallet_dropdown_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginStart="4dp"
+                android:src="@drawable/ic_expand_more"
+                android:contentDescription="@string/toolbar_title_wallets"
+                app:tint="?android:attr/textColorSecondary" />
 
-        <ImageView
-            android:id="@+id/wallet_dropdown_icon"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginStart="4dp"
-            android:src="@drawable/ic_expand_more"
-            android:contentDescription="@string/toolbar_title_wallets"
-            app:tint="?android:attr/textColorSecondary" />
+        </LinearLayout>
 
     </LinearLayout>
 

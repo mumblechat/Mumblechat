@@ -267,6 +267,36 @@ public class ChatFragment extends BaseFragment implements
             }
             
             @Override
+            public void onPageFinished(WebView view, String url)
+            {
+                super.onPageFinished(view, url);
+                // Inject JavaScript to fix RPC URL - blockchain2 has CORS issues, use blockchain instead
+                // This intercepts fetch/XMLHttpRequest to replace blockchain2 with blockchain
+                String fixRpcScript = 
+                    "(function() {" +
+                    "  const originalFetch = window.fetch;" +
+                    "  window.fetch = function(url, options) {" +
+                    "    if (typeof url === 'string' && url.includes('blockchain2.ramestta.com')) {" +
+                    "      url = url.replace('blockchain2.ramestta.com', 'blockchain.ramestta.com');" +
+                    "      console.log('RamaPay: Fixed RPC URL to blockchain.ramestta.com');" +
+                    "    }" +
+                    "    return originalFetch.call(this, url, options);" +
+                    "  };" +
+                    "  const originalXHROpen = XMLHttpRequest.prototype.open;" +
+                    "  XMLHttpRequest.prototype.open = function(method, url) {" +
+                    "    if (typeof url === 'string' && url.includes('blockchain2.ramestta.com')) {" +
+                    "      url = url.replace('blockchain2.ramestta.com', 'blockchain.ramestta.com');" +
+                    "      console.log('RamaPay: Fixed XHR URL to blockchain.ramestta.com');" +
+                    "    }" +
+                    "    return originalXHROpen.apply(this, [method, url, ...Array.from(arguments).slice(2)]);" +
+                    "  };" +
+                    "  console.log('RamaPay: RPC URL fix injected');" +
+                    "})();";
+                view.evaluateJavascript(fixRpcScript, null);
+                Timber.d("Injected RPC URL fix script for MumbleChat");
+            }
+            
+            @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl)
             {
                 super.onReceivedError(view, errorCode, description, failingUrl);

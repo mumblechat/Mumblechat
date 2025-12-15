@@ -436,15 +436,8 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
                 {
                     // Show wallet creation success notification
                     showWalletCreatedSuccessNotification();
-                    
-                    // Show security setup for first wallet if not already set up
-                    if (!appSecurityManager.isFirstWalletCreated() && 
-                        !appSecurityManager.isSecurityEnabled() && 
-                        !appSecurityManager.isSecuritySetupSkipped())
-                    {
-                        // Delay security setup to let network selection complete first
-                        handler.postDelayed(this::showSecuritySetup, 500);
-                    }
+                    // Security setup is now handled in SplashActivity BEFORE seed phrase
+                    // so no need to show it here
                 }
                 else
                 {

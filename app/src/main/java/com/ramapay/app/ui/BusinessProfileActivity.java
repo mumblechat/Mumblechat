@@ -87,6 +87,7 @@ public class BusinessProfileActivity extends BaseActivity
         setContentView(R.layout.activity_business_profile);
         
         toolbar();
+        enableDisplayHomeAsUp();
         setTitle(getString(R.string.business_profile));
 
         wallet = getIntent().getParcelableExtra("wallet");

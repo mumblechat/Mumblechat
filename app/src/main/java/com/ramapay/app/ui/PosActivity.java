@@ -75,6 +75,9 @@ public class PosActivity extends BaseActivity
     private LinearLayout layoutWaiting;
     private TextView textWaitingStatus;
     private TextView textTimer;
+    private TextView textReceivingAddress;
+    private android.widget.ImageButton buttonCopyAddress;
+    private android.widget.ImageButton buttonShareAddress;
 
     // UI Elements - Payment Success
     private MaterialCardView cardPaymentSuccess;
@@ -88,6 +91,8 @@ public class PosActivity extends BaseActivity
     private MaterialButton buttonCancel;
 
     private int screenWidth;
+    private String currentWalletAddress;
+    private Wallet currentWallet;
     private RealmPosInvoice currentInvoice;
 
     public static Intent createIntent(Context context, Wallet wallet)
@@ -143,6 +148,9 @@ public class PosActivity extends BaseActivity
         layoutWaiting = findViewById(R.id.layout_waiting);
         textWaitingStatus = findViewById(R.id.text_waiting_status);
         textTimer = findViewById(R.id.text_timer);
+        textReceivingAddress = findViewById(R.id.text_receiving_address);
+        buttonCopyAddress = findViewById(R.id.button_copy_address);
+        buttonShareAddress = findViewById(R.id.button_share_address);
 
         // Payment Success Section
         cardPaymentSuccess = findViewById(R.id.card_payment_success);
@@ -210,6 +218,45 @@ public class PosActivity extends BaseActivity
 
         // Cancel button
         buttonCancel.setOnClickListener(v -> cancelCurrentPayment());
+        
+        // Copy address button
+        buttonCopyAddress.setOnClickListener(v -> copyAddressToClipboard());
+        
+        // Share address button
+        buttonShareAddress.setOnClickListener(v -> sharePaymentDetails());
+    }
+    
+    private void copyAddressToClipboard()
+    {
+        if (currentWalletAddress != null && !currentWalletAddress.isEmpty())
+        {
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager) 
+                    getSystemService(Context.CLIPBOARD_SERVICE);
+            android.content.ClipData clip = android.content.ClipData.newPlainText("Address", currentWalletAddress);
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, R.string.pos_address_copied, Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void sharePaymentDetails()
+    {
+        if (currentInvoice == null || currentWalletAddress == null) return;
+        
+        String currencySymbol = viewModel.getCurrencySymbol(currentInvoice.getFiatCurrency());
+        BigDecimal cryptoDisplay = new BigDecimal(currentInvoice.getCryptoAmount())
+                .divide(BigDecimal.TEN.pow(currentInvoice.getTokenDecimals()), 6, RoundingMode.HALF_UP);
+        
+        String shareText = "Payment Request\n\n" +
+                "Amount: " + currencySymbol + currentInvoice.getFiatAmount() + "\n" +
+                "Crypto: " + cryptoDisplay.stripTrailingZeros().toPlainString() + " " + currentInvoice.getTokenSymbol() + "\n\n" +
+                "Send to address:\n" + currentWalletAddress + "\n\n" +
+                "Network: Ramestta (Chain ID 1370)";
+        
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Payment Request");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        startActivity(Intent.createChooser(shareIntent, "Share via"));
     }
 
     private void showCategoryPicker()
@@ -234,6 +281,14 @@ public class PosActivity extends BaseActivity
     private void onWalletLoaded(Wallet wallet)
     {
         Timber.d("Wallet loaded: %s", wallet.address);
+        currentWallet = wallet;
+        currentWalletAddress = wallet.address;
+        
+        // Update receiving address display
+        if (textReceivingAddress != null && currentWalletAddress != null)
+        {
+            textReceivingAddress.setText(currentWalletAddress);
+        }
     }
 
     private void onTokensLoaded(List<Token> tokens)
@@ -332,13 +387,16 @@ public class PosActivity extends BaseActivity
         
         Toast.makeText(this, R.string.pos_payment_timeout, Toast.LENGTH_LONG).show();
         
-        // Allow user to retry or cancel
-        // Keep the QR screen visible but stop the spinner
-        if (layoutWaiting != null)
-        {
-            // Hide the spinner but keep the timeout message visible
-            layoutWaiting.setVisibility(View.VISIBLE);
-        }
+        // Auto-close the QR popup after 3 seconds and return to input screen
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            showInputScreen();
+            // Clear the amount input for next transaction
+            if (editFiatAmount != null)
+            {
+                editFiatAmount.setText("");
+            }
+            currentInvoice = null;
+        }, 3000);
     }
 
     private void onPaymentReceived(RealmPosInvoice paidInvoice)
@@ -585,5 +643,33 @@ public class PosActivity extends BaseActivity
         {
             finish();
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(android.view.Menu menu)
+    {
+        getMenuInflater().inflate(R.menu.menu_pos, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(android.view.MenuItem item)
+    {
+        int id = item.getItemId();
+        
+        if (id == R.id.action_history)
+        {
+            startActivity(new Intent(this, PosHistoryActivity.class));
+            return true;
+        }
+        else if (id == R.id.action_business_profile)
+        {
+            Intent intent = new Intent(this, BusinessProfileActivity.class);
+            intent.putExtra("wallet", currentWallet);
+            startActivity(intent);
+            return true;
+        }
+        
+        return super.onOptionsItemSelected(item);
     }
 }
