@@ -459,9 +459,8 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
                 }
             }, 300);
             
-            Intent selectNetworkIntent = new Intent(this, NetworkToggleActivity.class);
-            selectNetworkIntent.putExtra(C.EXTRA_SINGLE_ITEM, false);
-            networkSettingsHandler.launch(selectNetworkIntent);
+            // Network selection is already handled in WalletActionsActivity
+            // So we don't need to launch NetworkToggleActivity here again
         }
     }
     
