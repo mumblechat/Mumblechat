@@ -63,6 +63,8 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     private View loadingLayout;
     private com.alphawallet.app.widget.PercentageProgressView percentageProgress;
     private boolean pendingHomeNavigation = false;
+    private boolean isNavigatingToHome = false; // Flag to prevent double navigation
+    private boolean walletCreationInProgress = false; // Flag to track wallet creation flow
     
     // Network status views
     private ImageView iconNetworkStatus;
@@ -124,6 +126,10 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
         result -> {
             if (result.getResultCode() == RESULT_OK && pendingWalletAddress != null)
             {
+                // Mark that we're navigating to home to prevent double navigation
+                isNavigatingToHome = true;
+                walletCreationInProgress = false;
+                
                 // Show loading indicator while wallet is being stored
                 showLoading(true);
                 // Backup successful, now store the wallet and proceed to home
@@ -133,6 +139,7 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             }
             else
             {
+                walletCreationInProgress = false;
                 // Backup was cancelled, show friendly confirmation dialog
                 showBackupCancelledDialog();
             }
@@ -239,6 +246,18 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
 
     private void onWallets(Wallet[] wallets)
     {
+        // Prevent double navigation
+        if (isNavigatingToHome)
+        {
+            // Already navigating, just proceed directly
+            if (wallets.length > 0)
+            {
+                viewModel.doWalletStartupActions(wallets[0]);
+                proceedToHomeImmediately();
+            }
+            return;
+        }
+        
         //event chain should look like this:
         //1. check if wallets are empty:
         //      - yes, get either create a new account or take user to wallet page if SHOW_NEW_ACCOUNT_PROMPT is set
@@ -258,12 +277,15 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
                     Toast.makeText(this, R.string.no_internet_connection, Toast.LENGTH_LONG).show();
                     return;
                 }
+                // Mark wallet creation in progress
+                walletCreationInProgress = true;
                 AnalyticsProperties props = new AnalyticsProperties();
                 props.put(FirstWalletAction.KEY, FirstWalletAction.CREATE_WALLET.getValue());
                 viewModel.track(Analytics.Action.FIRST_WALLET_ACTION, props);
                 viewModel.createNewWallet(this, this);
             });
             findViewById(R.id.button_watch).setOnClickListener(v -> {
+                walletCreationInProgress = true;
                 new ImportWalletRouter().openWatchCreate(this, IMPORT_REQUEST_CODE);
             });
             findViewById(R.id.button_import).setOnClickListener(v -> {
@@ -273,6 +295,7 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
                     Toast.makeText(this, R.string.no_internet_connection, Toast.LENGTH_LONG).show();
                     return;
                 }
+                walletCreationInProgress = true;
                 new ImportWalletRouter().openForResult(this, IMPORT_REQUEST_CODE, true);
             });
         }
@@ -302,16 +325,26 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
         }
         else if (requestCode == IMPORT_REQUEST_CODE)
         {
+            walletCreationInProgress = false;
             if (resultCode == RESULT_OK && data != null)
             {
+                // Mark that we're navigating to home to prevent double navigation
+                isNavigatingToHome = true;
+                
                 // Mark the imported wallet as new so HomeActivity can show security setup
                 Wallet importedWallet = data.getParcelableExtra(WALLET);
                 if (importedWallet != null)
                 {
                     viewModel.markWalletAsNew(importedWallet.address);
                 }
+                // Fetch wallets and navigate - the isNavigatingToHome flag will ensure direct navigation
+                viewModel.fetchWallets();
             }
-            viewModel.fetchWallets();
+            else
+            {
+                // Import cancelled, stay on splash and reset state
+                isNavigatingToHome = false;
+            }
         }
     }
 
@@ -392,7 +425,19 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     
     private void proceedToHome()
     {
+        if (isFinishing()) return; // Don't navigate if activity is finishing
         new HomeRouter().open(this, true);
+        finish();
+    }
+    
+    /**
+     * Navigate to Home immediately without delay (used after wallet creation/import)
+     */
+    private void proceedToHomeImmediately()
+    {
+        if (isFinishing()) return; // Don't navigate if activity is finishing
+        showLoading(false);
+        new HomeRouter().open(this, true, true); // Pass true for newWalletCreated
         finish();
     }
 
