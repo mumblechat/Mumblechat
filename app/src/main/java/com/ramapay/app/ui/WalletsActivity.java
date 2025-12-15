@@ -734,104 +734,14 @@ public class WalletsActivity extends BaseActivity implements
                 return;
             }
             
-            // If only one master wallet, show options dialog
-            if (masterWallets.size() == 1)
-            {
-                showSingleMasterWalletOptionsDialog(masterWallets.get(0));
-            }
-            else
-            {
-                // Multiple master wallets - show selection dialog
-                showMasterWalletSelectionDialog(masterWallets);
-            }
+            // Always show the master wallet selection dialog (works for single or multiple wallets)
+            showMasterWalletSelectionDialog(masterWallets);
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
     
-    private void showSingleMasterWalletOptionsDialog(Wallet masterWallet)
-    {
-        try {
-            if (masterWallet == null) {
-                Toast.makeText(this, "Error: Invalid wallet", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            BottomSheetDialog bottomSheet = new BottomSheetDialog(this);
-            View sheetView = getLayoutInflater().inflate(R.layout.dialog_single_master_wallet_options, null);
-            bottomSheet.setContentView(sheetView);
-        
-        // Expand the bottom sheet
-        bottomSheet.setOnShowListener(dialog -> {
-            BottomSheetDialog d = (BottomSheetDialog) dialog;
-            View bottomSheetInternal = d.findViewById(com.google.android.material.R.id.design_bottom_sheet);
-            if (bottomSheetInternal != null) {
-                com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheetInternal)
-                    .setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
-            }
-        });
-        
-        // Close button
-        ImageView closeButton = sheetView.findViewById(R.id.close_action);
-        closeButton.setOnClickListener(v -> bottomSheet.dismiss());
-        
-        // Master wallet info
-        TextView walletName = sheetView.findViewById(R.id.wallet_name);
-        TextView walletAddress = sheetView.findViewById(R.id.wallet_address);
-        walletName.setText(masterWallet.name != null && !masterWallet.name.isEmpty() ? 
-            masterWallet.name : getString(R.string.master_wallet));
-        walletAddress.setText(Keys.toChecksumAddress(masterWallet.address).substring(0, 10) + "..." + 
-            masterWallet.address.substring(masterWallet.address.length() - 4));
-        
-        // Get existing derived accounts count
-        Wallet[] allWallets = viewModel.wallets().getValue();
-        int derivedCount = 0;
-        if (allWallets != null) {
-            for (Wallet w : allWallets) {
-                if (w.type == WalletType.HDKEY && 
-                    w.parentAddress != null && 
-                    w.parentAddress.equalsIgnoreCase(masterWallet.address)) {
-                    derivedCount++;
-                }
-            }
-        }
-        
-        // Show existing accounts count
-        TextView existingAccountsText = sheetView.findViewById(R.id.existing_accounts_info);
-        int nextIndex = viewModel.getNextHDKeyIndexForMaster(allWallets, masterWallet.address);
-        existingAccountsText.setText(getString(R.string.derived_accounts_count, derivedCount, nextIndex));
-        
-        // Option 1: Add next account
-        View addNextAccount = sheetView.findViewById(R.id.add_next_account);
-        addNextAccount.setOnClickListener(v -> {
-            bottomSheet.dismiss();
-            deriveAccountFromMaster(masterWallet);
-        });
-        
-        // Option 2: Discover all accounts with activity
-        View discoverAccounts = sheetView.findViewById(R.id.discover_accounts);
-        discoverAccounts.setOnClickListener(v -> {
-            bottomSheet.dismiss();
-            startAccountDiscovery(masterWallet);
-        });
-        
-        // Option 3: Recover missing account
-        View recoverMissing = sheetView.findViewById(R.id.recover_missing_account);
-        recoverMissing.setOnClickListener(v -> {
-            bottomSheet.dismiss();
-            List<Wallet> singleMasterList = new java.util.ArrayList<>();
-            singleMasterList.add(masterWallet);
-            showRecoverMissingAccountDialog(singleMasterList);
-        });
-        
-        bottomSheet.show();
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Error showing dialog: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
     private void showMasterWalletSelectionDialog(List<Wallet> masterWallets)
     {
         try {
