@@ -83,6 +83,7 @@ public class NewSettingsFragment extends BaseFragment
     private SettingsItemView darkModeSetting;
     private SettingsItemView supportSetting;
     private SettingsItemView aboutRamaPaySetting;
+    private SettingsItemView tokenListingRequestSetting;
     private SettingsItemView walletConnectSetting;
     private SettingsItemView posSetting;
     private SettingsItemView showSeedPhrase;
@@ -401,6 +402,13 @@ public class NewSettingsFragment extends BaseFragment
                         .withListener(this::onSupportSettingClicked)
                         .build();
 
+        tokenListingRequestSetting =
+                new SettingsItemView.Builder(getContext())
+                        .withIcon(R.drawable.ic_add_circle)
+                        .withTitle(R.string.title_token_listing_request)
+                        .withListener(this::onTokenListingRequestClicked)
+                        .build();
+
         aboutRamaPaySetting =
                 new SettingsItemView.Builder(getContext())
                         .withIcon(R.drawable.ic_settings_about)
@@ -453,6 +461,7 @@ public class NewSettingsFragment extends BaseFragment
         systemSettingsLayout.addView(advancedSetting, systemIndex++);
 
         supportSettingsLayout.addView(supportSetting, supportIndex++);
+        supportSettingsLayout.addView(tokenListingRequestSetting, supportIndex++);
         supportSettingsLayout.addView(aboutRamaPaySetting, supportIndex++);
     }
 
@@ -790,6 +799,12 @@ public class NewSettingsFragment extends BaseFragment
     private void onAboutRamaPayClicked()
     {
         Intent intent = new Intent(getActivity(), AboutRamaPayActivity.class);
+        startActivity(intent);
+    }
+
+    private void onTokenListingRequestClicked()
+    {
+        Intent intent = new Intent(getActivity(), TokenListingRequestActivity.class);
         startActivity(intent);
     }
 

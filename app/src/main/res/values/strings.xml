@@ -522,6 +522,7 @@
     <string name="history">History</string>
     <string name="discover_dapps">Discover DApps</string>
     <string name="action_add">Add</string>
+    <string name="action_refresh">Refresh</string>
     <string name="add_to_my_dapps">Add to My DApps</string>
     <string name="edit_dapp">Edit DApp</string>
     <string name="dapp_title">Title</string>
@@ -1413,4 +1414,28 @@
     <string name="payment_amount">Amount</string>
     <string name="payment_confirm">Confirm Payment</string>
     <string name="merchant_verified">Verified Merchant</string>
+
+    <!-- Token Listing Request -->
+    <string name="title_token_listing_request">Token Listing Request</string>
+    <string name="token_listing_description">Submit a request to have your token icon displayed in RamaPay. Please provide accurate token information.</string>
+    <string name="token_contract_address">Token Contract Address</string>
+    <string name="token_address_helper">0x… (full contract address)</string>
+    <string name="token_chain">Blockchain Network</string>
+    <string name="listing_token_name">Token Name</string>
+    <string name="listing_token_symbol">Token Symbol</string>
+    <string name="token_icon_url">Token Icon URL</string>
+    <string name="token_icon_url_helper">Direct link to PNG image (256x256 recommended)</string>
+    <string name="project_website">Project Website</string>
+    <string name="contact_email">Contact Email</string>
+    <string name="additional_notes">Additional Notes (Optional)</string>
+    <string name="submit_listing_request">Submit Request</string>
+    <string name="error_token_address_required">Token contract address is required</string>
+    <string name="error_chain_required">Please select a blockchain network</string>
+    <string name="error_listing_token_name_required">Token name is required</string>
+    <string name="error_token_symbol_required">Token symbol is required</string>
+    <string name="error_icon_url_required">Token icon URL is required</string>
+    <string name="error_email_required">Contact email is required</string>
+    <string name="error_listing_invalid_email">Please enter a valid email address</string>
+    <string name="token_listing_request_sent">Token listing request submitted successfully!</string>
+    <string name="token_listing_email_subject">Token Listing Request for RamaPay</string>
 </resources>

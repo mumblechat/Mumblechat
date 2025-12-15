@@ -324,6 +324,11 @@
                 android:label="Support Settings" />
 
         <activity
+                android:name=".ui.TokenListingRequestActivity"
+                android:label="@string/title_token_listing_request"
+                android:windowSoftInputMode="adjustResize" />
+
+        <activity
                 android:name=".ui.AboutRamaPayActivity"
                 android:label="@string/title_about_ramapay" />
 

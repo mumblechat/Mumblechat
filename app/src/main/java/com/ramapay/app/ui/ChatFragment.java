@@ -1,5 +1,6 @@
 package com.ramapay.app.ui;
 
+import static com.ramapay.ethereum.EthereumNetworkBase.RAMESTTA_MAINNET_ID;
 import static org.web3j.protocol.core.methods.request.Transaction.createFunctionCallTransaction;
 
 import android.annotation.SuppressLint;
@@ -139,7 +140,18 @@ public class ChatFragment extends BaseFragment implements
         viewModel.defaultWallet().observe(getViewLifecycleOwner(), this::onDefaultWallet);
         viewModel.transactionFinalised().observe(getViewLifecycleOwner(), this::txWritten);
         viewModel.transactionError().observe(getViewLifecycleOwner(), this::txError);
-        activeNetwork = viewModel.getActiveNetwork();
+        
+        // Force Ramestta network for MumbleChat to ensure consistent RPC (blockchain.ramestta.com)
+        NetworkInfo ramesttaNetwork = viewModel.getNetworkInfo(RAMESTTA_MAINNET_ID);
+        if (ramesttaNetwork != null)
+        {
+            activeNetwork = ramesttaNetwork;
+            Timber.d("ChatFragment: Forcing Ramestta network for MumbleChat");
+        }
+        else
+        {
+            activeNetwork = viewModel.getActiveNetwork();
+        }
         viewModel.findWallet();
     }
 
@@ -192,6 +204,13 @@ public class ChatFragment extends BaseFragment implements
 
     private void onNetworkChanged(NetworkInfo networkInfo)
     {
+        // MumbleChat always uses Ramestta network, ignore other network changes
+        // This ensures consistent RPC (blockchain.ramestta.com) for XMTP signing
+        if (activeNetwork != null && activeNetwork.chainId == RAMESTTA_MAINNET_ID)
+        {
+            Timber.d("ChatFragment: Ignoring network change, keeping Ramestta for MumbleChat");
+            return;
+        }
         activeNetwork = networkInfo;
         if (wallet != null)
         {

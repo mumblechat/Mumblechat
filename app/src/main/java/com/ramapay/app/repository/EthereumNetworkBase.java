@@ -396,8 +396,7 @@ public abstract class EthereumNetworkBase implements EthereumNetworkRepositoryTy
                 "https://sepolia-testnet-rpc.mintchain.io"
         });
         CHAIN_CONFIG_RPC.put(RAMESTTA_MAINNET_ID, new String[]{
-                "https://blockchain.ramestta.com",
-                "https://blockchain2.ramestta.com"
+                "https://blockchain.ramestta.com"
         });
         CHAIN_CONFIG_RPC.put(RAMESTTA_TESTNET_ID, new String[]{
                 "https://testnet.ramestta.com"

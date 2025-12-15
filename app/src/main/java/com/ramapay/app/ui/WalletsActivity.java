@@ -232,7 +232,12 @@ public class WalletsActivity extends BaseActivity implements
 
         systemView.attachRecyclerView(list);
         systemView.attachSwipeRefreshLayout(refreshLayout);
-        refreshLayout.setOnRefreshListener(this::onSwipeRefresh);
+        
+        // Disable swipe refresh - not needed for wallets list
+        refreshLayout.setEnabled(false);
+        
+        // Scroll to top when opening the page
+        list.scrollToPosition(0);
     }
 
     private void onSwipeRefresh()
@@ -299,7 +304,7 @@ public class WalletsActivity extends BaseActivity implements
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
-        if (CustomViewSettings.canChangeWallets()) getMenuInflater().inflate(R.menu.menu_add, menu);
+        if (CustomViewSettings.canChangeWallets()) getMenuInflater().inflate(R.menu.menu_wallets, menu);
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -310,12 +315,21 @@ public class WalletsActivity extends BaseActivity implements
         {
             onAddWallet();
         }
+        else if (item.getItemId() == R.id.action_refresh)
+        {
+            onRefreshWallets();
+        }
         else if (item.getItemId() == android.R.id.home)
         {
             backPressed();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+    
+    private void onRefreshWallets()
+    {
+        viewModel.swipeRefreshWallets();
     }
 
     @Override
@@ -1498,7 +1512,8 @@ public class WalletsActivity extends BaseActivity implements
         if (adapter != null)
         {
             adapter.setWallets(wallets);
-            scrollToDefaultWallet();
+            // Scroll to top instead of default wallet position
+            list.scrollToPosition(0);
         }
 
         invalidateOptionsMenu();
