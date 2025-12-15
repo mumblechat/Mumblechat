@@ -5,6 +5,7 @@ import static com.alphawallet.ethereum.EthereumNetworkBase.MAINNET_ID;
 
 import android.app.Activity;
 import android.content.Context;
+import android.security.keystore.UserNotAuthenticatedException;
 import android.util.Pair;
 
 import androidx.annotation.Nullable;
@@ -527,6 +528,11 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
     {
         importWalletRouter.openWatchCreate(activity, C.IMPORT_REQUEST_CODE);
     }
+    
+    public void requestAuthentication(Activity activity, Wallet wallet, Operation operation)
+    {
+        keyService.requestAuthentication(activity, wallet, operation);
+    }
 
     public void completeAuthentication(Operation taskCode)
     {
@@ -898,6 +904,8 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
     public interface AccountDiscoveryCallback {
         void onAccountsDiscovered(java.util.List<Integer> activeIndices);
         void onDiscoveryFailed(String error);
+        void onProgress(int current, int total, String currentAddress, int foundCount);
+        void onAuthenticationRequired();
     }
 
     /**
@@ -911,67 +919,127 @@ public class WalletsViewModel extends BaseViewModel implements ServiceSyncCallba
         final int GAP_LIMIT = 20; // Standard BIP44 gap limit
         final int MAX_SCAN = 50; // Maximum accounts to scan
         
-        disposable = io.reactivex.Single.fromCallable(() -> {
+        disposable = io.reactivex.Observable.create((io.reactivex.ObservableEmitter<java.util.List<Integer>> emitter) -> {
             java.util.List<Integer> activeIndices = new java.util.ArrayList<>();
             int consecutiveEmpty = 0;
             
-            for (int index = 0; index < MAX_SCAN && consecutiveEmpty < GAP_LIMIT; index++) {
-                try {
-                    // Derive address at this index
-                    String address = keyService.getAddressAtIndex(masterWallet, index);
-                    if (address != null && !address.isEmpty()) {
-                        // Check if this address has any activity
+            try {
+                for (int index = 0; index < MAX_SCAN && consecutiveEmpty < GAP_LIMIT && !emitter.isDisposed(); index++) {
+                    try {
+                        // Derive address at this index using authenticated method
+                        String address = keyService.getAddressAtIndexAuthenticated(masterWallet, index);
+                        
+                        // Update progress on main thread
+                        final int currentIndex = index;
+                        final String currentAddr = address;
+                        final int currentFoundCount = activeIndices.size();
+                        AndroidSchedulers.mainThread().scheduleDirect(() -> 
+                            callback.onProgress(currentIndex + 1, MAX_SCAN, currentAddr, currentFoundCount));
+                        
+                        android.util.Log.d("WalletsViewModel", "Checking address at index " + index + ": " + address);
+                        
+                        // Check if this address has any activity on multiple chains
                         boolean hasActivity = checkAddressHasActivity(address);
                         if (hasActivity) {
                             activeIndices.add(index);
                             consecutiveEmpty = 0;
+                            android.util.Log.d("WalletsViewModel", "Found active account at index " + index + ": " + address);
                         } else {
                             consecutiveEmpty++;
                         }
-                    } else {
-                        consecutiveEmpty++;
+                    } catch (UserNotAuthenticatedException e) {
+                        // Authentication required - rethrow to outer catch
+                        throw e;
+                    } catch (Exception e) {
+                        android.util.Log.w("WalletsViewModel", "Error checking index " + index + ": " + e.getMessage());
+                        // Don't increment consecutiveEmpty for transient errors
+                        // This allows retrying on network issues
                     }
-                } catch (Exception e) {
-                    consecutiveEmpty++;
                 }
+            } catch (UserNotAuthenticatedException e) {
+                // Authentication required - propagate to UI
+                android.util.Log.d("WalletsViewModel", "Authentication required for discovery");
+                if (!emitter.isDisposed()) {
+                    emitter.onError(e);
+                }
+                return;
+            } catch (Exception e) {
+                android.util.Log.e("WalletsViewModel", "Discovery error: " + e.getMessage(), e);
+                if (!emitter.isDisposed()) {
+                    emitter.onError(e);
+                }
+                return;
             }
-            return activeIndices;
+            
+            if (!emitter.isDisposed()) {
+                emitter.onNext(activeIndices);
+                emitter.onComplete();
+            }
         })
         .subscribeOn(Schedulers.io())
         .observeOn(AndroidSchedulers.mainThread())
         .subscribe(
             activeIndices -> callback.onAccountsDiscovered(activeIndices),
-            error -> callback.onDiscoveryFailed(error.getMessage())
+            error -> {
+                if (error instanceof UserNotAuthenticatedException) {
+                    callback.onAuthenticationRequired();
+                } else {
+                    callback.onDiscoveryFailed(error.getMessage());
+                }
+            }
         );
     }
 
     /**
      * Check if an address has any activity (balance or transactions)
+     * Checks multiple chains to ensure comprehensive discovery
      * @param address The address to check
      * @return true if the address has activity
      */
     private boolean checkAddressHasActivity(String address)
     {
-        try {
-            // Use a simple balance check on mainnet to determine if account has been used
-            // This is a simplified check - in production you might want to check multiple chains
-            org.web3j.protocol.Web3j web3j = org.web3j.protocol.Web3j.build(
-                new org.web3j.protocol.http.HttpService("https://mainnet.infura.io/v3/da3717f25f824cc1baa32d812386d93f"));
-            
-            org.web3j.protocol.core.methods.response.EthGetBalance balance = 
-                web3j.ethGetBalance(address, org.web3j.protocol.core.DefaultBlockParameterName.LATEST).send();
-            
-            if (balance.getBalance().compareTo(java.math.BigInteger.ZERO) > 0) {
-                return true;
+        // List of RPC endpoints to check
+        String[] rpcEndpoints = {
+            "https://mainnet.infura.io/v3/da3717f25f824cc1baa32d812386d93f", // Ethereum Mainnet
+            "https://polygon-rpc.com", // Polygon
+            "https://bsc-dataseed.binance.org", // BSC
+            "https://arb1.arbitrum.io/rpc", // Arbitrum
+            "https://blockchain.ramestta.com" // Ramesta
+        };
+        
+        for (String endpoint : rpcEndpoints) {
+            try {
+                android.util.Log.d("WalletsViewModel", "Checking address " + address + " on " + endpoint);
+                org.web3j.protocol.Web3j web3j = org.web3j.protocol.Web3j.build(
+                    new org.web3j.protocol.http.HttpService(endpoint));
+                
+                // Check transaction count first (faster than balance check)
+                org.web3j.protocol.core.methods.response.EthGetTransactionCount txCount = 
+                    web3j.ethGetTransactionCount(address, org.web3j.protocol.core.DefaultBlockParameterName.LATEST).send();
+                
+                if (txCount.getTransactionCount().compareTo(java.math.BigInteger.ZERO) > 0) {
+                    android.util.Log.d("WalletsViewModel", "Found activity on " + endpoint + ": tx count = " + txCount.getTransactionCount());
+                    web3j.shutdown();
+                    return true;
+                }
+                
+                // Check balance
+                org.web3j.protocol.core.methods.response.EthGetBalance balance = 
+                    web3j.ethGetBalance(address, org.web3j.protocol.core.DefaultBlockParameterName.LATEST).send();
+                
+                web3j.shutdown();
+                
+                if (balance.getBalance().compareTo(java.math.BigInteger.ZERO) > 0) {
+                    android.util.Log.d("WalletsViewModel", "Found activity on " + endpoint + ": balance = " + balance.getBalance());
+                    return true;
+                }
+            } catch (Exception e) {
+                android.util.Log.w("WalletsViewModel", "Failed to check " + endpoint + ": " + e.getMessage());
+                // Continue to next endpoint
+                continue;
             }
-            
-            // Also check transaction count
-            org.web3j.protocol.core.methods.response.EthGetTransactionCount txCount = 
-                web3j.ethGetTransactionCount(address, org.web3j.protocol.core.DefaultBlockParameterName.LATEST).send();
-            
-            return txCount.getTransactionCount().compareTo(java.math.BigInteger.ZERO) > 0;
-        } catch (Exception e) {
-            return false;
         }
+        
+        return false;
     }
 }

@@ -91,6 +91,58 @@
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
+        <!-- Discover All Accounts Option -->
+        <LinearLayout
+            android:id="@+id/discover_all_accounts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/background_wallet_select_item"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_search_small"
+                app:tint="@color/brand"
+                android:contentDescription="@null" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/discover_all_accounts"
+                    android:textColor="?android:textColorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/discover_all_accounts_desc_multi"
+                    android:textColor="?android:textColorSecondary"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="?colorControlNormal"
+                android:contentDescription="@null" />
+
+        </LinearLayout>
+
+        <!-- Recover Missing Account Option -->
         <LinearLayout
             android:id="@+id/recover_missing_account"
             android:layout_width="match_parent"

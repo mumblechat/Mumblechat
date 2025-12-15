@@ -921,6 +921,28 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             return null;
         }
     }
+    
+    /**
+     * Get the address at a specific HD derivation index with authentication handling
+     * Throws UserNotAuthenticatedException if authentication is required
+     * @param wallet The parent HD wallet
+     * @param accountIndex The account index
+     * @return The address
+     * @throws UserNotAuthenticatedException if user needs to authenticate
+     * @throws KeyServiceException on other errors
+     */
+    public String getAddressAtIndexAuthenticated(Wallet wallet, int accountIndex) 
+            throws UserNotAuthenticatedException, KeyServiceException
+    {
+        currentWallet = wallet;
+        String mnemonic = unpackMnemonic();
+        HDWallet hdWallet = new HDWallet(mnemonic, "");
+        
+        String derivationPath = "m/44'/60'/0'/0/" + accountIndex;
+        PrivateKey pk = hdWallet.getKey(CoinType.ETHEREUM, derivationPath);
+        String address = CoinType.ETHEREUM.deriveAddress(pk);
+        return address;
+    }
 
     private synchronized boolean storeEncryptedBytes(byte[] data, boolean createAuthLocked, String fileName)
     {
@@ -1174,6 +1196,19 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
 
         return true;
     }
+    
+    /**
+     * Request authentication for a specific operation
+     * @param activity The activity context
+     * @param wallet The wallet context (can be null for operations not requiring wallet)
+     * @param operation The operation requiring authentication
+     */
+    public void requestAuthentication(Activity activity, Wallet wallet, Operation operation)
+    {
+        this.activity = activity;
+        this.currentWallet = wallet;
+        checkAuthentication(operation);
+    }
 
     private void checkAuthentication(Operation operation)
     {
@@ -1194,6 +1229,7 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             case IMPORT_HD_KEY:
             case CREATE_HD_KEY:
             case DERIVE_HD_ACCOUNT:
+            case DISCOVER_ACCOUNTS:
                 //always unlock for these conditions
                 dialogTitle = context.getString(R.string.provide_authentication);
                 break;
