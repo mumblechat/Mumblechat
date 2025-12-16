@@ -67,6 +67,7 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     private boolean walletCreationInProgress = false; // Flag to track wallet creation flow
     private boolean pendingSecuritySetup = false; // Flag to track security setup before backup
     private boolean pendingImportNavigation = false; // Flag to proceed to home after security for imports
+    private boolean pendingImportAfterSecurity = false; // Flag to open ImportWalletActivity after security setup
     
     // Network status views
     private ImageView iconNetworkStatus;
@@ -129,9 +130,15 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             // Security setup completed or skipped
             pendingSecuritySetup = false;
             
-            if (pendingImportNavigation)
+            if (pendingImportAfterSecurity)
             {
-                // This was from an import, proceed to home
+                // Security done, now open ImportWalletActivity
+                pendingImportAfterSecurity = false;
+                new ImportWalletRouter().openForResult(this, IMPORT_REQUEST_CODE, true);
+            }
+            else if (pendingImportNavigation)
+            {
+                // This was from an import completion, proceed to home
                 pendingImportNavigation = false;
                 isNavigatingToHome = true;
                 viewModel.fetchWallets();
@@ -319,7 +326,23 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
                     return;
                 }
                 walletCreationInProgress = true;
-                new ImportWalletRouter().openForResult(this, IMPORT_REQUEST_CODE, true);
+                
+                // Check if security is already set up or skipped - show security FIRST like create wallet
+                if (appSecurityManager != null && 
+                    !appSecurityManager.isSecurityEnabled() && 
+                    !appSecurityManager.isSecuritySetupSkipped())
+                {
+                    // Show security setup FIRST before import
+                    pendingSecuritySetup = true;
+                    pendingImportAfterSecurity = true;
+                    Intent securityIntent = SetupSecurityActivity.createIntent(this, false, true);
+                    securitySetupHandler.launch(securityIntent);
+                }
+                else
+                {
+                    // Security already set up or skipped, proceed to import
+                    new ImportWalletRouter().openForResult(this, IMPORT_REQUEST_CODE, true);
+                }
             });
         }
         else
@@ -358,23 +381,9 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
                     viewModel.markWalletAsNew(importedWallet.address);
                 }
                 
-                // Check if security is already set up or skipped
-                if (appSecurityManager != null && 
-                    !appSecurityManager.isSecurityEnabled() && 
-                    !appSecurityManager.isSecuritySetupSkipped())
-                {
-                    // Show security setup FIRST before proceeding to home
-                    pendingSecuritySetup = true;
-                    pendingImportNavigation = true; // Flag to proceed to home after security
-                    Intent securityIntent = SetupSecurityActivity.createIntent(this, false, true);
-                    securitySetupHandler.launch(securityIntent);
-                }
-                else
-                {
-                    // Security already set up or skipped, proceed to home
-                    isNavigatingToHome = true;
-                    viewModel.fetchWallets();
-                }
+                // Security was already set up BEFORE import, proceed directly to home
+                isNavigatingToHome = true;
+                viewModel.fetchWallets();
             }
             else
             {

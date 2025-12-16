@@ -1178,6 +1178,9 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
             case DappBrowserFragment.REQUEST_CAMERA_ACCESS:
                 getFragment(DAPP_BROWSER).gotCameraAccess(permissions, grantResults);
                 break;
+            case ChatFragment.REQUEST_CAMERA_ACCESS:
+                getFragment(CHAT).gotCameraAccess(permissions, grantResults);
+                break;
             case DappBrowserFragment.REQUEST_FILE_ACCESS:
                 getFragment(DAPP_BROWSER).gotFileAccess(permissions, grantResults);
                 break;

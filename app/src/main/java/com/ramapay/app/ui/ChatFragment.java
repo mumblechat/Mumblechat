@@ -3,6 +3,7 @@ package com.ramapay.app.ui;
 import static com.ramapay.ethereum.EthereumNetworkBase.RAMESTTA_MAINNET_ID;
 import static org.web3j.protocol.core.methods.request.Transaction.createFunctionCallTransaction;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -12,12 +13,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.ConsoleMessage;
+import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -87,6 +90,10 @@ public class ChatFragment extends BaseFragment implements
     private SwipeRefreshLayout swipeRefreshLayout;
     private boolean isWebViewSetup = false;
     private static final String MUMBLECHAT_URL = "https://mumblechat.com/conversations";
+    
+    // Camera permission handling
+    public static final int REQUEST_CAMERA_ACCESS = 112;
+    private PermissionRequest permissionRequest;
     
     // Save WebView state to prevent reloading on tab switch
     private Bundle webViewState;
@@ -274,6 +281,12 @@ public class ChatFragment extends BaseFragment implements
             {
                 Timber.d("MumbleChat: %s", msg.message());
                 return super.onConsoleMessage(msg);
+            }
+            
+            @Override
+            public void onPermissionRequest(final PermissionRequest request)
+            {
+                requestCameraPermission(request);
             }
         });
 
@@ -736,5 +749,50 @@ public class ChatFragment extends BaseFragment implements
             hasLoadedOnce = false;
         }
         super.onDestroy();
+    }
+    
+    // Camera permission handling for MumbleChat QR scanning
+    private void requestCameraPermission(@NotNull PermissionRequest request)
+    {
+        final String[] requestedResources = request.getResources();
+        permissionRequest = request;
+        for (String r : requestedResources)
+        {
+            if (r.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+            {
+                final String[] permissions = new String[]{Manifest.permission.CAMERA};
+                requireActivity().requestPermissions(permissions, REQUEST_CAMERA_ACCESS);
+                return;
+            }
+        }
+        // If no video capture requested, deny the request
+        request.deny();
+    }
+    
+    @Override
+    public void gotCameraAccess(@NotNull String[] permissions, int[] grantResults)
+    {
+        boolean cameraAccess = false;
+        for (int i = 0; i < permissions.length; i++)
+        {
+            if (permissions[i].equals(Manifest.permission.CAMERA) && grantResults[i] != -1)
+            {
+                cameraAccess = true;
+                if (permissionRequest != null)
+                {
+                    permissionRequest.grant(permissionRequest.getResources());
+                }
+                break;
+            }
+        }
+        if (!cameraAccess)
+        {
+            if (permissionRequest != null)
+            {
+                permissionRequest.deny();
+            }
+            Toast.makeText(getContext(), "Camera permission not granted", Toast.LENGTH_SHORT).show();
+        }
+        permissionRequest = null;
     }
 }
