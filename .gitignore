@@ -81,3 +81,5 @@ vendor/
 .project
 output/
 node_modules/
+ramapay-release.keystore
+*.keystore
