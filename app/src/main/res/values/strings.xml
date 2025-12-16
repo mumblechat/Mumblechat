@@ -284,6 +284,9 @@
     <string name="help_question8">Terms of Service</string>
     <string name="privacy_policy" translatable="false">privacyPolicy.html</string>
     <string name="terms_of_service" translatable="false">termsOfService.html</string>
+    <string name="title_privacy_policy">Privacy Policy</string>
+    <string name="title_terms_of_service">Terms of Service</string>
+    <string name="about_legal_title">Legal</string>
     <string name="tokenscript_explaination" translatable="false">tokenscript_explaination.html</string>
     <string name="twenty_four_hours">24 hours</string>
     <string name="appreciation">Appreciation</string>

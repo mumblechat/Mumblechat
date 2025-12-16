@@ -1,5 +1,7 @@
 package com.ramapay.app.ui;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -30,6 +32,18 @@ public class AboutRamaPayActivity extends BaseActivity
             "Version %s (Build %d)", 
             BuildConfig.VERSION_NAME, 
             BuildConfig.VERSION_CODE));
+        
+        // Privacy Policy click
+        findViewById(R.id.privacy_policy_link).setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://ramestta.com/privacy-policy"));
+            startActivity(intent);
+        });
+        
+        // Terms of Service click
+        findViewById(R.id.terms_of_service_link).setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://ramestta.com/terms-of-service"));
+            startActivity(intent);
+        });
     }
 
     @Override
