@@ -602,6 +602,7 @@
     <string name="legacy_wallets">Legacy Wallets</string>
     <string name="postponed_backup_warning">Backup postponed.</string>
     <string name="key_error">Wallet Key Error</string>
+    <string name="wallet_creation_failed_message">Failed to create your wallet. This can happen if your device has a security limitation. Please try again.</string>
     <string name="key_store_failed">Failed to securely store your wallet key.\n\nPlease try the following:\n• Restart the app and try again\n• Ensure your device has a screen lock (PIN, pattern, or fingerprint) enabled\n• Restart your device and try again\n• If the issue persists, your device may have a security limitation</string>
     <string name="key_not_found_reimport">Wallet key not found in secure storage. Please re-import your wallet using your seed phrase.</string>
     <string name="show_private_key">Show Private Key</string>
@@ -614,6 +615,7 @@
     <string name="create_a_new_wallet">Create a new Wallet</string>
     <string name="watch">Watch</string>
     <string name="creating_wallet">Creating Wallet…</string>
+    <string name="setting_up_wallet">Setting up your Wallet…</string>
     <string name="loading">Loading…</string>
     <string name="already_have_a_wallet">I already have a wallet:</string>
     <string name="watch_wallet">Watch-only Wallets</string>

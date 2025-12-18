@@ -71,4 +71,41 @@
         android:textStyle="bold"
         android:text="@string/action_finish" />
 
+    <!-- Loading overlay for network selection -->
+    <FrameLayout
+        android:id="@+id/layout_loading"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#E60D0D1A"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="40dp"
+            android:background="@drawable/loading_bg">
+
+            <com.ramapay.app.widget.PercentageProgressView
+                android:id="@+id/percentage_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/text_loading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/setting_up_wallet"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.03" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
 </RelativeLayout>

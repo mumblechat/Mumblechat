@@ -774,19 +774,29 @@ public class HomeViewModel extends BaseViewModel
      * Verify that the wallet key is properly stored and accessible
      * For derived HD accounts, verify the parent (master) wallet's keystore
      * Returns true if key storage is verified, false if there's an issue
+     * 
+     * This performs a comprehensive check:
+     * 1. KeyStore contains the alias
+     * 2. Encrypted data file exists
+     * 3. IV file exists
      */
     public boolean verifyWalletKeyStorage(Wallet wallet)
     {
         if (wallet == null) return false;
         
+        String addressToCheck;
         // For derived HD accounts, verify the parent wallet's keystore
         if (wallet.isDerivedHDAccount() && wallet.parentAddress != null && !wallet.parentAddress.isEmpty())
         {
-            return keyService.hasKeystore(wallet.parentAddress);
+            addressToCheck = wallet.parentAddress;
+        }
+        else
+        {
+            addressToCheck = wallet.address;
         }
         
-        // For master HD wallets and other wallet types, verify the wallet's own keystore
-        return keyService.hasKeystore(wallet.address);
+        // Comprehensive verification: KeyStore + encrypted files
+        return keyService.verifyKeyStorageComplete(addressToCheck);
     }
 
     public void checkLatestGithubRelease()

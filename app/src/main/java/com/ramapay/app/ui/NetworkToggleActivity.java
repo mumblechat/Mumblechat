@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 
@@ -14,9 +15,11 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.ramapay.app.R;
 import com.ramapay.app.analytics.Analytics;
+import com.ramapay.app.router.HomeRouter;
 import com.ramapay.app.ui.widget.adapter.MultiSelectNetworkAdapter;
 import com.ramapay.app.ui.widget.entity.NetworkItem;
 import com.ramapay.app.viewmodel.NetworkToggleViewModel;
+import com.ramapay.app.widget.PercentageProgressView;
 import com.ramapay.ethereum.NetworkInfo;
 
 import java.util.ArrayList;
@@ -28,9 +31,14 @@ import dagger.hilt.android.AndroidEntryPoint;
 @AndroidEntryPoint
 public class NetworkToggleActivity extends NetworkBaseActivity
 {
+    public static final String FROM_NEW_WALLET = "from_new_wallet";
+    
     private NetworkToggleViewModel viewModel;
     private MultiSelectNetworkAdapter mainNetAdapter;
     private MultiSelectNetworkAdapter testNetAdapter;
+    private FrameLayout loadingLayout;
+    private PercentageProgressView percentageProgress;
+    private boolean isFromNewWallet = false;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState)
@@ -41,17 +49,30 @@ public class NetworkToggleActivity extends NetworkBaseActivity
         initTestNetDialog(this);
         setupFilterList();
         setupFinishButton();
+        setupLoadingOverlay();
+        
+        // Check if this is from wallet creation (new wallet flow)
+        isFromNewWallet = getIntent().getBooleanExtra(FROM_NEW_WALLET, false);
+    }
+    
+    private void setupLoadingOverlay()
+    {
+        loadingLayout = findViewById(R.id.layout_loading);
+        percentageProgress = findViewById(R.id.percentage_progress);
     }
 
     private void setupFinishButton()
     {
         findViewById(R.id.button_finish).setOnClickListener(v -> {
-            handleSetNetworks();
-            // Navigate to home screen
-            Intent intent = new Intent(this, HomeActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            finish();
+            if (isFromNewWallet && loadingLayout != null && percentageProgress != null)
+            {
+                // Show loading overlay with progress for new wallet flow
+                showLoadingWithProgress();
+            }
+            else
+            {
+                handleSetNetworks();
+            }
         });
     }
 
@@ -164,5 +185,53 @@ public class NetworkToggleActivity extends NetworkBaseActivity
         viewModel.setFilterNetworks(filterList, hasClicked, shouldBlankUserSelection);
         setResult(RESULT_OK, new Intent());
         finish();
+    }
+    
+    private void showLoadingWithProgress()
+    {
+        // Show loading overlay
+        loadingLayout.setVisibility(View.VISIBLE);
+        
+        // Disable finish button to prevent double-tap
+        findViewById(R.id.button_finish).setEnabled(false);
+        
+        // Save network settings first
+        saveNetworkSettings();
+        
+        // Start progress simulation (1.2 seconds for smooth experience)
+        percentageProgress.startSimulation(1200, () -> {
+            // When progress completes, navigate directly to Home
+            runOnUiThread(() -> {
+                // Navigate directly to HomeActivity (skip returning to SplashActivity)
+                new HomeRouter().open(NetworkToggleActivity.this, true, true);
+                finish();
+            });
+        });
+    }
+    
+    private void saveNetworkSettings()
+    {
+        viewModel.setTestnetEnabled(testnetSwitch.isChecked());
+
+        List<Long> filterList = new ArrayList<>(Arrays.asList(mainNetAdapter.getSelectedItems()));
+        if (testnetSwitch.isChecked())
+        {
+            filterList.addAll(Arrays.asList(testNetAdapter.getSelectedItems()));
+        }
+        boolean hasClicked = mainNetAdapter.hasSelectedItems() || testNetAdapter.hasSelectedItems();
+        boolean shouldBlankUserSelection = filterList.size() == 0;
+
+        viewModel.setFilterNetworks(filterList, hasClicked, shouldBlankUserSelection);
+    }
+    
+    @Override
+    public void onBackPressed()
+    {
+        // Prevent back press during loading
+        if (loadingLayout != null && loadingLayout.getVisibility() == View.VISIBLE)
+        {
+            return;
+        }
+        super.onBackPressed();
     }
 }

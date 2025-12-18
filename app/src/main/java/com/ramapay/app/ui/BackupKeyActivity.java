@@ -747,12 +747,13 @@ public class BackupKeyActivity extends BaseActivity implements
                 // For first-time wallet creation, check if device is secured first
                 if (viewModel.deviceIsSecured())
                 {
-                    // During first-time wallet creation, automatically trigger upgrade without showing screen
-                    // to avoid the blue screen flash
+                    // During first-time wallet creation, skip upgrade to avoid white screen
+                    // The key is already stored securely without authentication
+                    // User can upgrade later from settings if they want
                     if (!isExplicitUpgrade)
                     {
-                        // Silently start the upgrade process
-                        upgradeKeySecurity();
+                        // Skip upgrade during wallet creation for smoother experience
+                        finishBackupSuccess(false);
                     }
                     else
                     {
@@ -1118,11 +1119,16 @@ public class BackupKeyActivity extends BaseActivity implements
             Toast.makeText(this, R.string.seed_phrase_copied_auto_clear, Toast.LENGTH_LONG).show();
             
             // Auto-clear clipboard after 60 seconds for security
+            // Use clearPrimaryClip on Android 10+ to avoid triggering 'Copied' indicator
             handler.postDelayed(() -> {
                 try {
                     ClipboardManager cb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     if (cb != null) {
-                        cb.setPrimaryClip(ClipData.newPlainText("", ""));
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                            cb.clearPrimaryClip();
+                        } else {
+                            cb.setPrimaryClip(ClipData.newPlainText("", ""));
+                        }
                     }
                 } catch (Exception e) {
                     Timber.e(e, "Error clearing clipboard");

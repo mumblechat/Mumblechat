@@ -26,6 +26,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.ramapay.app.C;
 import com.ramapay.app.R;
 import com.ramapay.app.analytics.Analytics;
 import com.ramapay.app.entity.AnalyticsProperties;
@@ -68,6 +69,7 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     private boolean pendingSecuritySetup = false; // Flag to track security setup before backup
     private boolean pendingImportNavigation = false; // Flag to proceed to home after security for imports
     private boolean pendingImportAfterSecurity = false; // Flag to open ImportWalletActivity after security setup
+    private boolean pendingNetworkSelection = false; // Flag to show network selection before going to home
     
     // Network status views
     private ImageView iconNetworkStatus;
@@ -162,14 +164,28 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
         result -> {
             if (result.getResultCode() == RESULT_OK && pendingWalletAddress != null)
             {
-                // Mark that we're navigating to home to prevent double navigation
-                isNavigatingToHome = true;
                 walletCreationInProgress = false;
                 
-                // Show loading indicator while wallet is being stored
+                // Show splash content with loading indicator during transition
+                View splashContent = findViewById(R.id.splash_content_container);
+                if (splashContent != null) {
+                    splashContent.setVisibility(View.VISIBLE);
+                }
+                // Hide the new wallet buttons during loading
+                View newWalletLayout = findViewById(R.id.layout_new_wallet);
+                if (newWalletLayout != null) {
+                    newWalletLayout.setVisibility(View.GONE);
+                }
+                // Show loading indicator
                 showLoading(true);
-                // Backup successful, now store the wallet and proceed to home
+                
+                // Backup successful, store the wallet immediately
                 viewModel.StoreHDKey(pendingWalletAddress, pendingAuthLevel);
+                
+                // Mark that we need to show network selection before going to home
+                pendingNetworkSelection = true;
+                
+                // Clear pending values
                 pendingWalletAddress = null;
                 pendingAuthLevel = null;
             }
@@ -179,6 +195,20 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
                 // Backup was cancelled, show friendly confirmation dialog
                 showBackupCancelledDialog();
             }
+        }
+    );
+    
+    // Network selection handler - launched after wallet creation, navigates to home when done
+    private final ActivityResultLauncher<Intent> networkSelectionHandler = registerForActivityResult(
+        new ActivityResultContracts.StartActivityForResult(),
+        result -> {
+            // Network selection completed (or back pressed), proceed to home immediately
+            pendingNetworkSelection = false;
+            isNavigatingToHome = true;
+            
+            // Don't show any loading - just navigate directly to home
+            // The fade transition will handle the visual smoothness
+            proceedToHomeImmediately();
         }
     );
 
@@ -315,6 +345,25 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             return;
         }
         
+        // After wallet creation/import, show network selection FIRST before going to home
+        if (pendingNetworkSelection && wallets.length > 0)
+        {
+            // Hide any loading screen
+            showLoading(false);
+            
+            // Mark the wallet as current
+            viewModel.doWalletStartupActions(wallets[0]);
+            
+            // Launch network selection - will navigate directly to home when done
+            Intent intent = new Intent(this, NetworkToggleActivity.class);
+            intent.putExtra(C.EXTRA_SINGLE_ITEM, false);
+            intent.putExtra(NetworkToggleActivity.FROM_NEW_WALLET, true);
+            startActivity(intent);
+            // Finish SplashActivity immediately so there's no blank screen to return to
+            finish();
+            return;
+        }
+        
         //event chain should look like this:
         //1. check if wallets are empty:
         //      - yes, get either create a new account or take user to wallet page if SHOW_NEW_ACCOUNT_PROMPT is set
@@ -432,6 +481,15 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     @Override
     public void HDKeyCreated(String address, Context ctx, KeyService.AuthenticationLevel level)
     {
+        // Check if key creation failed (address is null)
+        if (address == null || address.isEmpty())
+        {
+            // Key storage failed - show error and allow retry
+            walletCreationInProgress = false;
+            showKeyCreationFailedDialog();
+            return;
+        }
+        
         // Store wallet details temporarily
         pendingWalletAddress = address;
         pendingAuthLevel = level;
@@ -451,6 +509,27 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             // Security already set up or skipped, proceed to backup flow
             launchBackupFlow();
         }
+    }
+    
+    /**
+     * Show dialog when key creation/storage fails
+     */
+    private void showKeyCreationFailedDialog()
+    {
+        AWalletAlertDialog dialog = new AWalletAlertDialog(this);
+        dialog.setTitle(R.string.key_error);
+        dialog.setMessage(R.string.wallet_creation_failed_message);
+        dialog.setIcon(AWalletAlertDialog.ERROR);
+        dialog.setButtonText(R.string.try_again);
+        dialog.setSecondaryButtonText(R.string.action_cancel);
+        dialog.setButtonListener(v -> {
+            dialog.dismiss();
+            // Retry wallet creation
+            walletCreationInProgress = true;
+            viewModel.createNewWallet(this, this);
+        });
+        dialog.setSecondaryButtonListener(v -> dialog.dismiss());
+        dialog.show();
     }
     
     /**

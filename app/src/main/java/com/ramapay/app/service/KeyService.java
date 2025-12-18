@@ -1081,27 +1081,31 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             }
 
             // Verify the key was actually stored in the KeyStore
-            // Some devices (Oppo, Vivo) may silently fail to persist keys
-            keyStore.load(null); // Reload to ensure fresh state
-            if (!keyStore.containsAlias(fileName))
+            // Some devices (Oppo, Vivo) and emulators may silently fail to persist keys
+            // Use longer delay on emulators as they are slower
+            int verifyDelayMs = isEmulator() ? 500 : 100;
+            int maxVerifyAttempts = isEmulator() ? 5 : 3;
+            
+            for (int verifyAttempt = 0; verifyAttempt < maxVerifyAttempts; verifyAttempt++)
             {
-                Timber.tag(TAG).e("Key verification failed - key not found after storage for: %s", fileName);
-                // Try to reload one more time after a brief delay
-                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
-                keyStore.load(null);
-                if (!keyStore.containsAlias(fileName))
+                try { Thread.sleep(verifyDelayMs); } catch (InterruptedException ignored) {}
+                keyStore.load(null); // Reload to ensure fresh state
+                
+                if (keyStore.containsAlias(fileName))
                 {
-                    // Key really didn't persist - this device has keystore issues
-                    deleteKey(fileName);
-                    throw new ServiceErrorException(
-                            ServiceErrorException.ServiceErrorCode.KEY_STORE_ERROR,
-                            "Secure key storage verification failed. Your device may have incompatible security hardware. Please try again or use a different device.");
+                    Timber.tag(TAG).i("Key successfully stored and verified for: %s (attempt %d)", fileName, verifyAttempt + 1);
+                    return true;
                 }
+                
+                Timber.tag(TAG).w("Key verification attempt %d failed for: %s", verifyAttempt + 1, fileName);
             }
             
-            Timber.tag(TAG).i("Key successfully stored and verified for: %s", fileName);
-
-            return true;
+            // Key really didn't persist - this device has keystore issues
+            Timber.tag(TAG).e("Key verification failed - key not found after %d attempts for: %s", maxVerifyAttempts, fileName);
+            deleteKey(fileName);
+            throw new ServiceErrorException(
+                    ServiceErrorException.ServiceErrorCode.KEY_STORE_ERROR,
+                    "Secure key storage verification failed. Your device may have incompatible security hardware. Please try again or use a different device.");
         }
         catch (ServiceErrorException ex)
         {
@@ -1998,11 +2002,86 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             KeyStore keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
             keyStore.load(null);
             String matchingAddr = findMatchingAddrInKeyStore(walletAddress);
-            return keyStore.containsAlias(matchingAddr);
+            boolean hasAlias = keyStore.containsAlias(matchingAddr);
+            
+            if (hasAlias)
+            {
+                return true;
+            }
+            
+            // KeyStore alias not found - check if encrypted files exist
+            // This can happen on emulators where KeyStore entries get lost
+            String encryptedFilePath = getFilePath(context, walletAddress);
+            String ivFilePath = getFilePath(context, walletAddress + "iv");
+            java.io.File encryptedFile = new java.io.File(encryptedFilePath);
+            java.io.File ivFile = new java.io.File(ivFilePath);
+            
+            if (encryptedFile.exists() && ivFile.exists())
+            {
+                Timber.tag(TAG).w("KeyStore alias not found but encrypted files exist for %s - possible KeyStore corruption", walletAddress);
+                // Files exist but KeyStore entry is gone - this is a KeyStore corruption issue
+                // We can't recover without re-creating the key
+                return false;
+            }
+            
+            return false;
         }
         catch (KeyStoreException|NoSuchAlgorithmException|CertificateException|IOException e)
         {
             Timber.e(e);
+        }
+
+        return false;
+    }
+    
+    /**
+     * Comprehensive verification of key storage
+     * Checks:
+     * 1. KeyStore contains the key alias
+     * 2. Encrypted data file exists
+     * 3. IV file exists
+     * 
+     * This is more thorough than hasKeystore() and helps detect partial storage failures
+     */
+    public boolean verifyKeyStorageComplete(String walletAddress)
+    {
+        try
+        {
+            // Check KeyStore
+            KeyStore keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
+            keyStore.load(null);
+            String matchingAddr = findMatchingAddrInKeyStore(walletAddress);
+            
+            if (!keyStore.containsAlias(matchingAddr))
+            {
+                Timber.tag(TAG).w("Key verification: KeyStore alias not found for %s", walletAddress);
+                return false;
+            }
+            
+            // Check encrypted data file
+            String encryptedFilePath = getFilePath(context, matchingAddr);
+            java.io.File encryptedFile = new java.io.File(encryptedFilePath);
+            if (!encryptedFile.exists())
+            {
+                Timber.tag(TAG).w("Key verification: Encrypted file not found for %s", walletAddress);
+                return false;
+            }
+            
+            // Check IV file
+            String ivFilePath = getFilePath(context, matchingAddr + "iv");
+            java.io.File ivFile = new java.io.File(ivFilePath);
+            if (!ivFile.exists())
+            {
+                Timber.tag(TAG).w("Key verification: IV file not found for %s", walletAddress);
+                return false;
+            }
+            
+            Timber.tag(TAG).d("Key verification successful for %s", walletAddress);
+            return true;
+        }
+        catch (KeyStoreException|NoSuchAlgorithmException|CertificateException|IOException e)
+        {
+            Timber.tag(TAG).e(e, "Key verification error for %s", walletAddress);
         }
 
         return false;
