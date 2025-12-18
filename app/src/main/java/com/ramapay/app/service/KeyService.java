@@ -153,10 +153,56 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
     private boolean requireAuthentication = false;
 
     private static SecurityStatus securityStatus = SecurityStatus.NOT_CHECKED;
+    
+    // Some manufacturers have problematic KeyStore implementations
+    // iQOO is a Vivo sub-brand that may report separately
+    private static final String[] PROBLEMATIC_MANUFACTURERS = {"oppo", "vivo", "iqoo", "realme", "oneplus", "xiaomi", "huawei", "honor", "tecno", "infinix"};
 
     public Context getContext()
     {
         return context;
+    }
+    
+    /**
+     * Check if running on an emulator
+     */
+    private static boolean isEmulator()
+    {
+        return Build.FINGERPRINT.contains("generic")
+            || Build.FINGERPRINT.contains("emulator")
+            || Build.MODEL.contains("sdk_gphone")
+            || Build.MODEL.contains("Emulator")
+            || Build.MODEL.contains("Android SDK")
+            || Build.MANUFACTURER.contains("Genymotion")
+            || Build.HARDWARE.contains("goldfish")
+            || Build.HARDWARE.contains("ranchu")
+            || Build.PRODUCT.contains("sdk")
+            || Build.PRODUCT.contains("google_sdk")
+            || Build.PRODUCT.contains("sdk_gphone");
+    }
+    
+    /**
+     * Check if this device has a manufacturer known to have KeyStore issues
+     */
+    private static boolean isProblematicDevice()
+    {
+        // Emulators often have keystore issues
+        if (isEmulator())
+        {
+            Timber.tag(TAG).w("Running on emulator - using software key for reliability");
+            return true;
+        }
+        
+        String manufacturer = Build.MANUFACTURER.toLowerCase();
+        for (String problematic : PROBLEMATIC_MANUFACTURERS)
+        {
+            if (manufacturer.contains(problematic))
+            {
+                Timber.tag(TAG).w("Device manufacturer %s may have KeyStore issues", manufacturer);
+                return true;
+            }
+        }
+        return false;
     }
 
     public KeyService(Context ctx, AnalyticsServiceType<AnalyticsProperties> analyticsService)
@@ -509,7 +555,14 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             String matchingAddr = findMatchingAddrInKeyStore(walletAddressToUse);
             if (!keyStore.containsAlias(matchingAddr))
             {
-                throw new KeyServiceException("Wallet key not found in secure storage.\n\nYour wallet data may have been lost due to device security changes or app reinstallation.\n\nPlease re-import your wallet using your recovery phrase.");
+                // Check if the encrypted file exists - if not, wallet was never properly created
+                File encryptedFile = new File(getFilePath(context, matchingAddr));
+                if (!encryptedFile.exists())
+                {
+                    throw new KeyServiceException("Wallet was not properly initialized.\n\nPlease create or import your wallet again.");
+                }
+                // File exists but key is gone - device security issue
+                throw new KeyServiceException("Wallet key not found in secure storage.\n\nThis may happen on some devices (like Oppo, Vivo) due to security restrictions.\n\nPlease re-import your wallet using your recovery phrase.");
             }
 
             //create a stream to the encrypted bytes
@@ -1027,6 +1080,27 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
                         "Failed to create the file for: " + fileName);
             }
 
+            // Verify the key was actually stored in the KeyStore
+            // Some devices (Oppo, Vivo) may silently fail to persist keys
+            keyStore.load(null); // Reload to ensure fresh state
+            if (!keyStore.containsAlias(fileName))
+            {
+                Timber.tag(TAG).e("Key verification failed - key not found after storage for: %s", fileName);
+                // Try to reload one more time after a brief delay
+                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                keyStore.load(null);
+                if (!keyStore.containsAlias(fileName))
+                {
+                    // Key really didn't persist - this device has keystore issues
+                    deleteKey(fileName);
+                    throw new ServiceErrorException(
+                            ServiceErrorException.ServiceErrorCode.KEY_STORE_ERROR,
+                            "Secure key storage verification failed. Your device may have incompatible security hardware. Please try again or use a different device.");
+                }
+            }
+            
+            Timber.tag(TAG).i("Key successfully stored and verified for: %s", fileName);
+
             return true;
         }
         catch (ServiceErrorException ex)
@@ -1055,7 +1129,19 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
                     KeyProperties.KEY_ALGORITHM_AES,
                     ANDROID_KEY_STORE);
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && tryInitStrongBoxKey(keyGenerator, keyAddress, useAuthentication))
+            // For problematic devices, try software key first to avoid hardware keystore issues
+            if (isProblematicDevice())
+            {
+                Timber.tag(TAG).w("Problematic device detected, trying software key first");
+                if (tryInitSoftwareKey(keyGenerator, keyAddress))
+                {
+                    authLevel = TEE_NO_AUTHENTICATION;
+                    keyInitialized = true;
+                    Timber.tag(TAG).i("Software key used for problematic device: %s", Build.MANUFACTURER);
+                }
+            }
+            
+            if (!keyInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && tryInitStrongBoxKey(keyGenerator, keyAddress, useAuthentication))
             {
                 if (useAuthentication) authLevel = AuthenticationLevel.STRONGBOX_AUTHENTICATION;
                 else authLevel = STRONGBOX_NO_AUTHENTICATION;

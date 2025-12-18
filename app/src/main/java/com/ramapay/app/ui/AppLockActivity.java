@@ -279,8 +279,8 @@ public class AppLockActivity extends BaseActivity {
             setResult(RESULT_OK);
         }
         finish();
-        // Use fade transition to avoid visual artifacts
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+        // Use instant transition for faster experience
+        overridePendingTransition(0, 0);
     }
     
     @Override

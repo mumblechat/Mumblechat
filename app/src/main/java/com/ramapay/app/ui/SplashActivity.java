@@ -130,6 +130,12 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             // Security setup completed or skipped
             pendingSecuritySetup = false;
             
+            // Hide splash content immediately to prevent flashing
+            View splashContent = findViewById(R.id.splash_content_container);
+            if (splashContent != null) {
+                splashContent.setVisibility(View.GONE);
+            }
+            
             if (pendingImportAfterSecurity)
             {
                 // Security done, now open ImportWalletActivity
@@ -204,10 +210,31 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
     {
         super.onCreate(savedInstanceState);
         
+        // Fast path for returning users - skip all splash UI and go directly to unlock/home
+        boolean walletExists = appSecurityManager != null && appSecurityManager.isFirstWalletCreated();
+        if (walletExists)
+        {
+            // Minimal UI for returning users - just a dark background
+            getWindow().setBackgroundDrawableResource(android.R.color.black);
+            setContentView(R.layout.activity_splash);
+            
+            // Don't load any images or start animations
+            // Initialize ViewModel and fetch wallets immediately
+            viewModel = new ViewModelProvider(this)
+                .get(SplashViewModel.class);
+            viewModel.wallets().observe(this, this::onWallets);
+            viewModel.fetchWallets();
+            return; // Skip all new user UI setup
+        }
+        
+        // New user path - show full splash experience
         // Set window background for futuristic theme
         getWindow().setBackgroundDrawableResource(R.drawable.futuristic_background);
         
         setContentView(R.layout.activity_splash);
+
+        // Splash content is hidden by default in XML (visibility=gone)
+        // Only shown for new users when no wallet exists
 
         // Load splash screen image
         ImageView splashImage = findViewById(R.id.splash_image);
@@ -299,6 +326,8 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
         if (wallets.length == 0)
         {
             viewModel.setDefaultBrowser();
+            // Show the entire splash content container for new users
+            findViewById(R.id.splash_content_container).setVisibility(View.VISIBLE);
             findViewById(R.id.layout_new_wallet).setVisibility(View.VISIBLE);
             findViewById(R.id.button_create).setOnClickListener(v -> {
                 // Check network connectivity first
@@ -347,8 +376,9 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
         }
         else
         {
+            // Wallet exists - proceed immediately to unlock/home (no delay for returning users)
             viewModel.doWalletStartupActions(wallets[0]);
-            handler.postDelayed(this, CustomViewSettings.startupDelay());
+            run(); // Call directly instead of postDelayed for faster experience
         }
     }
 
@@ -374,6 +404,12 @@ public class SplashActivity extends BaseActivity implements CreateWalletCallback
             walletCreationInProgress = false;
             if (resultCode == RESULT_OK && data != null)
             {
+                // Hide splash content immediately to prevent flashing
+                View splashContent = findViewById(R.id.splash_content_container);
+                if (splashContent != null) {
+                    splashContent.setVisibility(View.GONE);
+                }
+                
                 // Mark the imported wallet as new so HomeActivity shows network selection
                 Wallet importedWallet = data.getParcelableExtra(WALLET);
                 if (importedWallet != null)

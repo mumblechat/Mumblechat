@@ -6,6 +6,14 @@
     android:layout_height="match_parent"
     android:background="@drawable/futuristic_background">
 
+    <!-- Splash Content Container - Hidden by default, shown only for new users -->
+    <RelativeLayout
+        android:id="@+id/splash_content_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        tools:visibility="visible">
+
     <!-- Cute Squirrel - Bottom Left -->
     <ImageView
         android:id="@+id/squirrel"
@@ -178,7 +186,7 @@
 
     </LinearLayout>
 
-    <!-- Buttons Container - Futuristic Style -->
+    <!-- Buttons Container - Futuristic Style - Only shown for new users without wallet -->
     <LinearLayout
         android:id="@+id/layout_new_wallet"
         android:layout_width="match_parent"
@@ -188,7 +196,7 @@
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="48dp"
         android:orientation="vertical"
-        android:visibility="visible"
+        android:visibility="gone"
         tools:visibility="visible">
 
         <com.google.android.material.button.MaterialButton
@@ -239,6 +247,9 @@
             android:visibility="gone" />
 
     </LinearLayout>
+
+    </RelativeLayout>
+    <!-- End of Splash Content Container -->
 
     <!-- Loading overlay for wallet creation -->
     <FrameLayout

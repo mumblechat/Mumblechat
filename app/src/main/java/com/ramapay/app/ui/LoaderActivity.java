@@ -21,10 +21,19 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.ramapay.app.R;
+import com.ramapay.app.service.AppSecurityManager;
 import com.ramapay.app.widget.PercentageProgressView;
 import com.bumptech.glide.Glide;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
+
+@AndroidEntryPoint
 public class LoaderActivity extends AppCompatActivity {
+    
+    @Inject
+    AppSecurityManager appSecurityManager;
     
     private final Handler handler = new Handler(Looper.getMainLooper());
     private View dot1, dot2, dot3;
@@ -33,6 +42,14 @@ public class LoaderActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Fast path for returning users - skip loader entirely
+        if (appSecurityManager != null && appSecurityManager.isFirstWalletCreated()) {
+            // Wallet exists - go directly to SplashActivity (which will show AppLock if needed)
+            startActivity(new Intent(this, SplashActivity.class));
+            finish();
+            return;
+        }
         
         // Make status bar transparent for immersive experience
         getWindow().setStatusBarColor(Color.parseColor("#0D0D1A"));

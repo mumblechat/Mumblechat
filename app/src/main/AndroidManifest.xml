@@ -73,7 +73,7 @@
                 android:exported="true"
                 android:launchMode="singleTask"
                 android:hardwareAccelerated="true"
-                android:theme="@style/AppTheme.NoActionBar.Splash"
+                android:theme="@style/AppTheme.NoActionBar"
                 android:windowSoftInputMode="adjustPan">
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />

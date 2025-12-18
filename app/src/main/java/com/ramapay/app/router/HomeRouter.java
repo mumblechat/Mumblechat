@@ -1,5 +1,6 @@
 package com.ramapay.app.router;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 
@@ -23,5 +24,10 @@ public class HomeRouter {
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         }
         context.startActivity(intent);
+        
+        // Apply instant transition for faster feel
+        if (context instanceof Activity) {
+            ((Activity) context).overridePendingTransition(0, 0);
+        }
     }
 }
