@@ -109,7 +109,8 @@ public class BackupKeyActivity extends BaseActivity implements
     protected void onCreate(@Nullable Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        secureWindow();
+        // Screenshots are allowed for seed phrase backup so users can save their recovery words
+        // Copy button is also available for convenience
 
         alertDialog = null;
         lockOrientation();
@@ -504,9 +505,9 @@ public class BackupKeyActivity extends BaseActivity implements
 
             case SEED_PHRASE_INVALID:
             case VERIFY_SEED_PHRASE:
-                state = BackupState.ENTER_BACKUP_STATE_HD; //reset view back to splash screen
-                WriteDownSeedPhrase();
-                DisplaySeed();
+                // Don't reset state or re-fetch mnemonic when minimizing during verification
+                // The mnemonicArray is already stored in memory, just clear the UI for security
+                // On resume, we'll restore the verification UI with the same mnemonic
                 break;
 
             case SET_JSON_PASSWORD:
@@ -1537,9 +1538,13 @@ public class BackupKeyActivity extends BaseActivity implements
         }
     }
 
+    // Note: Screenshots are intentionally ALLOWED for seed phrase backup
+    // This helps users save their recovery phrase securely
+    // The copy button provides an additional way to save the seed phrase
     private void secureWindow()
     {
-        // Prevent screenshots to protect seed phrase
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        // Previously blocked screenshots, now allowing for better UX
+        // Users can screenshot their seed phrase to save it
+        // getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
     }
 }

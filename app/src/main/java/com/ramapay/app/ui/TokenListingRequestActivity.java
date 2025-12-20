@@ -1,37 +1,47 @@
 package com.ramapay.app.ui;
 
-import android.content.Intent;
-import android.net.Uri;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.Patterns;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.ramapay.app.R;
-import com.ramapay.app.entity.MediaLinks;
 import com.ramapay.app.entity.NetworkInfo;
-import com.ramapay.app.repository.EthereumNetworkRepositoryType;
+import com.ramapay.app.entity.tokens.TokenInfo;
+import com.ramapay.app.util.Utils;
+import com.ramapay.app.viewmodel.TokenListingViewModel;
+import com.ramapay.app.widget.AWalletAlertDialog;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.inject.Inject;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import timber.log.Timber;
 
 @AndroidEntryPoint
 public class TokenListingRequestActivity extends BaseActivity
 {
-    @Inject
-    EthereumNetworkRepositoryType ethereumNetworkRepository;
+    private TokenListingViewModel viewModel;
+
+    private final Pattern findAddress = Pattern.compile("(0x)([0-9a-fA-F]{40})($|\\s)");
 
     private TextInputLayout tokenAddressLayout;
     private TextInputEditText tokenAddressInput;
@@ -41,6 +51,8 @@ public class TokenListingRequestActivity extends BaseActivity
     private TextInputEditText tokenNameInput;
     private TextInputLayout tokenSymbolLayout;
     private TextInputEditText tokenSymbolInput;
+    private TextInputLayout decimalsLayout;
+    private TextInputEditText decimalsInput;
     private TextInputLayout iconUrlLayout;
     private TextInputEditText iconUrlInput;
     private TextInputLayout websiteLayout;
@@ -51,8 +63,18 @@ public class TokenListingRequestActivity extends BaseActivity
     private TextInputEditText notesInput;
     private MaterialButton submitButton;
 
+    // Progress UI
+    private LinearLayout progressLayout;
+    private ProgressBar progressBar;
+    private TextView progressText;
+
     private List<NetworkInfo> networks;
-    private String selectedChain = "";
+    private NetworkInfo selectedNetwork = null;
+    private long selectedChainId = -1;
+    private String lastCheckedAddress = "";
+    private int detectedDecimals = 18;
+
+    private AWalletAlertDialog progressDialog;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState)
@@ -63,8 +85,11 @@ public class TokenListingRequestActivity extends BaseActivity
         toolbar();
         setTitle(getString(R.string.title_token_listing_request));
 
+        viewModel = new ViewModelProvider(this).get(TokenListingViewModel.class);
+
         initViews();
         initChainDropdown();
+        setupObservers();
         setupListeners();
     }
 
@@ -78,6 +103,8 @@ public class TokenListingRequestActivity extends BaseActivity
         tokenNameInput = findViewById(R.id.token_name_input);
         tokenSymbolLayout = findViewById(R.id.token_symbol_layout);
         tokenSymbolInput = findViewById(R.id.token_symbol_input);
+        decimalsLayout = findViewById(R.id.decimals_layout);
+        decimalsInput = findViewById(R.id.decimals_input);
         iconUrlLayout = findViewById(R.id.icon_url_layout);
         iconUrlInput = findViewById(R.id.icon_url_input);
         websiteLayout = findViewById(R.id.website_layout);
@@ -87,6 +114,70 @@ public class TokenListingRequestActivity extends BaseActivity
         notesLayout = findViewById(R.id.notes_layout);
         notesInput = findViewById(R.id.notes_input);
         submitButton = findViewById(R.id.btn_submit_request);
+
+        // Progress UI
+        progressLayout = findViewById(R.id.progress_layout);
+        progressBar = findViewById(R.id.progress_bar);
+        progressText = findViewById(R.id.progress_text);
+
+        if (progressLayout != null)
+        {
+            progressLayout.setVisibility(View.GONE);
+        }
+
+        // Setup paste button click listeners
+        setupPasteButtons();
+    }
+
+    private void setupPasteButtons()
+    {
+        // Paste button for contract address
+        tokenAddressLayout.setEndIconOnClickListener(v -> {
+            String clipboardText = getClipboardText();
+            if (!TextUtils.isEmpty(clipboardText))
+            {
+                tokenAddressInput.setText(clipboardText);
+                tokenAddressInput.setSelection(clipboardText.length());
+            }
+        });
+
+        // Paste button for icon URL
+        iconUrlLayout.setEndIconOnClickListener(v -> {
+            String clipboardText = getClipboardText();
+            if (!TextUtils.isEmpty(clipboardText))
+            {
+                iconUrlInput.setText(clipboardText);
+                iconUrlInput.setSelection(clipboardText.length());
+            }
+        });
+
+        // Paste button for website
+        websiteLayout.setEndIconOnClickListener(v -> {
+            String clipboardText = getClipboardText();
+            if (!TextUtils.isEmpty(clipboardText))
+            {
+                websiteInput.setText(clipboardText);
+                websiteInput.setSelection(clipboardText.length());
+            }
+        });
+    }
+
+    private String getClipboardText()
+    {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null && clipboard.hasPrimaryClip())
+        {
+            ClipData clipData = clipboard.getPrimaryClip();
+            if (clipData != null && clipData.getItemCount() > 0)
+            {
+                CharSequence text = clipData.getItemAt(0).getText();
+                if (text != null)
+                {
+                    return text.toString().trim();
+                }
+            }
+        }
+        return "";
     }
 
     private void initChainDropdown()
@@ -95,7 +186,7 @@ public class TokenListingRequestActivity extends BaseActivity
         List<String> chainNames = new ArrayList<>();
 
         // Get all available networks
-        NetworkInfo[] allNetworks = ethereumNetworkRepository.getAvailableNetworkList();
+        NetworkInfo[] allNetworks = viewModel.getAvailableNetworks();
         for (NetworkInfo network : allNetworks)
         {
             if (network != null && !TextUtils.isEmpty(network.name))
@@ -115,13 +206,110 @@ public class TokenListingRequestActivity extends BaseActivity
         chainDropdown.setOnItemClickListener((parent, view, position, id) -> {
             if (position < networks.size())
             {
-                selectedChain = networks.get(position).name;
+                selectedNetwork = networks.get(position);
+                selectedChainId = selectedNetwork.chainId;
+                chainLayout.setError(null);
+            }
+        });
+    }
+
+    private void setupObservers()
+    {
+        // Token detected
+        viewModel.detectedToken().observe(this, tokenInfo -> {
+            if (tokenInfo != null)
+            {
+                runOnUiThread(() -> {
+                    fillTokenDetails(tokenInfo);
+                    hideProgress();
+                    Toast.makeText(this, R.string.token_detected_successfully, Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+
+        // Network detected
+        viewModel.detectedNetwork().observe(this, networkInfo -> {
+            if (networkInfo != null)
+            {
+                runOnUiThread(() -> {
+                    selectedNetwork = networkInfo;
+                    selectedChainId = networkInfo.chainId;
+                    chainDropdown.setText(networkInfo.name, false);
+                    chainLayout.setError(null);
+                });
+            }
+        });
+
+        // Scan progress
+        viewModel.scanProgress().observe(this, progress -> {
+            if (progressBar != null)
+            {
+                progressBar.setProgress(progress);
+            }
+            if (progressText != null)
+            {
+                progressText.setText(getString(R.string.scanning_networks_progress, progress));
+            }
+        });
+
+        // Scan complete
+        viewModel.scanComplete().observe(this, complete -> {
+            if (complete)
+            {
+                hideProgress();
+            }
+        });
+
+        // No contract found
+        viewModel.noContractFound().observe(this, notFound -> {
+            if (notFound)
+            {
+                hideProgress();
+                Toast.makeText(this, R.string.contract_not_found_on_networks, Toast.LENGTH_LONG).show();
+            }
+        });
+
+        // Submit success
+        viewModel.submitSuccess().observe(this, success -> {
+            if (success)
+            {
+                hideSubmitProgress();
+                showSuccessDialog();
+            }
+        });
+
+        // Submit error
+        viewModel.submitError().observe(this, error -> {
+            if (error != null)
+            {
+                hideSubmitProgress();
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show();
             }
         });
     }
 
     private void setupListeners()
     {
+        // Token address input listener - auto-detect on valid address
+        tokenAddressInput.addTextChangedListener(new TextWatcher()
+        {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count)
+            {
+                String input = s.toString().trim();
+                if (input.length() > 38)
+                {
+                    checkContractAddress(input);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
         submitButton.setOnClickListener(v -> {
             if (validateForm())
             {
@@ -129,7 +317,7 @@ public class TokenListingRequestActivity extends BaseActivity
             }
         });
 
-        // Clear errors on text change
+        // Clear errors on focus
         tokenAddressInput.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) tokenAddressLayout.setError(null);
         });
@@ -145,6 +333,104 @@ public class TokenListingRequestActivity extends BaseActivity
         emailInput.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) emailLayout.setError(null);
         });
+    }
+
+    private void checkContractAddress(String address)
+    {
+        // Extract valid address if needed
+        if (!Utils.isAddressValid(address))
+        {
+            Matcher matcher = findAddress.matcher(address);
+            if (matcher.find())
+            {
+                address = matcher.group(1) + matcher.group(2);
+            }
+        }
+
+        if (Utils.isAddressValid(address) && !address.equalsIgnoreCase(lastCheckedAddress))
+        {
+            lastCheckedAddress = address;
+            showProgress();
+            tokenAddressLayout.setError(null);
+
+            // Clear previous data
+            tokenNameInput.setText("");
+            tokenSymbolInput.setText("");
+            if (decimalsInput != null) decimalsInput.setText("");
+            chainDropdown.setText("", false);
+            selectedNetwork = null;
+            selectedChainId = -1;
+
+            // Scan all networks for the contract
+            viewModel.scanAllNetworks(address);
+        }
+    }
+
+    private void fillTokenDetails(TokenInfo tokenInfo)
+    {
+        if (!TextUtils.isEmpty(tokenInfo.name))
+        {
+            tokenNameInput.setText(tokenInfo.name);
+        }
+        if (!TextUtils.isEmpty(tokenInfo.symbol))
+        {
+            tokenSymbolInput.setText(tokenInfo.symbol);
+        }
+        if (decimalsInput != null && tokenInfo.decimals > 0)
+        {
+            decimalsInput.setText(String.valueOf(tokenInfo.decimals));
+            detectedDecimals = tokenInfo.decimals;
+        }
+    }
+
+    private void showProgress()
+    {
+        if (progressLayout != null)
+        {
+            progressLayout.setVisibility(View.VISIBLE);
+            progressBar.setProgress(0);
+            progressText.setText(R.string.detecting_token);
+        }
+    }
+
+    private void hideProgress()
+    {
+        if (progressLayout != null)
+        {
+            progressLayout.setVisibility(View.GONE);
+        }
+    }
+
+    private void showSubmitProgress()
+    {
+        progressDialog = new AWalletAlertDialog(this);
+        progressDialog.setTitle(R.string.submitting_request);
+        progressDialog.setProgressMode();
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+    }
+
+    private void hideSubmitProgress()
+    {
+        if (progressDialog != null && progressDialog.isShowing())
+        {
+            progressDialog.dismiss();
+        }
+    }
+
+    private void showSuccessDialog()
+    {
+        AWalletAlertDialog dialog = new AWalletAlertDialog(this);
+        dialog.setIcon(AWalletAlertDialog.SUCCESS);
+        dialog.setTitle(R.string.token_listing_submitted);
+        dialog.setMessage(getString(R.string.token_listing_submitted_message));
+        dialog.setButtonText(R.string.ok);
+        dialog.setButtonListener(v -> {
+            dialog.dismiss();
+            finish();
+        });
+        dialog.setCancelable(false);
+        dialog.show();
     }
 
     private boolean validateForm()
@@ -165,7 +451,7 @@ public class TokenListingRequestActivity extends BaseActivity
         }
 
         // Validate chain selection
-        if (TextUtils.isEmpty(selectedChain))
+        if (selectedChainId <= 0)
         {
             chainLayout.setError(getString(R.string.error_chain_required));
             isValid = false;
@@ -222,6 +508,8 @@ public class TokenListingRequestActivity extends BaseActivity
 
     private void submitRequest()
     {
+        showSubmitProgress();
+
         String tokenAddress = getTextFromInput(tokenAddressInput);
         String tokenName = getTextFromInput(tokenNameInput);
         String tokenSymbol = getTextFromInput(tokenSymbolInput);
@@ -230,47 +518,34 @@ public class TokenListingRequestActivity extends BaseActivity
         String contactEmail = getTextFromInput(emailInput);
         String notes = getTextFromInput(notesInput);
 
-        // Build email body
-        StringBuilder bodyBuilder = new StringBuilder();
-        bodyBuilder.append("Token Listing Request\n");
-        bodyBuilder.append("=====================\n\n");
-        bodyBuilder.append("Token Contract Address: ").append(tokenAddress).append("\n");
-        bodyBuilder.append("Blockchain Network: ").append(selectedChain).append("\n");
-        bodyBuilder.append("Token Name: ").append(tokenName).append("\n");
-        bodyBuilder.append("Token Symbol: ").append(tokenSymbol).append("\n");
-        bodyBuilder.append("Token Icon URL: ").append(iconUrl).append("\n");
-        
-        if (!TextUtils.isEmpty(website))
+        int decimals = detectedDecimals;
+        if (decimalsInput != null)
         {
-            bodyBuilder.append("Project Website: ").append(website).append("\n");
-        }
-        
-        bodyBuilder.append("Contact Email: ").append(contactEmail).append("\n");
-        
-        if (!TextUtils.isEmpty(notes))
-        {
-            bodyBuilder.append("\nAdditional Notes:\n").append(notes).append("\n");
+            String decimalsStr = getTextFromInput(decimalsInput);
+            if (!TextUtils.isEmpty(decimalsStr))
+            {
+                try
+                {
+                    decimals = Integer.parseInt(decimalsStr);
+                }
+                catch (NumberFormatException e)
+                {
+                    decimals = 18;
+                }
+            }
         }
 
-        // Send email intent
-        Intent intent = new Intent(Intent.ACTION_SENDTO);
-        String emailAddress = MediaLinks.AWALLET_EMAIL1 + "@" + MediaLinks.AWALLET_EMAIL2;
-        String mailtoUri = "mailto:" + emailAddress +
-                "?subject=" + Uri.encode(getString(R.string.token_listing_email_subject)) +
-                "&body=" + Uri.encode(bodyBuilder.toString());
-        intent.setData(Uri.parse(mailtoUri));
-
-        try
-        {
-            startActivity(intent);
-            Toast.makeText(this, R.string.token_listing_request_sent, Toast.LENGTH_LONG).show();
-            finish();
-        }
-        catch (Exception e)
-        {
-            Timber.e(e, "Failed to open email client");
-            Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show();
-        }
+        viewModel.submitTokenListingRequest(
+                tokenAddress,
+                selectedChainId,
+                tokenName,
+                tokenSymbol,
+                decimals,
+                iconUrl,
+                website,
+                contactEmail,
+                notes
+        );
     }
 
     private String getTextFromInput(TextInputEditText input)
@@ -284,9 +559,7 @@ public class TokenListingRequestActivity extends BaseActivity
 
     private boolean isValidContractAddress(String address)
     {
-        // Basic validation for Ethereum-style addresses
-        return address != null && 
-               address.matches("^0x[a-fA-F0-9]{40}$");
+        return address != null && address.matches("^0x[a-fA-F0-9]{40}$");
     }
 
     private boolean isValidEmail(String email)
@@ -297,5 +570,12 @@ public class TokenListingRequestActivity extends BaseActivity
     private boolean isValidUrl(String url)
     {
         return url != null && Patterns.WEB_URL.matcher(url).matches();
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        super.onDestroy();
+        viewModel.stopScan();
     }
 }

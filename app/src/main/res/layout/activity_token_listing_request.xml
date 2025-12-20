@@ -37,7 +37,10 @@
                 android:layout_marginBottom="16dp"
                 android:hint="@string/token_contract_address"
                 app:helperText="@string/token_address_helper"
-                app:helperTextEnabled="true">
+                app:helperTextEnabled="true"
+                app:endIconMode="custom"
+                app:endIconDrawable="@drawable/ic_paste"
+                app:endIconContentDescription="@string/paste">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/token_address_input"
@@ -47,6 +50,38 @@
                     android:maxLines="1" />
 
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Progress Layout for scanning -->
+            <LinearLayout
+                android:id="@+id/progress_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/background_slippage"
+                android:visibility="gone">
+
+                <ProgressBar
+                    android:id="@+id/progress_bar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="100"
+                    android:progress="0"
+                    android:layout_marginEnd="12dp" />
+
+                <TextView
+                    android:id="@+id/progress_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/detecting_token"
+                    android:textSize="12sp"
+                    android:textColor="?android:attr/textColorSecondary" />
+
+            </LinearLayout>
 
             <!-- Chain/Network Selection -->
             <com.google.android.material.textfield.TextInputLayout
@@ -102,6 +137,26 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Token Decimals -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/decimals_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:hint="@string/token_decimals"
+                app:helperText="@string/token_decimals_helper"
+                app:helperTextEnabled="true">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/decimals_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:maxLines="1" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- Token Icon URL -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/icon_url_layout"
@@ -111,7 +166,10 @@
                 android:layout_marginBottom="16dp"
                 android:hint="@string/token_icon_url"
                 app:helperText="@string/token_icon_url_helper"
-                app:helperTextEnabled="true">
+                app:helperTextEnabled="true"
+                app:endIconMode="custom"
+                app:endIconDrawable="@drawable/ic_paste"
+                app:endIconContentDescription="@string/paste">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/icon_url_input"
@@ -129,7 +187,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:hint="@string/project_website">
+                android:hint="@string/project_website"
+                app:endIconMode="custom"
+                app:endIconDrawable="@drawable/ic_paste"
+                app:endIconContentDescription="@string/paste">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/website_input"

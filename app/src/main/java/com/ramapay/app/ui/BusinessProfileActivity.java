@@ -217,52 +217,85 @@ public class BusinessProfileActivity extends BaseActivity
         {
             inputBusinessName.setError(getString(R.string.business_name_required));
             inputBusinessName.requestFocus();
+            // Scroll to top to show the error
+            ((android.widget.ScrollView) findViewById(R.id.scrollView)).smoothScrollTo(0, 0);
             return;
         }
+        
+        if (wallet == null || wallet.address == null)
+        {
+            Timber.e("Wallet or wallet address is null");
+            Toast.makeText(this, R.string.error_saving_profile, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Capture values before async operation
+        final String finalBusinessName = businessName;
+        final String businessType = getText(inputBusinessType);
+        final String ownerName = getText(inputOwnerName);
+        final String phone = getText(inputPhone);
+        final String email = getText(inputEmail);
+        final String address = getText(inputAddress);
+        final String city = getText(inputCity);
+        final String pincode = getText(inputPincode);
+        final String state = getText(inputState);
+        final String country = getText(inputCountry);
+        final String gst = getText(inputGst);
+        final String currencySelection = getText(inputDefaultCurrency);
+        final String walletAddress = wallet.address;
 
         try (Realm realm = realmManager.getRealmInstance(wallet))
         {
-            realm.executeTransaction(r -> {
+            realm.executeTransactionAsync(r -> {
                 RealmBusinessProfile profile = r.where(RealmBusinessProfile.class)
-                        .equalTo("walletAddress", wallet.address)
+                        .equalTo("walletAddress", walletAddress)
                         .findFirst();
 
                 if (profile == null)
                 {
-                    profile = r.createObject(RealmBusinessProfile.class, wallet.address);
+                    profile = r.createObject(RealmBusinessProfile.class, walletAddress);
                     profile.setCreatedAt(System.currentTimeMillis());
                 }
 
-                profile.setBusinessName(businessName);
-                profile.setBusinessType(getText(inputBusinessType));
-                profile.setOwnerName(getText(inputOwnerName));
-                profile.setPhoneNumber(getText(inputPhone));
-                profile.setEmail(getText(inputEmail));
-                profile.setAddress(getText(inputAddress));
-                profile.setCity(getText(inputCity));
-                profile.setPincode(getText(inputPincode));
-                profile.setState(getText(inputState));
-                profile.setCountry(getText(inputCountry));
-                profile.setGstNumber(getText(inputGst));
+                profile.setBusinessName(finalBusinessName);
+                profile.setBusinessType(businessType);
+                profile.setOwnerName(ownerName);
+                profile.setPhoneNumber(phone);
+                profile.setEmail(email);
+                profile.setAddress(address);
+                profile.setCity(city);
+                profile.setPincode(pincode);
+                profile.setState(state);
+                profile.setCountry(country);
+                profile.setGstNumber(gst);
                 
                 // Extract currency code from selection
-                String currencySelection = getText(inputDefaultCurrency);
                 if (!TextUtils.isEmpty(currencySelection) && currencySelection.contains(" - "))
                 {
                     profile.setDefaultCurrency(currencySelection.split(" - ")[0]);
                 }
                 
                 profile.setUpdatedAt(System.currentTimeMillis());
-            });
-
-            Toast.makeText(this, R.string.profile_saved, Toast.LENGTH_SHORT).show();
-            setResult(RESULT_OK);
-            finish();
+            }, 
+            // Success callback
+            () -> runOnUiThread(() -> {
+                Toast.makeText(this, R.string.profile_saved, Toast.LENGTH_SHORT).show();
+                setResult(RESULT_OK);
+                finish();
+            }),
+            // Error callback
+            error -> runOnUiThread(() -> {
+                Timber.e(error, "Error saving business profile");
+                Toast.makeText(this, getString(R.string.error_saving_profile) + ": " + error.getMessage(), 
+                        Toast.LENGTH_LONG).show();
+            }));
         }
         catch (Exception e)
         {
-            Timber.e(e, "Error saving business profile");
-            Toast.makeText(this, R.string.error_saving_profile, Toast.LENGTH_SHORT).show();
+            Timber.e(e, "Error saving business profile for wallet: %s - %s", 
+                    wallet != null ? wallet.address : "null", e.getMessage());
+            Toast.makeText(this, getString(R.string.error_saving_profile) + ": " + e.getMessage(), 
+                    Toast.LENGTH_LONG).show();
         }
     }
 

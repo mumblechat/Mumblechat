@@ -39,6 +39,7 @@ public class SecuritySettingsActivity extends BaseActivity {
     private Spinner timeoutSpinner;
     private SwitchMaterial transactionAuthSwitch;
     private SwitchMaterial biometricSwitch;
+    private SwitchMaterial screenOffLockSwitch;
     private MaterialButton btnChangePassword;
     private ImageView iconBiometric;
 
@@ -76,6 +77,7 @@ public class SecuritySettingsActivity extends BaseActivity {
         timeoutSpinner = findViewById(R.id.timeout_spinner);
         transactionAuthSwitch = findViewById(R.id.transaction_auth_switch);
         biometricSwitch = findViewById(R.id.biometric_switch);
+        screenOffLockSwitch = findViewById(R.id.screen_off_lock_switch);
         btnChangePassword = findViewById(R.id.btn_change_password);
         iconBiometric = findViewById(R.id.icon_biometric);
 
@@ -120,6 +122,9 @@ public class SecuritySettingsActivity extends BaseActivity {
 
         // Load biometric setting
         biometricSwitch.setChecked(securityManager.isBiometricEnabled());
+        
+        // Load screen off lock setting (default is true)
+        screenOffLockSwitch.setChecked(securityManager.isLockOnScreenOffEnabled());
     }
 
     private int getTimeoutPosition(long timeout) {
@@ -163,6 +168,16 @@ public class SecuritySettingsActivity extends BaseActivity {
             } else {
                 securityManager.setBiometricEnabled(false);
                 Toast.makeText(this, R.string.biometric_disabled, Toast.LENGTH_SHORT).show();
+            }
+        });
+        
+        // Screen off lock toggle
+        screenOffLockSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            securityManager.setLockOnScreenOffEnabled(isChecked);
+            if (isChecked) {
+                Toast.makeText(this, R.string.lock_on_screen_off_enabled, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, R.string.lock_on_screen_off_disabled, Toast.LENGTH_SHORT).show();
             }
         });
 

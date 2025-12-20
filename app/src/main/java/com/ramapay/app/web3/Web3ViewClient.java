@@ -67,20 +67,17 @@ public class Web3ViewClient extends WebViewClient {
     @Override
     public void onReceivedSslError(WebView view, final SslErrorHandler handler, SslError error)
     {
+        // Always cancel SSL errors to protect users from man-in-the-middle attacks
+        // Do not allow users to bypass this - required by Google Play policy
+        handler.cancel();
+        
+        // Show error dialog to inform the user
         AWalletAlertDialog aDialog = new AWalletAlertDialog(context);
         aDialog.setTitle(R.string.title_dialog_error);
         aDialog.setIcon(AWalletAlertDialog.ERROR);
         aDialog.setMessage(R.string.ssl_cert_invalid);
-        aDialog.setButtonText(R.string.dialog_approve);
-        aDialog.setButtonListener(v -> {
-            handler.proceed();
-            aDialog.dismiss();
-        });
-        aDialog.setSecondaryButtonText(R.string.action_cancel);
-        aDialog.setButtonListener(v -> {
-            handler.cancel();
-            aDialog.dismiss();
-        });
+        aDialog.setButtonText(R.string.dialog_ok);
+        aDialog.setButtonListener(v -> aDialog.dismiss());
         aDialog.show();
     }
 

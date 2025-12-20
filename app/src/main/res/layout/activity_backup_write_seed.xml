@@ -19,13 +19,28 @@
         android:text="@string/write_down_seed_phrase"
         android:textAlignment="center" />
 
+    <TextView
+        android:id="@+id/text_hint"
+        style="@style/Aw.Typography.Sub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/text_title"
+        android:layout_marginTop="@dimen/tiny_8"
+        android:gravity="center_horizontal"
+        android:paddingStart="@dimen/cozy_20"
+        android:paddingEnd="@dimen/cozy_20"
+        android:text="@string/write_down_seed_phrase_hint"
+        android:textAlignment="center"
+        android:textColor="?android:textColorSecondary"
+        android:textSize="14sp" />
+
     <com.google.android.flexbox.FlexboxLayout
         android:id="@+id/layout_word_holder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/text_title"
+        android:layout_below="@id/text_hint"
         android:layout_marginLeft="@dimen/standard_16"
-        android:layout_marginTop="@dimen/double_base_48"
+        android:layout_marginTop="@dimen/cozy_20"
         android:layout_marginRight="@dimen/standard_16"
         app:flexDirection="row"
         app:flexWrap="wrap" />

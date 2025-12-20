@@ -49,6 +49,7 @@ public class AppSecurityManager {
     private static final String KEY_USING_PIN = "using_pin";  // true = PIN, false = password
     private static final String KEY_FAILED_ATTEMPTS = "failed_attempts";
     private static final String KEY_LOCKOUT_END_TIME = "lockout_end_time";
+    private static final String KEY_LOCK_ON_SCREEN_OFF = "lock_on_screen_off";
     
     // Timeout options in milliseconds
     public static final long TIMEOUT_1_MIN = 1 * 60 * 1000;
@@ -488,6 +489,30 @@ public class AppSecurityManager {
     public void lockApp() {
         isAuthenticated = false;
         lastAuthTime = 0;
+    }
+    
+    /**
+     * Check if lock on screen off is enabled
+     * Default is true for better security
+     */
+    public boolean isLockOnScreenOffEnabled() {
+        return securePrefs.getBoolean(KEY_LOCK_ON_SCREEN_OFF, true);
+    }
+    
+    /**
+     * Enable or disable lock on screen off
+     */
+    public void setLockOnScreenOffEnabled(boolean enabled) {
+        securePrefs.edit().putBoolean(KEY_LOCK_ON_SCREEN_OFF, enabled).apply();
+    }
+    
+    /**
+     * Called when screen is turned off - locks the app if enabled
+     */
+    public void onScreenOff() {
+        if (isSecurityEnabled() && isLockOnScreenOffEnabled()) {
+            lockApp();
+        }
     }
     
     /**

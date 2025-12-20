@@ -156,7 +156,8 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
     
     // Some manufacturers have problematic KeyStore implementations
     // iQOO is a Vivo sub-brand that may report separately
-    private static final String[] PROBLEMATIC_MANUFACTURERS = {"oppo", "vivo", "iqoo", "realme", "oneplus", "xiaomi", "huawei", "honor", "tecno", "infinix"};
+    // Samsung and other major brands added due to Play Store signing issues
+    private static final String[] PROBLEMATIC_MANUFACTURERS = {"oppo", "vivo", "iqoo", "realme", "oneplus", "xiaomi", "huawei", "honor", "tecno", "infinix", "samsung", "motorola", "lenovo", "zte", "meizu", "nubia", "asus", "lg", "sony"};
 
     public Context getContext()
     {
@@ -561,8 +562,14 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
                 {
                     throw new KeyServiceException("Wallet was not properly initialized.\n\nPlease create or import your wallet again.");
                 }
-                // File exists but key is gone - device security issue
-                throw new KeyServiceException("Wallet key not found in secure storage.\n\nThis may happen on some devices (like Oppo, Vivo) due to security restrictions.\n\nPlease re-import your wallet using your recovery phrase.");
+                // File exists but key is gone - this is a known issue with:
+                // 1. Play Store App Signing (Google re-signs the app)
+                // 2. Device security changes (PIN/password changed)
+                // 3. Some Android manufacturers (Oppo, Vivo, Xiaomi, Samsung, etc.)
+                // 4. App reinstall or data restore from backup
+                String deviceInfo = Build.MANUFACTURER + " " + Build.MODEL;
+                Timber.tag(TAG).e("Key not found for wallet %s on device %s", matchingAddr, deviceInfo);
+                throw new KeyServiceException(context.getString(R.string.wallet_key_not_found));
             }
 
             //create a stream to the encrypted bytes
@@ -1081,10 +1088,11 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
             }
 
             // Verify the key was actually stored in the KeyStore
-            // Some devices (Oppo, Vivo) and emulators may silently fail to persist keys
-            // Use longer delay on emulators as they are slower
-            int verifyDelayMs = isEmulator() ? 500 : 100;
-            int maxVerifyAttempts = isEmulator() ? 5 : 3;
+            // Some devices (Oppo, Vivo, Samsung) and emulators may silently fail to persist keys
+            // Use longer delay for all devices when using Play Store signed builds
+            // Play Store re-signs the app which can cause keystore binding issues
+            int verifyDelayMs = isEmulator() ? 500 : (isProblematicDevice() ? 300 : 200);
+            int maxVerifyAttempts = isEmulator() ? 5 : (isProblematicDevice() ? 5 : 4);
             
             for (int verifyAttempt = 0; verifyAttempt < maxVerifyAttempts; verifyAttempt++)
             {
@@ -1126,6 +1134,7 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
     {
         KeyGenerator keyGenerator = null;
         boolean keyInitialized = false;
+        boolean isDeviceProblematic = isProblematicDevice();
 
         try
         {
@@ -1134,7 +1143,7 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
                     ANDROID_KEY_STORE);
 
             // For problematic devices, try software key first to avoid hardware keystore issues
-            if (isProblematicDevice())
+            if (isDeviceProblematic)
             {
                 Timber.tag(TAG).w("Problematic device detected, trying software key first");
                 if (tryInitSoftwareKey(keyGenerator, keyAddress))
@@ -1145,13 +1154,14 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
                 }
             }
             
-            if (!keyInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && tryInitStrongBoxKey(keyGenerator, keyAddress, useAuthentication))
+            // Skip StrongBox for problematic devices - it can cause key persistence issues
+            if (!keyInitialized && !isDeviceProblematic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && tryInitStrongBoxKey(keyGenerator, keyAddress, useAuthentication))
             {
                 if (useAuthentication) authLevel = AuthenticationLevel.STRONGBOX_AUTHENTICATION;
                 else authLevel = STRONGBOX_NO_AUTHENTICATION;
                 keyInitialized = true;
             }
-            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && tryInitStrongBoxKey(keyGenerator, keyAddress, false))
+            else if (!isDeviceProblematic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && tryInitStrongBoxKey(keyGenerator, keyAddress, false))
             {
                 authLevel = STRONGBOX_NO_AUTHENTICATION;
                 keyInitialized = true;
