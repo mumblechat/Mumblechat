@@ -23,6 +23,7 @@ public class DeepLinkService
     public static final String WC_PREFIX = "wc?uri=";
     public static final String WC_COMMAND = "wc:";
     public static final String AW_PREFIX = "awallet://";
+    public static final String RAMAPAY_PREFIX = "ramapay://";
     public static final String OPEN_URL_PREFIX = "openURL?q=";
 
     public static DeepLinkRequest parseIntent(String importData, Intent startIntent)
@@ -34,7 +35,11 @@ public class DeepLinkService
             return checkIntents(startIntent);
         }
 
-        if (importData.startsWith(AW_PREFIX)) //strip AW_PREFIX
+        if (importData.startsWith(RAMAPAY_PREFIX)) //strip RAMAPAY_PREFIX
+        {
+            importData = importData.substring(RAMAPAY_PREFIX.length());
+        }
+        else if (importData.startsWith(AW_PREFIX)) //strip AW_PREFIX
         {
             importData = importData.substring(AW_PREFIX.length());
         }

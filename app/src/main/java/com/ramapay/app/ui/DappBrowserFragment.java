@@ -985,6 +985,11 @@ public class DappBrowserFragment extends BaseFragment implements OnSignTransacti
                         viewModel.showMyAddress(getContext());
                         return true;
                     }
+                    // Handle ramapay://wc?uri=... WalletConnect deep links
+                    if (url.contains("wc?uri=") || url.contains("wc%3Furi="))
+                    {
+                        return handleRamaPayWalletConnect(url);
+                    }
                     break;
                 case C.DAPP_PREFIX_AWALLET:
                     handleAWCode(url);
@@ -1030,6 +1035,46 @@ public class DappBrowserFragment extends BaseFragment implements OnSignTransacti
         Bundle codeBundle = new Bundle();
         codeBundle.putString(C.AWALLET_CODE, awCode);
         getParentFragmentManager().setFragmentResult(C.AWALLET_CODE, codeBundle);
+    }
+
+    private boolean handleRamaPayWalletConnect(String url)
+    {
+        if (wallet.type == WalletType.WATCH)
+        {
+            showWalletWatch();
+            return true;
+        }
+
+        try
+        {
+            // Extract WC URI from ramapay://wc?uri=... format
+            String wcUri;
+            if (url.contains("wc?uri="))
+            {
+                wcUri = url.substring(url.indexOf("wc?uri=") + 7);
+            }
+            else if (url.contains("wc%3Furi="))
+            {
+                wcUri = url.substring(url.indexOf("wc%3Furi=") + 9);
+            }
+            else
+            {
+                return false;
+            }
+
+            String decodedWcUri = URLDecoder.decode(wcUri, Charset.defaultCharset().name());
+            walletConnectSession = decodedWcUri;
+            if (getContext() != null)
+            {
+                viewModel.handleWalletConnect(getContext(), decodedWcUri, activeNetwork);
+            }
+            return true;
+        }
+        catch (Exception e)
+        {
+            Timber.e("Failed to parse RamaPay WalletConnect URL: %s", e.getMessage());
+            return false;
+        }
     }
 
     private boolean fromWalletConnectModal(String url)

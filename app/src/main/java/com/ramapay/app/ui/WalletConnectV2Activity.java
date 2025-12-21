@@ -71,6 +71,8 @@ public class WalletConnectV2Activity extends BaseActivity implements StandardFun
     private FunctionButtonBar functionBar;
     private WalletAdapter walletAdapter;
     private WalletConnectV2SessionItem session;
+    private boolean launchedFromExternalApp = false;
+    private String callingPackage = null;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState)
@@ -81,6 +83,20 @@ public class WalletConnectV2Activity extends BaseActivity implements StandardFun
         toolbar();
         setTitle(getString(R.string.title_wallet_connect));
         initViews();
+        
+        // Check if we were launched from an external app (like Chrome)
+        callingPackage = getCallingPackage();
+        if (callingPackage == null && getReferrer() != null)
+        {
+            callingPackage = getReferrer().getHost();
+        }
+        launchedFromExternalApp = callingPackage != null && !callingPackage.equals(getPackageName());
+        
+        // Also check if we're a new task (launched via deep link from external app)
+        if (!launchedFromExternalApp)
+        {
+            launchedFromExternalApp = (getIntent().getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0;
+        }
 
         String url = retrieveUrl();
         if (!TextUtils.isEmpty(url))
@@ -408,19 +424,74 @@ public class WalletConnectV2Activity extends BaseActivity implements StandardFun
     @Override
     public void onSessionProposalApproved()
     {
-        finish();
+        runOnUiThread(() -> {
+            Toast.makeText(this, R.string.wc_session_connected, Toast.LENGTH_SHORT).show();
+            // Return to the calling app (browser)
+            returnToCallingApp();
+        });
     }
 
     @Override
     public void onSessionProposalRejected()
     {
-        finish();
+        runOnUiThread(() -> {
+            Toast.makeText(this, R.string.wc_session_rejected, Toast.LENGTH_SHORT).show();
+            returnToCallingApp();
+        });
     }
 
     @Override
     public void onSessionDisconnected()
     {
-        runOnUiThread(() -> awWalletConnectClient.updateNotification(null));
+        runOnUiThread(() -> {
+            awWalletConnectClient.updateNotification(null);
+            Toast.makeText(this, R.string.wc_session_disconnected, Toast.LENGTH_SHORT).show();
+        });
+        finish();
+    }
+    
+    private void returnToCallingApp()
+    {
+        String redirectUrl = session != null ? session.url : null;
+        
+        // If launched from external app (Chrome, etc.), use moveTaskToBack to return
+        // This reveals the previous app without launching a new activity
+        if (launchedFromExternalApp)
+        {
+            // Move RamaPay to background, which reveals the calling app (Chrome)
+            moveTaskToBack(true);
+            // Give time for the task switch, then finish this activity
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 500);
+            return;
+        }
+        
+        // If we're at the root of our task (launched via deep link as new task)
+        if (isTaskRoot())
+        {
+            // Try to open the DApp URL in browser to return user to the DApp
+            if (!TextUtils.isEmpty(redirectUrl) && redirectUrl.startsWith("http"))
+            {
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(redirectUrl));
+                browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                try
+                {
+                    startActivity(browserIntent);
+                    finish();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    // Fallback: just move to back
+                }
+            }
+            
+            // Fallback: move to background
+            moveTaskToBack(true);
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 500);
+            return;
+        }
+        
+        // Default: just finish (this will show the previous activity in our app)
         finish();
     }
 }

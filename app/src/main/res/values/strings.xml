@@ -1233,6 +1233,9 @@
     <string name="no_title">(No title)</string>
     <string name="title_session_details">Session Details</string>
     <string name="title_session_proposal">Session Proposal</string>
+    <string name="wc_session_connected">✓ Connected! Returning to app…</string>
+    <string name="wc_session_rejected">Session rejected</string>
+    <string name="wc_session_disconnected">Session disconnected</string>
     <string name="message_wc_wallet_different_from_active_wallet">Wallet different from active wallet.</string>
     <string name="settings_title_analytics">Analytics</string>
     <string name="settings_title_crash_reporting">Crash Reporting</string>

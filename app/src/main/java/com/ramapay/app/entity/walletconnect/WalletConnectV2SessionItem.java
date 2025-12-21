@@ -64,11 +64,36 @@ public class WalletConnectV2SessionItem extends WalletConnectSessionItem impleme
         item.icon = sessionProposal.getIcons().isEmpty() ? null : sessionProposal.getIcons().get(0).toString();
         item.sessionId = sessionProposal.getProposerPublicKey();
         item.settled = false;
+        
         NamespaceParser namespaceParser = new NamespaceParser();
+        
+        // Parse required namespaces first
         namespaceParser.parseProposal(sessionProposal.getRequiredNamespaces());
         item.chains.addAll(namespaceParser.getChains());
         item.methods.addAll(namespaceParser.getMethods());
         item.events.addAll(namespaceParser.getEvents());
+        
+        // Also parse optional namespaces (many modern DApps use these instead of required)
+        NamespaceParser optionalParser = new NamespaceParser();
+        optionalParser.parseProposal(sessionProposal.getOptionalNamespaces());
+        
+        // Add optional chains/methods/events if not already present
+        for (String chain : optionalParser.getChains()) {
+            if (!item.chains.contains(chain)) {
+                item.chains.add(chain);
+            }
+        }
+        for (String method : optionalParser.getMethods()) {
+            if (!item.methods.contains(method)) {
+                item.methods.add(method);
+            }
+        }
+        for (String event : optionalParser.getEvents()) {
+            if (!item.events.contains(event)) {
+                item.events.add(event);
+            }
+        }
+        
         return item;
     }
 

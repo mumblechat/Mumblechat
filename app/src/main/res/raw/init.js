@@ -96,4 +96,44 @@ window.web3.eth.getCoinbase = function(cb) {
 window.web3.eth.defaultAccount = __addressHex
 
 window.ethereum = web3.currentProvider
+
+// EIP-6963: Multi Injected Provider Discovery
+// This allows DApps to auto-detect RamaPay wallet
+const ramaPayIcon = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNjQiIGN5PSI2NCIgcj0iNjQiIGZpbGw9IiNGRkQ3MDAiLz48dGV4dCB4PSI2NCIgeT0iNzYiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI0OCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlI8L3RleHQ+PC9zdmc+';
+
+const ramaPayProviderInfo = {
+  uuid: 'e5b0a9c1-8d2f-4a3b-9c6e-7f8d9a0b1c2d',
+  name: 'RamaPay',
+  icon: ramaPayIcon,
+  rdns: 'io.ramestta.wallet'
+};
+
+// Create the provider detail object
+const ramaPayProviderDetail = {
+  info: ramaPayProviderInfo,
+  provider: window.ethereum
+};
+
+// Function to announce the provider
+function announceProvider() {
+  const event = new CustomEvent('eip6963:announceProvider', {
+    detail: Object.freeze(ramaPayProviderDetail)
+  });
+  window.dispatchEvent(event);
+}
+
+// Listen for DApp requests for providers
+window.addEventListener('eip6963:requestProvider', () => {
+  announceProvider();
+});
+
+// Announce on load
+announceProvider();
+
+// Also set provider identification flags
+if (window.ethereum) {
+  window.ethereum.isRamaPay = true;
+  window.ethereum.isAlphaWallet = true;
+}
+
 })();
