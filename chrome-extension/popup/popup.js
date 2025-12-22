@@ -134,7 +134,17 @@ function setupEventListeners() {
       e.target.classList.add('active');
       document.querySelectorAll('#main-screen .tab-panel').forEach(p => p.classList.remove('active'));
       document.getElementById(`${tabName}-tab`)?.classList.add('active');
+      
+      // Auto-refresh activity when Activity tab is clicked
+      if (tabName === 'activity') {
+        loadTransactionHistory();
+      }
     });
+  });
+
+  // Activity refresh button
+  document.getElementById('btn-refresh-activity')?.addEventListener('click', () => {
+    loadTransactionHistory();
   });
 
   // Send screen
@@ -173,6 +183,7 @@ function setupEventListeners() {
     loadAccountsList();
     showScreen('accounts');
   });
+  document.getElementById('btn-auto-fetch-tokens')?.addEventListener('click', handleAutoFetchTokens);
   document.getElementById('btn-manage-networks')?.addEventListener('click', () => {
     loadNetworksList();
     showScreen('networks');
@@ -1606,7 +1617,7 @@ async function handleTokenAddressInput(e) {
     previewDiv.innerHTML = `
       <div class="scanning-indicator">
         <div class="spinner"></div>
-        <p>Scanning all networks for token...</p>
+        <p>Checking token on ${currentNetwork?.name || 'current network'}...</p>
       </div>
     `;
   }
@@ -1614,38 +1625,23 @@ async function handleTokenAddressInput(e) {
   // Debounce the API call
   tokenFetchTimeout = setTimeout(async () => {
     try {
-      // Scan all networks for the token
-      const result = await sendMessage('scanTokenAllNetworks', { tokenAddress: address });
+      // Only scan current active network (not all networks to avoid errors)
+      const result = await sendMessage('getTokenInfo', { tokenAddress: address });
       
-      if (result.success && result.tokens && result.tokens.length > 0) {
-        foundTokensOnNetworks = result.tokens;
-        
-        // If found on only one network, auto-select it
-        if (result.tokens.length === 1) {
-          pendingTokenInfo = result.tokens[0];
-          showTokenPreview(pendingTokenInfo);
-        } else {
-          // Show list of networks where token was found
-          showTokenNetworkList(result.tokens);
-        }
+      if (result.success && result.token) {
+        pendingTokenInfo = result.token;
+        showTokenPreview(pendingTokenInfo);
       } else {
-        // Fallback to current network only
-        const fallbackResult = await sendMessage('getTokenInfo', { tokenAddress: address });
-        if (fallbackResult.success && fallbackResult.token) {
-          pendingTokenInfo = fallbackResult.token;
-          showTokenPreview(pendingTokenInfo);
-        } else {
-          previewDiv.innerHTML = `
-            <div class="token-not-found">
-              <p>❌ Token not found on any network</p>
-              <p class="hint">Scanned ${result.scannedNetworks || 'all'} networks</p>
-            </div>
-          `;
-        }
+        previewDiv.innerHTML = `
+          <div class="token-not-found">
+            <p>❌ Token not found on ${currentNetwork?.name || 'current network'}</p>
+            <p class="hint">Make sure you're on the correct network for this token</p>
+          </div>
+        `;
       }
     } catch (error) {
-      console.error('Token scan error:', error);
-      previewDiv.innerHTML = `<p class="error">Error scanning networks</p>`;
+      console.error('Token fetch error:', error);
+      previewDiv.innerHTML = `<p class="error">Error fetching token info</p>`;
     }
   }, 500);
 }
@@ -1764,6 +1760,35 @@ async function handleAddToken() {
     }
   } catch (error) {
     showToast('Error adding token', 'error');
+  }
+}
+
+/**
+ * Auto-fetch tokens with balance on current network
+ */
+async function handleAutoFetchTokens() {
+  showToast('Scanning for tokens...', 'info');
+  
+  try {
+    const result = await sendMessage('autoFetchTokens', { 
+      address: currentWalletAddress,
+      networkKey: currentNetwork?.key || currentNetwork?.name
+    });
+    
+    if (result.success) {
+      const count = result.tokensFound || 0;
+      if (count > 0) {
+        showToast(`Found ${count} token${count > 1 ? 's' : ''} with balance!`, 'success');
+        await loadCustomTokens();
+      } else {
+        showToast('No tokens with balance found', 'info');
+      }
+    } else {
+      showToast(result.error || 'Failed to scan tokens', 'error');
+    }
+  } catch (error) {
+    console.error('Auto-fetch error:', error);
+    showToast('Error scanning for tokens', 'error');
   }
 }
 
@@ -3127,7 +3152,7 @@ async function handleImportSeedAccount() {
     });
     
     if (result.success) {
-      showToast(`Imported ${result.count} account(s)`, 'success');
+      showToast(`Imported ${result.count || result.addedCount || 1} account(s)`, 'success');
       document.getElementById('import-seed-modal').classList.remove('show');
       document.getElementById('import-seed-name').value = '';
       document.getElementById('import-seed-value').value = '';

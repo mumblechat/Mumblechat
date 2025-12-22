@@ -1142,6 +1142,28 @@ body::before {
   padding: 8px 0;
 }
 
+/* Icon Buttons */
+.btn-icon {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+}
+
+.btn-icon:hover {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: var(--primary);
+  transform: scale(1.05);
+}
+
+.btn-icon:active {
+  transform: scale(0.95);
+}
+
 .activity-item {
   display: flex;
   justify-content: space-between;
@@ -1521,7 +1543,8 @@ body::before {
   align-items: center;
 }
 
-.modal.active {
+.modal.active,
+.modal.show {
   display: flex;
 }
 

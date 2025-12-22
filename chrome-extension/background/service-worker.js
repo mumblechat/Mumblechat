@@ -170,6 +170,8 @@ async function handleMessage(request, sender) {
       return await getTokenInfo(data);
     case 'scanTokenAllNetworks':
       return await scanTokenAllNetworks(data);
+    case 'autoFetchTokens':
+      return await autoFetchTokens(data);
     case 'getPendingDappRequest':
       return getPendingDappRequest();
     case 'approveDappConnection':
@@ -492,7 +494,7 @@ async function createHDWallet({ name }) {
     }
 
     // Generate new mnemonic for new master wallet
-    const walletData = await walletManager.createWallet();
+    const walletData = await walletManager.createNewWallet();
     const masterWalletId = generateWalletId();
     const masterWalletNumber = currentWalletData.masterWallets.length + 1;
     
@@ -907,14 +909,17 @@ async function bulkAddAccounts({ count, startIndex }) {
 /**
  * Import accounts from an external seed phrase (different from main wallet)
  */
-async function importSeedPhraseAccounts({ seedPhrase, count = 1, name }) {
+async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name }) {
   if (!isUnlocked || !currentWalletData) {
     return { success: false, error: 'Wallet is locked' };
   }
 
+  // Accept both seedPhrase and mnemonic parameters
+  const phrase = (seedPhrase || mnemonic || '').trim();
+  
   try {
     // Validate mnemonic
-    const isValid = ethers.Mnemonic.isValidMnemonic(seedPhrase.trim());
+    const isValid = ethers.Mnemonic.isValidMnemonic(phrase);
     if (!isValid) {
       return { success: false, error: 'Invalid seed phrase' };
     }
@@ -922,7 +927,7 @@ async function importSeedPhraseAccounts({ seedPhrase, count = 1, name }) {
     const addedAccounts = [];
     
     for (let i = 0; i < count; i++) {
-      const walletData = await walletManager.deriveAccount(seedPhrase.trim(), i);
+      const walletData = await walletManager.deriveAccount(phrase, i);
       
       // Check if this address already exists
       const exists = currentWalletData.accounts.some(
@@ -940,7 +945,7 @@ async function importSeedPhraseAccounts({ seedPhrase, count = 1, name }) {
           name: accountName,
           type: 'imported-seed',
           accountIndex: i,
-          seedPhraseHash: ethers.keccak256(ethers.toUtf8Bytes(seedPhrase.trim())).slice(0, 18)
+          seedPhraseHash: ethers.keccak256(ethers.toUtf8Bytes(phrase)).slice(0, 18)
         };
         
         currentWalletData.accounts.push(newAccount);
@@ -1614,6 +1619,143 @@ async function scanTokenAllNetworks({ tokenAddress }) {
     tokens: foundTokens.map(f => f.token),
     scannedNetworks: networksToScan.length,
     foundCount: foundTokens.length
+  };
+}
+
+/**
+ * Auto-fetch tokens with balance for current wallet on current network
+ * Scans common token addresses to find tokens with non-zero balance
+ */
+async function autoFetchTokens({ address }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  const walletAddress = address || currentWalletData.accounts[currentWalletData.activeAccountIndex].address;
+  const network = walletManager.currentNetwork;
+  
+  if (!network) {
+    return { success: false, error: 'No network selected' };
+  }
+
+  // Common token addresses for different networks
+  const COMMON_TOKENS = {
+    // Ramestta Mainnet tokens
+    '1370': [
+      { address: '0x1234567890123456789012345678901234567890', symbol: 'WRAMA' }, // Wrapped RAMA (placeholder)
+    ],
+    // Ethereum Mainnet tokens
+    '1': [
+      { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', symbol: 'USDT' },
+      { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', symbol: 'USDC' },
+      { address: '0x6B175474E89094C44Da98b954EescdeCB5BB8fD6', symbol: 'DAI' },
+      { address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', symbol: 'WBTC' },
+      { address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', symbol: 'LINK' },
+      { address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', symbol: 'UNI' },
+      { address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', symbol: 'AAVE' },
+    ],
+    // Polygon Mainnet tokens
+    '137': [
+      { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', symbol: 'USDT' },
+      { address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', symbol: 'USDC' },
+      { address: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063', symbol: 'DAI' },
+      { address: '0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6', symbol: 'WBTC' },
+      { address: '0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39', symbol: 'LINK' },
+      { address: '0xb33EaAd8d922B1083446DC23f610c2567fB5180f', symbol: 'UNI' },
+      { address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270', symbol: 'WMATIC' },
+    ],
+    // BNB Smart Chain tokens
+    '56': [
+      { address: '0x55d398326f99059fF775485246999027B3197955', symbol: 'USDT' },
+      { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', symbol: 'USDC' },
+      { address: '0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3', symbol: 'DAI' },
+      { address: '0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c', symbol: 'BTCB' },
+      { address: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', symbol: 'WBNB' },
+      { address: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', symbol: 'CAKE' },
+    ],
+    // Arbitrum One tokens  
+    '42161': [
+      { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', symbol: 'USDT' },
+      { address: '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8', symbol: 'USDC' },
+      { address: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', symbol: 'DAI' },
+      { address: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f', symbol: 'WBTC' },
+    ],
+    // Optimism tokens
+    '10': [
+      { address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', symbol: 'USDT' },
+      { address: '0x7F5c764cBc14f9669B88837ca1490cCa17c31607', symbol: 'USDC' },
+      { address: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', symbol: 'DAI' },
+    ],
+  };
+
+  const chainId = network.chainId.toString();
+  const tokensToScan = COMMON_TOKENS[chainId] || [];
+  
+  if (tokensToScan.length === 0) {
+    return { success: true, tokensFound: 0, message: 'No common tokens configured for this network' };
+  }
+
+  const foundTokens = [];
+  const erc20Abi = [
+    'function decimals() view returns (uint8)',
+    'function symbol() view returns (string)',
+    'function name() view returns (string)',
+    'function balanceOf(address) view returns (uint256)'
+  ];
+
+  const provider = new ethers.JsonRpcProvider(network.rpcUrl);
+
+  // Scan each token
+  await Promise.all(tokensToScan.map(async (tokenInfo) => {
+    try {
+      const contract = new ethers.Contract(tokenInfo.address, erc20Abi, provider);
+      
+      const [balance, symbol, name, decimals] = await Promise.all([
+        contract.balanceOf(walletAddress),
+        contract.symbol(),
+        contract.name(),
+        contract.decimals()
+      ]);
+      
+      // Only add if balance > 0
+      if (balance > 0n) {
+        // Check if token already exists
+        const exists = (currentWalletData.customTokens || []).some(
+          t => t.address.toLowerCase() === tokenInfo.address.toLowerCase() && t.chainId === network.chainId
+        );
+        
+        if (!exists) {
+          const newToken = {
+            address: tokenInfo.address,
+            symbol: symbol || tokenInfo.symbol,
+            name: name || symbol || 'Unknown',
+            decimals: Number(decimals) || 18,
+            chainId: network.chainId,
+            addedAt: Date.now()
+          };
+          
+          if (!currentWalletData.customTokens) {
+            currentWalletData.customTokens = [];
+          }
+          currentWalletData.customTokens.push(newToken);
+          foundTokens.push(newToken);
+        }
+      }
+    } catch (error) {
+      // Token contract not found or error - skip
+      console.log(`Token scan error for ${tokenInfo.symbol}:`, error.message);
+    }
+  }));
+
+  // Save if any tokens were added
+  if (foundTokens.length > 0) {
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+  }
+
+  return { 
+    success: true, 
+    tokensFound: foundTokens.length,
+    tokens: foundTokens.map(t => t.symbol)
   };
 }
 
