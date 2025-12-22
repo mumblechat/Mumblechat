@@ -137,7 +137,7 @@ async function handleMessage(request, sender) {
     case 'generateQRCode':
       return await handleGenerateQRCode(data);
     case 'getAccounts':
-      return getAccounts();
+      return await getAccounts();
     case 'getNextAccountIndex':
       return getNextAccountIndex();
     case 'addAccount':
@@ -145,7 +145,7 @@ async function handleMessage(request, sender) {
     case 'createHDWallet':
       return await createHDWallet(data);
     case 'getMasterWallets':
-      return getMasterWallets();
+      return await getMasterWallets();
     case 'addAccountToMaster':
       return await addAccountToMaster(data);
     case 'bulkAddToMaster':
@@ -401,6 +401,13 @@ async function unlockWallet({ password }) {
     const prefs = await storageManager.loadPreferences();
     if (prefs.autoLockMinutes !== undefined) {
       autoLockMinutes = prefs.autoLockMinutes;
+    }
+    
+    // Run migration on unlock to ensure accounts are properly linked
+    const needsSave = initializeMasterWallets();
+    if (needsSave) {
+      await storageManager.saveWallet(currentWalletData, password);
+      console.log('Migrated wallet data: linked accounts to master wallets');
     }
 
     return { 
@@ -764,32 +771,45 @@ function initializeMasterWallets() {
     });
     needsSave = true;
     
-    // Update existing derived accounts (including legacy ones without type)
+    // Update ALL accounts that don't have masterWalletId (except imported/watch)
     currentWalletData.accounts.forEach(acc => {
-      // Accounts with accountIndex are derived accounts
-      const isDerived = acc.type === 'derived' || 
-                       (acc.accountIndex !== undefined && acc.accountIndex !== null && acc.type !== 'imported' && acc.type !== 'watch');
+      // Skip explicitly imported or watch accounts
+      if (acc.type === 'imported' || acc.type === 'imported-seed' || acc.type === 'watch') {
+        return;
+      }
       
-      if (isDerived && !acc.masterWalletId) {
+      // All other accounts should be linked to this master wallet
+      if (!acc.masterWalletId) {
         acc.masterWalletId = masterId;
-        acc.type = 'derived'; // Ensure type is set
+        acc.type = 'derived';
+        // Set accountIndex if not present (assume first account is index 0)
+        if (acc.accountIndex === undefined || acc.accountIndex === null) {
+          acc.accountIndex = 0;
+        }
       }
     });
   }
   
-  // If we have master wallets, ensure all derived accounts are linked
+  // If we have master wallets, ensure all unlinked accounts are linked
   if (currentWalletData.masterWallets.length > 0) {
     const firstMasterId = currentWalletData.masterWallets[0].id;
     
     currentWalletData.accounts.forEach(acc => {
-      // Legacy accounts without type but with accountIndex should be derived
-      const isLegacyDerived = !acc.type && acc.accountIndex !== undefined && acc.accountIndex !== null;
-      const isDerived = acc.type === 'derived' || isLegacyDerived;
+      // Skip explicitly imported or watch accounts
+      if (acc.type === 'imported' || acc.type === 'imported-seed' || acc.type === 'watch') {
+        return;
+      }
       
-      if (isDerived && !acc.masterWalletId) {
+      // Any account without masterWalletId should be linked
+      if (!acc.masterWalletId) {
         acc.masterWalletId = firstMasterId;
         acc.type = 'derived';
         needsSave = true;
+        
+        // Set accountIndex if not present
+        if (acc.accountIndex === undefined || acc.accountIndex === null) {
+          acc.accountIndex = 0;
+        }
       }
     });
   }
