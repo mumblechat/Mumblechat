@@ -124,7 +124,10 @@ function setupEventListeners() {
     await generateQRCode();
   });
   document.getElementById('btn-swap')?.addEventListener('click', () => showToast('Swap coming soon!', 'info'));
-  document.getElementById('btn-settings')?.addEventListener('click', () => showScreen('settings'));
+  document.getElementById('btn-settings')?.addEventListener('click', async () => {
+    showScreen('settings');
+    await loadAutoLockDisplay();
+  });
 
   // Tabs on main screen
   document.querySelectorAll('#main-screen .tabs .tab').forEach(tab => {
@@ -163,6 +166,16 @@ function setupEventListeners() {
   document.getElementById('btn-reset-wallet')?.addEventListener('click', handleResetWallet);
   document.getElementById('btn-export-key')?.addEventListener('click', () => showScreen('export-key'));
   document.getElementById('btn-export-seed')?.addEventListener('click', () => showScreen('export-seed'));
+  document.getElementById('btn-auto-lock')?.addEventListener('click', () => {
+    console.log('Auto-lock clicked');
+    showAutoLockModal();
+  });
+  
+  // Auto-Lock Modal
+  document.getElementById('close-auto-lock-modal')?.addEventListener('click', () => {
+    document.getElementById('auto-lock-modal').classList.remove('show');
+  });
+  document.getElementById('btn-save-auto-lock')?.addEventListener('click', saveAutoLockSetting);
   
   // Reset Wallet Modal
   document.getElementById('close-reset-wallet-modal')?.addEventListener('click', () => {
@@ -192,61 +205,120 @@ function setupEventListeners() {
   document.getElementById('btn-add-network-from-list')?.addEventListener('click', () => showScreen('add-network'));
   document.getElementById('btn-change-password')?.addEventListener('click', () => showScreen('change-password'));
 
-  // Account Management
+  // Account/Wallet Management
   document.getElementById('btn-account-selector')?.addEventListener('click', () => {
     loadAccountsList();
     showScreen('accounts');
   });
   
-  // Add Account - Show master wallet selection
+  // Add Account button - show master wallet selection
   document.getElementById('btn-add-account-select')?.addEventListener('click', showAddAccountModal);
+  
+  // Create Master Wallet button
+  document.getElementById('btn-create-master-wallet')?.addEventListener('click', () => {
+    document.getElementById('create-master-wallet-modal').classList.add('show');
+  });
+  
+  // Import Private Key button
+  document.getElementById('btn-import-key-account')?.addEventListener('click', () => {
+    document.getElementById('import-wallet-modal').classList.add('show');
+    // Switch to private key tab
+    document.querySelectorAll('#import-wallet-modal .tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('#import-wallet-modal .tab[data-tab="key"]')?.classList.add('active');
+    document.querySelectorAll('#import-wallet-modal .tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('import-tab-key')?.classList.add('active');
+  });
+  
+  // Import Seed Phrase button
+  document.getElementById('btn-import-seed-account')?.addEventListener('click', () => {
+    document.getElementById('import-wallet-modal').classList.add('show');
+    // Switch to seed phrase tab
+    document.querySelectorAll('#import-wallet-modal .tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('#import-wallet-modal .tab[data-tab="seed"]')?.classList.add('active');
+    document.querySelectorAll('#import-wallet-modal .tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('import-tab-seed')?.classList.add('active');
+  });
+  
+  // Select Master Wallet Modal;
+    document.getElementById('import-wallet-modal').classList.add('show');
+  });
+  
+  // Watch Wallet button (optional - add if needed in UI later)
+  document.getElementById('opt-watch-wallet')?.addEventListener('click', () => {
+    document.getElementById('watch-wallet-modal').classList.add('show');
+  });
+  
+  // Select Master Wallet Modal
   document.getElementById('close-select-master-modal')?.addEventListener('click', () => {
     document.getElementById('select-master-modal').classList.remove('show');
   });
   
-  // Create Master Wallet
-  document.getElementById('btn-create-master-wallet')?.addEventListener('click', () => {
-    document.getElementById('create-master-wallet-modal').classList.add('show');
-  });
+  // Create Master Wallet Modal
   document.getElementById('close-create-master-wallet-modal')?.addEventListener('click', () => {
     document.getElementById('create-master-wallet-modal').classList.remove('show');
   });
   document.getElementById('btn-confirm-create-master-wallet')?.addEventListener('click', handleCreateMasterWallet);
   
-  // Bulk add to master
+  // Import Wallet Modal
+  document.getElementById('close-import-wallet-modal')?.addEventListener('click', () => {
+    document.getElementById('import-wallet-modal').classList.remove('show');
+  });
+  
+  // Import wallet tabs
+  document.querySelectorAll('#import-wallet-modal .tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      const tabType = e.target.dataset.tab;
+      document.querySelectorAll('#import-wallet-modal .tab').forEach(t => t.classList.remove('active'));
+      e.target.classList.add('active');
+      document.querySelectorAll('#import-wallet-modal .tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`import-tab-${tabType}`)?.classList.add('active');
+    });
+  });
+  
+  document.getElementById('btn-confirm-import-wallet')?.addEventListener('click', handleImportWalletFromModal);
+  
+  // Watch Wallet Modal
+  document.getElementById('close-watch-modal')?.addEventListener('click', () => {
+    document.getElementById('watch-wallet-modal').classList.remove('show');
+  });
+  document.getElementById('btn-confirm-watch')?.addEventListener('click', handleAddWatchWallet);
+  
+  // Bulk Add Modal
   document.getElementById('close-bulk-add-master-modal')?.addEventListener('click', () => {
     document.getElementById('bulk-add-master-modal').classList.remove('show');
   });
+  document.getElementById('btn-cancel-bulk')?.addEventListener('click', () => {
+    document.getElementById('bulk-add-master-modal').classList.remove('show');
+  });
+  document.getElementById('bulk-add-master-count')?.addEventListener('input', (e) => {
+    const count = parseInt(e.target.value) || 5;
+    document.getElementById('btn-confirm-bulk-add-master').textContent = `Add ${count} Wallets`;
+  });
   document.getElementById('btn-confirm-bulk-add-master')?.addEventListener('click', confirmBulkAddToMaster);
   
-  // Import Private Key
-  document.getElementById('btn-import-key-account')?.addEventListener('click', () => {
-    document.getElementById('import-key-modal').classList.add('show');
+  // Recover Account Modal
+  document.getElementById('close-recover-modal')?.addEventListener('click', () => {
+    document.getElementById('recover-account-modal').classList.remove('show');
   });
-  document.getElementById('close-import-key-modal')?.addEventListener('click', () => {
-    document.getElementById('import-key-modal').classList.remove('show');
-  });
-  document.getElementById('btn-confirm-import-key')?.addEventListener('click', handleImportKeyAccount);
+  document.getElementById('btn-confirm-recover')?.addEventListener('click', handleRecoverAccount);
   
-  // Legacy - Create Account Modal (keep for backwards compatibility)
-  document.getElementById('close-create-account-modal')?.addEventListener('click', () => {
-    document.getElementById('create-account-modal').classList.remove('show');
-  });
-  document.getElementById('btn-confirm-create-account')?.addEventListener('click', confirmCreateAccount);
+  // Modal backdrop click handlers
+  const modalIds = [
+    'select-master-modal',
+    'create-master-wallet-modal', 
+    'import-wallet-modal',
+    'watch-wallet-modal',
+    'bulk-add-master-modal',
+    'recover-account-modal'
+  ];
   
-  // Legacy - Bulk Add Accounts
-  document.getElementById('btn-bulk-add-accounts')?.addEventListener('click', handleBulkAddAccounts);
-  document.getElementById('close-bulk-add-modal')?.addEventListener('click', () => {
-    document.getElementById('bulk-add-modal').classList.remove('show');
+  modalIds.forEach(modalId => {
+    document.getElementById(modalId)?.addEventListener('click', (e) => {
+      if (e.target.id === modalId) {
+        document.getElementById(modalId).classList.remove('show');
+      }
+    });
   });
-  document.getElementById('btn-confirm-bulk-add')?.addEventListener('click', confirmBulkAdd);
-  
-  // Import Seed Phrase
-  document.getElementById('btn-import-seed-account')?.addEventListener('click', showImportSeedModal);
-  document.getElementById('close-import-seed-modal')?.addEventListener('click', () => {
-    document.getElementById('import-seed-modal').classList.remove('show');
-  });
-  document.getElementById('btn-confirm-import-seed')?.addEventListener('click', handleImportSeedAccount);
 
   // Export Private Key Screen
   document.getElementById('btn-reveal-key')?.addEventListener('click', handleRevealPrivateKey);
@@ -1327,6 +1399,80 @@ async function handleLock() {
     showToast('Wallet locked', 'success');
   } catch (error) {
     showToast('Error locking wallet', 'error');
+  }
+}
+
+/**
+ * Show auto-lock settings modal
+ */
+async function showAutoLockModal() {
+  try {
+    const result = await sendMessage('getAutoLockSettings');
+    
+    if (result.success) {
+      // Select the current setting
+      const radios = document.querySelectorAll('input[name="auto-lock"]');
+      radios.forEach(radio => {
+        radio.checked = parseInt(radio.value) === result.autoLockMinutes;
+      });
+    }
+    
+    document.getElementById('auto-lock-modal').classList.add('show');
+  } catch (error) {
+    showToast('Error loading settings', 'error');
+  }
+}
+
+/**
+ * Save auto-lock setting
+ */
+async function saveAutoLockSetting() {
+  try {
+    const selected = document.querySelector('input[name="auto-lock"]:checked');
+    if (!selected) {
+      showToast('Please select a timeout', 'error');
+      return;
+    }
+    
+    const minutes = parseInt(selected.value);
+    const result = await sendMessage('setAutoLockTimeout', { minutes });
+    
+    if (result.success) {
+      // Update the display in settings
+      const displayText = minutes === 0 ? 'Never' : 
+                         minutes >= 60 ? `${minutes / 60} hr` : `${minutes} min`;
+      const autoLockValue = document.getElementById('auto-lock-value');
+      if (autoLockValue) {
+        autoLockValue.textContent = displayText;
+      }
+      
+      document.getElementById('auto-lock-modal').classList.remove('show');
+      showToast('Auto-lock timer updated', 'success');
+    } else {
+      showToast(result.error || 'Failed to save setting', 'error');
+    }
+  } catch (error) {
+    showToast('Error saving setting', 'error');
+  }
+}
+
+/**
+ * Load and display current auto-lock setting
+ */
+async function loadAutoLockDisplay() {
+  try {
+    const result = await sendMessage('getAutoLockSettings');
+    if (result.success) {
+      const minutes = result.autoLockMinutes;
+      const displayText = minutes === 0 ? 'Never' : 
+                         minutes >= 60 ? `${minutes / 60} hr` : `${minutes} min`;
+      const autoLockValue = document.getElementById('auto-lock-value');
+      if (autoLockValue) {
+        autoLockValue.textContent = displayText;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading auto-lock display:', error);
   }
 }
 
@@ -2598,7 +2744,7 @@ window.showScreen = function(screenName) {
 // ============================================
 
 /**
- * Load and display all accounts
+ * Load and display all accounts in Android-style wallet hierarchy
  */
 async function loadAccountsList() {
   try {
@@ -2619,10 +2765,13 @@ async function loadAccountsList() {
     // Group accounts by master wallet
     const masterWalletAccounts = {};
     const importedAccounts = [];
+    const watchAccounts = [];
     
     accounts.forEach((acc, idx) => {
       acc.index = idx; // Store original index for switching
-      if (acc.masterWalletId) {
+      if (acc.type === 'watch') {
+        watchAccounts.push(acc);
+      } else if (acc.masterWalletId) {
         if (!masterWalletAccounts[acc.masterWalletId]) {
           masterWalletAccounts[acc.masterWalletId] = [];
         }
@@ -2635,9 +2784,13 @@ async function loadAccountsList() {
       }
     });
     
-    // Render Master Wallets with their accounts
-    masterWallets.forEach(mw => {
+    // Render Master Wallets with their accounts nested inside
+    masterWallets.forEach((mw, mwIdx) => {
       const mwAccounts = masterWalletAccounts[mw.id] || [];
+      
+      // Sort accounts by accountIndex for proper order
+      mwAccounts.sort((a, b) => (a.accountIndex || 0) - (b.accountIndex || 0));
+      
       html += `
         <div class="master-wallet-group" data-master-id="${mw.id}">
           <div class="master-wallet-header">
@@ -2649,13 +2802,22 @@ async function loadAccountsList() {
             <span class="master-wallet-badge">HD</span>
           </div>
           <div class="master-wallet-accounts">
-            ${mwAccounts.map(acc => renderAccountItem(acc)).join('')}
+            ${mwAccounts.map((acc, accIdx) => `
+              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}">
+                <div class="account-avatar" style="background: linear-gradient(135deg, #4ade80, #22c55e);">${acc.name.charAt(0).toUpperCase()}</div>
+                <div class="account-info-main">
+                  <div class="account-name-text">${acc.name}</div>
+                  <div class="account-address-text">${formatAddress(acc.address)}</div>
+                </div>
+                ${acc.isActive ? '<span class="account-checkmark">✓</span>' : ''}
+              </div>
+            `).join('')}
           </div>
         </div>
       `;
     });
     
-    // Render Imported/Legacy Accounts
+    // Render Imported Accounts section (only if there are any)
     if (importedAccounts.length > 0) {
       html += `
         <div class="imported-accounts-section">
@@ -2664,20 +2826,64 @@ async function loadAccountsList() {
             <span class="section-title">Imported Accounts</span>
           </div>
           <div class="imported-accounts-list">
-            ${importedAccounts.map(acc => renderAccountItem(acc)).join('')}
+            ${importedAccounts.map(acc => `
+              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}">
+                <div class="account-avatar" style="background: linear-gradient(135deg, #4ade80, #22c55e);">${acc.name.charAt(0).toUpperCase()}</div>
+                <div class="account-info-main">
+                  <div class="account-name-text">${acc.name}</div>
+                  <div class="account-address-text">${formatAddress(acc.address)}</div>
+                </div>
+                ${acc.isActive ? '<span class="account-checkmark">✓</span>' : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    // Render Watch Wallets section (only if there are any)
+    if (watchAccounts.length > 0) {
+      html += `
+        <div class="watch-accounts-section">
+          <div class="watch-accounts-header">
+            <span class="section-icon">👁</span>
+            <span class="section-title">Watch Wallets</span>
+          </div>
+          <div class="watch-accounts-list">
+            ${watchAccounts.map(acc => `
+              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}">
+                <div class="account-avatar" style="background: linear-gradient(135deg, #a78bfa, #8b5cf6);">${acc.name.charAt(0).toUpperCase()}</div>
+                <div class="account-info-main">
+                  <div class="account-name-text">${acc.name} <span class="watch-badge">👁</span></div>
+                  <div class="account-address-text">${formatAddress(acc.address)}</div>
+                </div>
+                ${acc.isActive ? '<span class="account-checkmark">✓</span>' : ''}
+              </div>
+            `).join('')}
           </div>
         </div>
       `;
     }
     
     if (!html) {
-      html = '<p class="empty-state">No accounts found. Create a Master Wallet to get started!</p>';
+      html = `
+        <div class="empty-wallet-state" style="text-align: center; padding: 40px 20px;">
+          <div style="font-size: 48px; margin-bottom: 16px;">🏦</div>
+          <h3 style="margin-bottom: 8px; color: var(--text-primary);">No Wallets Yet</h3>
+          <p style="color: var(--text-muted); margin-bottom: 20px;">Create or import a wallet to get started</p>
+        </div>
+      `;
     }
     
     container.innerHTML = html;
     
-    // Add event listeners
-    attachAccountEventListeners(container);
+    // Add event listeners for account items
+    container.querySelectorAll('.account-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const index = parseInt(item.dataset.index);
+        await switchToAccount(index);
+      });
+    });
     
   } catch (error) {
     console.error('Error loading accounts:', error);
@@ -2686,11 +2892,140 @@ async function loadAccountsList() {
 }
 
 /**
- * Render a single account item
+ * Render a wallet card (Android-style)
+ */
+function renderWalletCard(account, displayDetails, groupName, isMasterAccount = false, type = 'derived') {
+  const avatarClass = type === 'imported' ? 'imported' : type === 'watch' ? 'watch' : '';
+  const watchBadge = type === 'watch' ? '<span class="watch-badge">👁 Watch</span>' : '';
+  
+  return `
+    <div class="wallet-card ${account.isActive ? 'active' : ''}" data-index="${account.index}">
+      <button class="wallet-card-menu" data-menu="${account.index}">⋮</button>
+      <div class="wallet-card-avatar ${avatarClass}">
+        <div style="font-size: 20px;">${isMasterAccount ? '🏦' : type === 'watch' ? '👁' : '💎'}</div>
+      </div>
+      <div class="wallet-card-info">
+        <div class="wallet-card-balance">$0.0000 ${watchBadge}</div>
+        <div class="wallet-card-details">${displayDetails}</div>
+      </div>
+      <div class="wallet-card-change">+0.000%</div>
+      <span class="wallet-card-arrow">›</span>
+    </div>
+  `;
+}
+
+/**
+ * Attach event listeners to wallet cards
+ */
+function attachWalletCardEventListeners(container) {
+  // Menu buttons
+  container.querySelectorAll('[data-menu]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const index = parseInt(btn.dataset.menu);
+      showWalletCardMenu(index, btn);
+    });
+  });
+
+  // Click to switch account
+  container.querySelectorAll('.wallet-card').forEach(item => {
+    item.addEventListener('click', async (e) => {
+      if (e.target.closest('.wallet-card-menu')) return;
+      const index = parseInt(item.dataset.index);
+      await switchToAccount(index);
+    });
+  });
+}
+
+/**
+ * Show wallet card menu (rename, remove, etc.)
+ */
+function showWalletCardMenu(accountIndex, targetBtn) {
+  // Remove any existing menu
+  const existingMenu = document.querySelector('.wallet-card-popup-menu');
+  if (existingMenu) existingMenu.remove();
+  
+  const menu = document.createElement('div');
+  menu.className = 'wallet-card-popup-menu';
+  menu.style.cssText = `
+    position: absolute;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 1000;
+    min-width: 140px;
+  `;
+  
+  menu.innerHTML = `
+    <div class="menu-item" data-action="rename" style="padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+      <span>✏️</span> Rename
+    </div>
+    <div class="menu-item" data-action="copy" style="padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+      <span>📋</span> Copy Address
+    </div>
+    <div class="menu-item delete" data-action="remove" style="padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: var(--danger-color);">
+      <span>🗑️</span> Remove
+    </div>
+  `;
+  
+  // Position menu
+  const rect = targetBtn.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + 5}px`;
+  menu.style.left = `${rect.left - 100}px`;
+  
+  document.body.appendChild(menu);
+  
+  // Add event listeners
+  menu.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      const action = item.dataset.action;
+      menu.remove();
+      
+      if (action === 'rename') {
+        const result = await sendMessage('getAccounts');
+        if (result.success) {
+          const acc = result.accounts[accountIndex];
+          window.editAccountName(accountIndex, acc.name);
+        }
+      } else if (action === 'copy') {
+        const result = await sendMessage('getAccounts');
+        if (result.success) {
+          const acc = result.accounts[accountIndex];
+          navigator.clipboard.writeText(acc.address);
+          showToast('Address copied!', 'success');
+        }
+      } else if (action === 'remove') {
+        window.deleteAccount(accountIndex);
+      }
+    });
+    
+    item.addEventListener('mouseenter', () => {
+      item.style.background = 'var(--bg-tertiary)';
+    });
+    item.addEventListener('mouseleave', () => {
+      item.style.background = 'transparent';
+    });
+  });
+  
+  // Close menu on outside click
+  const closeMenu = (e) => {
+    if (!menu.contains(e.target)) {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeMenu), 10);
+}
+
+/**
+ * Render a single account item (legacy - kept for compatibility)
  */
 function renderAccountItem(account) {
   const typeLabel = account.type === 'imported' ? 'Key' : 
-                    account.type === 'imported-seed' ? 'Seed' : '';
+                    account.type === 'imported-seed' ? 'Seed' :
+                    account.type === 'watch' ? 'Watch' : '';
   
   return `
     <div class="account-item ${account.isActive ? 'active' : ''}" data-index="${account.index}">
@@ -2807,7 +3142,7 @@ async function confirmCreateAccount() {
 let selectedMasterWalletId = null;
 
 /**
- * Show Add Account modal with master wallet selection
+ * Show Add Account modal with master wallet selection (Android-style bottom sheet)
  */
 async function showAddAccountModal() {
   try {
@@ -2826,14 +3161,18 @@ async function showAddAccountModal() {
           <div class="wallet-icon">🏦</div>
           <div class="wallet-details">
             <div class="wallet-name">${mw.name}</div>
-            <div class="wallet-accounts">${mw.accountCount} account${mw.accountCount !== 1 ? 's' : ''}</div>
+            <div class="wallet-meta">${mw.accountCount} account${mw.accountCount !== 1 ? 's' : ''} · ${formatAddress(mw.firstAddress || '0x...')}</div>
           </div>
+          <span class="option-arrow">›</span>
         </div>
       `).join('');
       
-      // Add click handlers
+      // Add click handlers - clicking a wallet derives a new account from it
       listContainer.querySelectorAll('.master-wallet-option').forEach(option => {
-        option.addEventListener('click', () => handleSelectMasterWallet(option.dataset.masterId));
+        option.addEventListener('click', () => {
+          selectedMasterWalletId = option.dataset.masterId;
+          handleSelectMasterWallet(option.dataset.masterId);
+        });
       });
     }
     
@@ -2849,18 +3188,15 @@ async function showAddAccountModal() {
  * Handle selecting a master wallet and adding account to it
  */
 async function handleSelectMasterWallet(masterWalletId) {
-  const name = document.getElementById('new-derived-account-name')?.value?.trim();
-  
   try {
     const result = await sendMessage('addAccountToMaster', { 
       masterWalletId, 
-      name 
+      name: null // Auto-generate name
     });
     
     if (result.success) {
       showToast(`Created ${result.name}`, 'success');
       document.getElementById('select-master-modal').classList.remove('show');
-      document.getElementById('new-derived-account-name').value = '';
       await loadAccountsList();
     } else {
       showToast(result.error || 'Failed to create account', 'error');
@@ -3163,6 +3499,200 @@ async function handleImportSeedAccount() {
     }
   } catch (error) {
     showToast('Error importing wallet: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Handle import wallet from the unified import modal
+ */
+async function handleImportWalletFromModal() {
+  const activeSeedTab = document.querySelector('#import-wallet-modal #import-tab-seed.active');
+  
+  if (activeSeedTab) {
+    // Import via seed phrase
+    const seedPhrase = document.getElementById('import-wallet-seed')?.value?.trim();
+    const name = document.getElementById('import-wallet-seed-name')?.value?.trim();
+    const count = parseInt(document.getElementById('import-wallet-seed-count')?.value) || 1;
+    
+    if (!seedPhrase) {
+      showToast('Please enter a seed phrase', 'error');
+      return;
+    }
+    
+    const words = seedPhrase.split(/\s+/).filter(w => w.length > 0);
+    if (words.length !== 12 && words.length !== 24) {
+      showToast('Seed phrase must be 12 or 24 words', 'error');
+      return;
+    }
+    
+    try {
+      const result = await sendMessage('importSeedPhraseAccounts', { 
+        mnemonic: seedPhrase, 
+        name, 
+        count 
+      });
+      
+      if (result.success) {
+        showToast(`Imported ${result.count || result.addedCount || 1} account(s)`, 'success');
+        document.getElementById('import-wallet-modal').classList.remove('show');
+        document.getElementById('import-wallet-seed').value = '';
+        document.getElementById('import-wallet-seed-name').value = '';
+        document.getElementById('import-wallet-seed-count').value = '1';
+        await loadAccountsList();
+      } else {
+        showToast(result.error || 'Failed to import wallet', 'error');
+      }
+    } catch (error) {
+      showToast('Error importing wallet: ' + error.message, 'error');
+    }
+  } else {
+    // Import via private key
+    let privateKey = document.getElementById('import-wallet-key')?.value?.trim();
+    const name = document.getElementById('import-wallet-key-name')?.value?.trim();
+    
+    if (!privateKey) {
+      showToast('Please enter a private key', 'error');
+      return;
+    }
+    
+    if (!privateKey.startsWith('0x')) {
+      privateKey = '0x' + privateKey;
+    }
+    
+    if (privateKey.length !== 66) {
+      showToast('Invalid private key length', 'error');
+      return;
+    }
+    
+    try {
+      const result = await sendMessage('importPrivateKeyAccount', { privateKey, name });
+      
+      if (result.success) {
+        showToast('Account imported successfully', 'success');
+        document.getElementById('import-wallet-modal').classList.remove('show');
+        document.getElementById('import-wallet-key').value = '';
+        document.getElementById('import-wallet-key-name').value = '';
+        await loadAccountsList();
+      } else {
+        showToast(result.error || 'Failed to import account', 'error');
+      }
+    } catch (error) {
+      showToast('Error importing account: ' + error.message, 'error');
+    }
+  }
+}
+
+/**
+ * Handle adding a watch wallet
+ */
+async function handleAddWatchWallet() {
+  const name = document.getElementById('watch-wallet-name')?.value?.trim();
+  const address = document.getElementById('watch-wallet-address')?.value?.trim();
+  
+  if (!address) {
+    showToast('Please enter a wallet address', 'error');
+    return;
+  }
+  
+  // Basic address validation
+  if (!address.startsWith('0x') || address.length !== 42) {
+    showToast('Invalid Ethereum address format', 'error');
+    return;
+  }
+  
+  try {
+    const result = await sendMessage('addWatchWallet', { 
+      address, 
+      name: name || 'Watch Wallet' 
+    });
+    
+    if (result.success) {
+      showToast('Watch wallet added successfully', 'success');
+      document.getElementById('watch-wallet-modal').classList.remove('show');
+      document.getElementById('watch-wallet-name').value = '';
+      document.getElementById('watch-wallet-address').value = '';
+      await loadAccountsList();
+    } else {
+      showToast(result.error || 'Failed to add watch wallet', 'error');
+    }
+  } catch (error) {
+    showToast('Error adding watch wallet: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Show bulk add modal for a specific master wallet
+ */
+async function showBulkAddModal(masterWalletId) {
+  try {
+    const result = await sendMessage('getMasterWallets');
+    if (result.success) {
+      const mw = result.masterWallets.find(m => m.id === masterWalletId);
+      if (mw) {
+        document.getElementById('bulk-master-name').textContent = mw.name;
+        selectedMasterWalletId = masterWalletId;
+        document.getElementById('bulk-add-master-count').value = '5';
+        document.getElementById('btn-confirm-bulk-add-master').textContent = 'Add 5 Wallets';
+        document.getElementById('bulk-add-master-modal').classList.add('show');
+      }
+    }
+  } catch (error) {
+    showToast('Error loading wallet info', 'error');
+  }
+}
+
+/**
+ * Show recover account modal for a specific master wallet
+ */
+async function showRecoverAccountModal(masterWalletId) {
+  try {
+    const result = await sendMessage('getMasterWallets');
+    if (result.success) {
+      const mw = result.masterWallets.find(m => m.id === masterWalletId);
+      if (mw) {
+        document.getElementById('recover-master-name').textContent = mw.name;
+        selectedMasterWalletId = masterWalletId;
+        document.getElementById('recover-account-index').value = '0';
+        document.getElementById('recover-account-modal').classList.add('show');
+      }
+    }
+  } catch (error) {
+    showToast('Error loading wallet info', 'error');
+  }
+}
+
+/**
+ * Handle recovering a specific account by index
+ */
+async function handleRecoverAccount() {
+  if (!selectedMasterWalletId) {
+    showToast('No master wallet selected', 'error');
+    return;
+  }
+  
+  const index = parseInt(document.getElementById('recover-account-index')?.value);
+  
+  if (isNaN(index) || index < 0) {
+    showToast('Please enter a valid account index', 'error');
+    return;
+  }
+  
+  try {
+    const result = await sendMessage('recoverAccountByIndex', { 
+      masterWalletId: selectedMasterWalletId, 
+      index 
+    });
+    
+    if (result.success) {
+      showToast(`Recovered Account ${index + 1}`, 'success');
+      document.getElementById('recover-account-modal').classList.remove('show');
+      selectedMasterWalletId = null;
+      await loadAccountsList();
+    } else {
+      showToast(result.error || 'Failed to recover account', 'error');
+    }
+  } catch (error) {
+    showToast('Error recovering account: ' + error.message, 'error');
   }
 }
 

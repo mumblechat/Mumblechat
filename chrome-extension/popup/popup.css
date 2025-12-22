@@ -1588,6 +1588,53 @@ body::before {
   padding: 16px;
 }
 
+.modal-info {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* Auto-Lock Options */
+.auto-lock-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.radio-option:hover {
+  background: var(--bg-tertiary);
+}
+
+.radio-option input[type="radio"] {
+  margin-right: 12px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color);
+}
+
+.radio-option input[type="radio"]:checked + span {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.radio-option:has(input:checked) {
+  border-color: var(--primary-color);
+  background: rgba(99, 102, 241, 0.1);
+}
+
 /* Token Preview */
 .token-preview {
   background: var(--bg-tertiary);
@@ -2250,11 +2297,50 @@ body::before {
   color: var(--text-muted);
 }
 
+/* =================== WALLETS SCREEN (Android-style) =================== */
 .accounts-content {
-  padding: 16px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   height: calc(100% - 60px);
+  overflow-y: auto;
+}
+
+/* Summary Section */
+.wallets-summary {
+  background: var(--bg-primary);
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.summary-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.summary-balance {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.summary-change {
+  font-size: 14px;
+  color: var(--success);
+}
+
+.summary-change.negative {
+  color: var(--danger-color);
+}
+
+/* Wallets Section Header */
+.wallets-section-header {
+  padding: 16px 16px 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .accounts-list {
@@ -2470,6 +2556,44 @@ body::before {
   border-radius: 0 0 12px 12px;
 }
 
+/* Watch Accounts Section */
+.watch-accounts-section {
+  margin-top: 16px;
+}
+
+.watch-accounts-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: rgba(168, 139, 250, 0.1);
+  border: 1px solid rgba(168, 139, 250, 0.3);
+  border-radius: 12px 12px 0 0;
+}
+
+.watch-accounts-header .section-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.watch-accounts-header .section-title {
+  font-weight: 600;
+  color: #a78bfa;
+  font-size: 13px;
+}
+
+.watch-accounts-list .account-item:first-child {
+  border-radius: 0;
+}
+
+.watch-accounts-list .account-item:last-child {
+  border-radius: 0 0 12px 12px;
+}
+
+.watch-badge {
+  font-size: 11px;
+  margin-left: 4px;
+}
+
 /* Master Wallet Selection List (in modals) */
 .master-wallet-list {
   display: flex;
@@ -2522,6 +2646,12 @@ body::before {
   font-size: 13px;
 }
 
+.master-wallet-option .wallet-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
 .master-wallet-option .wallet-accounts {
   font-size: 11px;
   color: var(--text-muted);
@@ -2541,6 +2671,389 @@ body::before {
   color: var(--secondary-color);
   font-size: 18px;
   margin-left: 8px;
+}
+
+/* =================== BOTTOM SHEET MODAL =================== */
+.modal.bottom-sheet {
+  align-items: flex-end;
+}
+
+.bottom-sheet-content {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 20px 20px 0 0;
+  padding: 0;
+  animation: slideUp 0.3s ease-out;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.bottom-sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  margin: 12px auto;
+}
+
+.bottom-sheet-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  padding: 0 16px 16px;
+}
+
+.bottom-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bottom-sheet-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Wallet Options List (Add/Manage Wallet) */
+.wallet-options-list {
+  padding: 0 16px 24px;
+}
+
+.wallet-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 14px;
+}
+
+.wallet-option:hover {
+  background: var(--bg-tertiary);
+}
+
+.wallet-option:last-child {
+  margin-bottom: 0;
+}
+
+.option-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.option-icon.add {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+.option-icon.create {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--success);
+}
+
+.option-icon.import {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fb923c;
+}
+
+.option-icon.watch {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--primary-color);
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.option-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.option-help {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option-help:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Modal Subtitle */
+.modal-subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 0 16px 16px;
+}
+
+/* Advanced Section in Select Master Modal */
+.advanced-section {
+  border-top: 1px solid var(--border-color);
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.advanced-header {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.advanced-option {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 12px;
+}
+
+.advanced-option:hover {
+  background: var(--bg-tertiary);
+}
+
+.advanced-option:last-child {
+  margin-bottom: 0;
+}
+
+.option-icon-small {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.option-icon-small.recover {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fb923c;
+}
+
+.option-arrow {
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+/* Bulk Master Info */
+.bulk-master-info {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Centered Input */
+.centered-input {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  padding: 12px;
+}
+
+/* Modal Buttons Row */
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.modal-buttons .btn {
+  flex: 1;
+}
+
+/* Info Box Styles */
+.info-box {
+  padding: 14px 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.info-box.success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: var(--text-secondary);
+}
+
+.info-box.warning {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fbbf24;
+}
+
+.info-box.info {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--text-secondary);
+}
+
+.info-box p {
+  margin: 0;
+}
+
+/* Wallet Card (in accounts list) */
+.wallet-card {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  margin: 0 16px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wallet-card:hover {
+  background: var(--bg-tertiary);
+}
+
+.wallet-card.active {
+  border: 2px solid var(--primary-color);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.wallet-card-menu {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.wallet-card-menu:hover {
+  background: var(--bg-tertiary);
+}
+
+.wallet-card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4ade80, #22c55e, #86efac);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.wallet-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wallet-card-avatar.imported {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.wallet-card-avatar.watch {
+  background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+}
+
+.wallet-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wallet-card-balance {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.wallet-card-details {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wallet-card-change {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--success);
+  margin-right: 12px;
+}
+
+.wallet-card-change.negative {
+  color: var(--danger-color);
+}
+
+.wallet-card-arrow {
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+/* Watch badge */
+.watch-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+  border-radius: 4px;
+  margin-left: 6px;
 }
 
 /* =================== DAPP CONNECTION MODAL - FUTURISTIC =================== */

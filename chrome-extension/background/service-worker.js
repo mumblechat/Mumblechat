@@ -15,6 +15,18 @@ let sessionPassword = null;
 let currentWalletData = null;
 let connectedSites = new Set();
 
+// Auto-lock settings (in minutes)
+const AUTO_LOCK_OPTIONS = {
+  '5': 5,
+  '15': 15,
+  '30': 30,
+  '60': 60,
+  '120': 120,
+  'never': 0
+};
+let autoLockMinutes = 30; // Default: 30 minutes
+let lastActivityTime = Date.now();
+
 // Enabled networks list (persisted in wallet data)
 let enabledNetworks = [...DEFAULT_ENABLED_NETWORKS];
 
@@ -32,10 +44,64 @@ async function init() {
   if (prefs.network && NETWORKS[prefs.network]) {
     walletManager.switchNetwork(prefs.network);
   }
+  
+  // Load auto-lock setting
+  if (prefs.autoLockMinutes !== undefined) {
+    autoLockMinutes = prefs.autoLockMinutes;
+  }
 
   // Check for existing wallet
   const hasWallet = await storageManager.hasWallet();
   console.log('Wallet exists:', hasWallet);
+  
+  // Set up auto-lock alarm (checks every minute)
+  setupAutoLockAlarm();
+}
+
+/**
+ * Set up auto-lock alarm
+ */
+function setupAutoLockAlarm() {
+  // Clear any existing alarm
+  chrome.alarms.clear('autoLockCheck');
+  
+  // Create alarm that fires every minute to check for auto-lock
+  chrome.alarms.create('autoLockCheck', {
+    periodInMinutes: 1
+  });
+}
+
+/**
+ * Handle alarm events
+ */
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'autoLockCheck') {
+    checkAutoLock();
+  }
+});
+
+/**
+ * Check if wallet should be auto-locked
+ */
+function checkAutoLock() {
+  if (!isUnlocked || autoLockMinutes === 0) {
+    return; // Not unlocked or auto-lock disabled
+  }
+  
+  const now = Date.now();
+  const inactiveMinutes = (now - lastActivityTime) / (1000 * 60);
+  
+  if (inactiveMinutes >= autoLockMinutes) {
+    console.log(`Auto-locking wallet after ${autoLockMinutes} minutes of inactivity`);
+    lockWallet();
+  }
+}
+
+/**
+ * Update last activity time (call this on user actions)
+ */
+function updateActivity() {
+  lastActivityTime = Date.now();
 }
 
 init();
@@ -96,6 +162,10 @@ async function handleMessage(request, sender) {
       return await bulkAddAccounts(data);
     case 'importSeedPhraseAccounts':
       return await importSeedPhraseAccounts(data);
+    case 'addWatchWallet':
+      return await addWatchWallet(data);
+    case 'recoverAccountByIndex':
+      return await recoverAccountByIndex(data);
 
     // Balance & Transactions
     case 'getBalance':
@@ -150,6 +220,10 @@ async function handleMessage(request, sender) {
       return await exportRecoveryPhrase(data);
     case 'getConnectedSites':
       return getConnectedSites();
+    case 'getAutoLockSettings':
+      return getAutoLockSettings();
+    case 'setAutoLockTimeout':
+      return await setAutoLockTimeout(data);
 
     // dApp Connection
     case 'connectSite':
@@ -201,14 +275,26 @@ async function createWallet({ password }) {
   try {
     const walletData = await walletManager.createNewWallet();
     
+    // Generate master wallet ID for proper grouping
+    const masterWalletId = generateWalletId();
+    
     const fullData = {
       mnemonic: walletData.mnemonic,
+      masterWallets: [{
+        id: masterWalletId,
+        name: 'Master Wallet 1',
+        mnemonic: walletData.mnemonic,
+        createdAt: Date.now(),
+        type: 'master'
+      }],
       accounts: [{
         address: walletData.address,
         privateKey: walletData.privateKey,
         name: 'Account 1',
+        type: 'derived',
         derivationPath: walletData.derivationPath,
-        accountIndex: 0
+        accountIndex: 0,
+        masterWalletId: masterWalletId
       }],
       activeAccountIndex: 0
     };
@@ -240,14 +326,27 @@ async function importWallet({ password, mnemonic, privateKey, type }) {
 
     if (type === 'mnemonic' && mnemonic) {
       walletData = await walletManager.importFromMnemonic(mnemonic);
+      
+      // Generate master wallet ID for proper grouping
+      const masterWalletId = generateWalletId();
+      
       fullData = {
         mnemonic: mnemonic.trim(),
+        masterWallets: [{
+          id: masterWalletId,
+          name: 'Master Wallet 1',
+          mnemonic: mnemonic.trim(),
+          createdAt: Date.now(),
+          type: 'master'
+        }],
         accounts: [{
           address: walletData.address,
           privateKey: walletData.privateKey,
           name: 'Account 1',
+          type: 'derived',
           derivationPath: walletData.derivationPath,
-          accountIndex: 0
+          accountIndex: 0,
+          masterWalletId: masterWalletId
         }],
         activeAccountIndex: 0
       };
@@ -291,9 +390,18 @@ async function unlockWallet({ password }) {
     isUnlocked = true;
     sessionPassword = password;
     currentWalletData = walletData;
+    
+    // Reset activity timer on unlock
+    updateActivity();
 
     // Load custom networks from wallet data
     loadCustomNetworksFromWallet();
+    
+    // Load auto-lock preference
+    const prefs = await storageManager.loadPreferences();
+    if (prefs.autoLockMinutes !== undefined) {
+      autoLockMinutes = prefs.autoLockMinutes;
+    }
 
     return { 
       success: true, 
@@ -315,9 +423,49 @@ function lockWallet() {
 }
 
 /**
+ * Get auto-lock settings
+ */
+function getAutoLockSettings() {
+  return {
+    success: true,
+    autoLockMinutes: autoLockMinutes,
+    options: AUTO_LOCK_OPTIONS,
+    lastActivityTime: lastActivityTime
+  };
+}
+
+/**
+ * Set auto-lock timeout
+ */
+async function setAutoLockTimeout({ minutes }) {
+  // Validate the value
+  const validValues = Object.values(AUTO_LOCK_OPTIONS);
+  if (!validValues.includes(minutes)) {
+    return { success: false, error: 'Invalid auto-lock timeout value' };
+  }
+  
+  autoLockMinutes = minutes;
+  
+  // Save to preferences
+  const prefs = await storageManager.loadPreferences();
+  prefs.autoLockMinutes = minutes;
+  await storageManager.savePreferences(prefs);
+  
+  // Reset activity time when changing setting
+  updateActivity();
+  
+  return { success: true, autoLockMinutes: minutes };
+}
+
+/**
  * Get wallet status
  */
 function getWalletStatus() {
+  // Update activity on status check (popup is open)
+  if (isUnlocked) {
+    updateActivity();
+  }
+  
   return {
     success: true,
     hasWallet: currentWalletData !== null || isUnlocked,
@@ -352,13 +500,16 @@ async function handleGenerateQRCode({ text }) {
 /**
  * Get all accounts with hierarchical structure
  */
-function getAccounts() {
+async function getAccounts() {
   if (!isUnlocked || !currentWalletData) {
     return { success: false, error: 'Wallet is locked' };
   }
   
-  // Initialize master wallets if needed
-  initializeMasterWallets();
+  // Initialize master wallets if needed and save if migration occurred
+  const needsSave = initializeMasterWallets();
+  if (needsSave && sessionPassword) {
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+  }
   
   // Get master wallets info
   const masterWallets = (currentWalletData.masterWallets || []).map(mw => ({
@@ -558,52 +709,92 @@ function generateWalletId() {
 /**
  * Get all master wallets
  */
-function getMasterWallets() {
+async function getMasterWallets() {
   if (!isUnlocked || !currentWalletData) {
     return { success: false, error: 'Wallet is locked' };
   }
   
-  // Initialize or migrate master wallets
-  initializeMasterWallets();
+  // Initialize or migrate master wallets and save if needed
+  const needsSave = initializeMasterWallets();
+  if (needsSave && sessionPassword) {
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+  }
   
-  const masterWallets = (currentWalletData.masterWallets || []).map(mw => ({
-    id: mw.id,
-    name: mw.name,
-    createdAt: mw.createdAt,
-    accountCount: currentWalletData.accounts.filter(a => a.masterWalletId === mw.id).length
-  }));
+  const masterWallets = (currentWalletData.masterWallets || []).map(mw => {
+    // Find the first account (Account 1 / index 0) for this master wallet
+    const accounts = currentWalletData.accounts.filter(a => a.masterWalletId === mw.id);
+    const firstAccount = accounts.find(a => a.accountIndex === 0) || accounts[0];
+    
+    return {
+      id: mw.id,
+      name: mw.name,
+      createdAt: mw.createdAt,
+      accountCount: accounts.length,
+      firstAddress: firstAccount?.address || null
+    };
+  });
   
   return { success: true, masterWallets };
 }
 
 /**
  * Initialize master wallets (migrate from legacy structure if needed)
+ * Returns true if migration was needed and data should be saved
  */
 function initializeMasterWallets() {
-  if (!currentWalletData) return;
+  if (!currentWalletData) return false;
   
+  let needsSave = false;
+  
+  // Initialize masterWallets array if not present
   if (!currentWalletData.masterWallets) {
     currentWalletData.masterWallets = [];
-    
-    // Migrate existing mnemonic to first master wallet
-    if (currentWalletData.mnemonic) {
-      const masterId = generateWalletId();
-      currentWalletData.masterWallets.push({
-        id: masterId,
-        name: 'Master Wallet 1',
-        mnemonic: currentWalletData.mnemonic,
-        createdAt: Date.now(),
-        type: 'master'
-      });
-      
-      // Update existing derived accounts
-      currentWalletData.accounts.forEach(acc => {
-        if (acc.type === 'derived' && !acc.masterWalletId) {
-          acc.masterWalletId = masterId;
-        }
-      });
-    }
+    needsSave = true;
   }
+  
+  // If we have a mnemonic but no master wallets, create one
+  if (currentWalletData.mnemonic && currentWalletData.masterWallets.length === 0) {
+    const masterId = generateWalletId();
+    currentWalletData.masterWallets.push({
+      id: masterId,
+      name: 'Master Wallet 1',
+      mnemonic: currentWalletData.mnemonic,
+      createdAt: Date.now(),
+      type: 'master'
+    });
+    needsSave = true;
+    
+    // Update existing derived accounts (including legacy ones without type)
+    currentWalletData.accounts.forEach(acc => {
+      // Accounts with accountIndex are derived accounts
+      const isDerived = acc.type === 'derived' || 
+                       (acc.accountIndex !== undefined && acc.accountIndex !== null && acc.type !== 'imported' && acc.type !== 'watch');
+      
+      if (isDerived && !acc.masterWalletId) {
+        acc.masterWalletId = masterId;
+        acc.type = 'derived'; // Ensure type is set
+      }
+    });
+  }
+  
+  // If we have master wallets, ensure all derived accounts are linked
+  if (currentWalletData.masterWallets.length > 0) {
+    const firstMasterId = currentWalletData.masterWallets[0].id;
+    
+    currentWalletData.accounts.forEach(acc => {
+      // Legacy accounts without type but with accountIndex should be derived
+      const isLegacyDerived = !acc.type && acc.accountIndex !== undefined && acc.accountIndex !== null;
+      const isDerived = acc.type === 'derived' || isLegacyDerived;
+      
+      if (isDerived && !acc.masterWalletId) {
+        acc.masterWalletId = firstMasterId;
+        acc.type = 'derived';
+        needsSave = true;
+      }
+    });
+  }
+  
+  return needsSave;
 }
 
 /**
@@ -963,6 +1154,101 @@ async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name 
       success: true, 
       addedCount: addedAccounts.length,
       accounts: addedAccounts
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Add a watch-only wallet (no private key)
+ */
+async function addWatchWallet({ address, name }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  try {
+    // Validate address
+    if (!ethers.isAddress(address)) {
+      return { success: false, error: 'Invalid Ethereum address' };
+    }
+
+    // Check if address already exists
+    const exists = currentWalletData.accounts.some(
+      acc => acc.address.toLowerCase() === address.toLowerCase()
+    );
+
+    if (exists) {
+      return { success: false, error: 'This address is already in your wallet' };
+    }
+
+    const newAccount = {
+      address: ethers.getAddress(address), // Checksum address
+      privateKey: null, // Watch-only, no private key
+      name: name || 'Watch Wallet',
+      type: 'watch',
+      accountIndex: null,
+      isWatchOnly: true
+    };
+
+    currentWalletData.accounts.push(newAccount);
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+
+    return { 
+      success: true, 
+      address: newAccount.address,
+      name: newAccount.name
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Recover a specific account by index from a master wallet
+ */
+async function recoverAccountByIndex({ masterWalletId, index }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  initializeMasterWallets();
+
+  const masterWallet = currentWalletData.masterWallets?.find(mw => mw.id === masterWalletId);
+  if (!masterWallet) {
+    return { success: false, error: 'Master wallet not found' };
+  }
+
+  try {
+    const derivedAccount = await walletManager.deriveAccount(masterWallet.mnemonic, index);
+
+    // Check if address already exists
+    const exists = currentWalletData.accounts.some(
+      acc => acc.address.toLowerCase() === derivedAccount.address.toLowerCase()
+    );
+
+    if (exists) {
+      return { success: false, error: 'This account already exists in your wallet' };
+    }
+
+    const newAccount = {
+      address: derivedAccount.address,
+      privateKey: derivedAccount.privateKey,
+      name: `Account ${index + 1}`,
+      type: 'derived',
+      accountIndex: index,
+      masterWalletId: masterWalletId
+    };
+
+    currentWalletData.accounts.push(newAccount);
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+
+    return { 
+      success: true, 
+      address: newAccount.address,
+      name: newAccount.name,
+      accountIndex: index
     };
   } catch (error) {
     return { success: false, error: error.message };
