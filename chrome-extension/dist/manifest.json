@@ -37,7 +37,8 @@
     "storage",
     "activeTab",
     "notifications",
-    "clipboardWrite"
+    "clipboardWrite",
+    "alarms"
   ],
   "host_permissions": [
     "https://blockchain.ramestta.com/*",
