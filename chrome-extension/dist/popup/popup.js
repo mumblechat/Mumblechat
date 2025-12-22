@@ -239,18 +239,14 @@ function setupEventListeners() {
     document.getElementById('import-tab-seed')?.classList.add('active');
   });
   
-  // Select Master Wallet Modal;
-    document.getElementById('import-wallet-modal').classList.add('show');
+  // Select Master Wallet Modal
+  document.getElementById('close-select-master-modal')?.addEventListener('click', () => {
+    document.getElementById('select-master-modal').classList.remove('show');
   });
   
   // Watch Wallet button (optional - add if needed in UI later)
   document.getElementById('opt-watch-wallet')?.addEventListener('click', () => {
     document.getElementById('watch-wallet-modal').classList.add('show');
-  });
-  
-  // Select Master Wallet Modal
-  document.getElementById('close-select-master-modal')?.addEventListener('click', () => {
-    document.getElementById('select-master-modal').classList.remove('show');
   });
   
   // Create Master Wallet Modal
