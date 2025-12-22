@@ -244,7 +244,12 @@ function setupEventListeners() {
     document.getElementById('select-master-modal').classList.remove('show');
   });
   
-  // Watch Wallet button (optional - add if needed in UI later)
+  // Watch Wallet button
+  document.getElementById('btn-add-watch-wallet')?.addEventListener('click', () => {
+    document.getElementById('watch-wallet-modal').classList.add('show');
+  });
+  
+  // Legacy watch wallet button (for backwards compatibility)
   document.getElementById('opt-watch-wallet')?.addEventListener('click', () => {
     document.getElementById('watch-wallet-modal').classList.add('show');
   });
@@ -692,15 +697,21 @@ async function handleVerifyComplete() {
  * Skip verification (with confirmation)
  */
 async function skipVerification() {
-  if (confirm('Are you sure? Skipping verification means you may not have properly backed up your recovery phrase.')) {
-    currentMnemonic = null;
-    sessionStorage.removeItem('temp_mnemonic');
-    verifyPositions = [];
-    verifyCurrentStep = 0;
-    await loadMainScreen();
-    showScreen('main');
-    await loadAccountsList();
-  }
+  showConfirmModal({
+    title: 'Skip Verification?',
+    message: 'Are you sure? Skipping verification means you may not have properly backed up your recovery phrase.',
+    confirmText: 'Skip',
+    isDanger: true,
+    onConfirm: async () => {
+      currentMnemonic = null;
+      sessionStorage.removeItem('temp_mnemonic');
+      verifyPositions = [];
+      verifyCurrentStep = 0;
+      await loadMainScreen();
+      showScreen('main');
+      await loadAccountsList();
+    }
+  });
 }
 
 /**
@@ -1333,11 +1344,17 @@ async function handleSendTransaction() {
       
       if (txHash && explorerUrl) {
         showToast(`Transaction sent! Hash: ${txHash.slice(0, 10)}...`, 'success');
-        // Open explorer in new tab
+        // Ask to view on explorer
         setTimeout(() => {
-          if (confirm('View transaction on explorer?')) {
-            window.open(`${explorerUrl}/tx/${txHash}`, '_blank');
-          }
+          showConfirmModal({
+            title: 'Transaction Sent',
+            message: 'Would you like to view this transaction on the block explorer?',
+            confirmText: 'View',
+            cancelText: 'Close',
+            onConfirm: () => {
+              window.open(`${explorerUrl}/tx/${txHash}`, '_blank');
+            }
+          });
         }, 500);
       } else {
         showToast('Transaction sent successfully!', 'success');
@@ -1441,6 +1458,153 @@ async function handleLock() {
   } catch (error) {
     showToast('Error locking wallet', 'error');
   }
+}
+
+// ============================================
+// GENERIC INPUT & CONFIRM MODALS
+// ============================================
+
+/**
+ * Show a generic input modal (replaces prompt())
+ * @param {Object} options - Modal options
+ * @param {string} options.title - Modal title
+ * @param {string} options.label - Input label
+ * @param {string} options.placeholder - Input placeholder
+ * @param {string} options.defaultValue - Default input value
+ * @param {string} options.confirmText - Confirm button text
+ * @param {Function} options.onConfirm - Callback with input value
+ */
+function showInputModal({ title, label, placeholder = '', defaultValue = '', confirmText = 'OK', onConfirm }) {
+  // Remove existing input modal
+  const existing = document.getElementById('generic-input-modal');
+  if (existing) existing.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'generic-input-modal';
+  modal.className = 'modal active';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 320px;">
+      <div class="modal-header">
+        <h3>${title}</h3>
+        <button class="modal-close" id="input-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>${label}</label>
+          <input type="text" id="generic-input-value" class="form-control" placeholder="${placeholder}" value="${defaultValue}">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="input-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="input-modal-confirm">${confirmText}</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const input = document.getElementById('generic-input-value');
+  input.focus();
+  input.select();
+  
+  const closeModal = () => {
+    modal.remove();
+  };
+  
+  const handleConfirm = () => {
+    const value = input.value.trim();
+    closeModal();
+    if (onConfirm) onConfirm(value);
+  };
+  
+  document.getElementById('input-modal-close').addEventListener('click', closeModal);
+  document.getElementById('input-modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('input-modal-confirm').addEventListener('click', handleConfirm);
+  
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleConfirm();
+    if (e.key === 'Escape') closeModal();
+  });
+  
+  // Close on backdrop click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+}
+
+/**
+ * Show a generic confirm modal (replaces confirm())
+ * @param {Object} options - Modal options
+ * @param {string} options.title - Modal title
+ * @param {string} options.message - Confirmation message
+ * @param {string} options.confirmText - Confirm button text
+ * @param {string} options.cancelText - Cancel button text
+ * @param {boolean} options.isDanger - Use danger styling
+ * @param {Function} options.onConfirm - Callback when confirmed
+ * @param {Function} options.onCancel - Callback when cancelled
+ */
+function showConfirmModal({ title = 'Confirm', message, confirmText = 'OK', cancelText = 'Cancel', isDanger = false, onConfirm, onCancel }) {
+  // Remove existing confirm modal
+  const existing = document.getElementById('generic-confirm-modal');
+  if (existing) existing.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'generic-confirm-modal';
+  modal.className = 'modal active';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 320px;">
+      <div class="modal-header">
+        <h3>${title}</h3>
+        <button class="modal-close" id="confirm-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-secondary); margin: 0; line-height: 1.5;">${message}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="confirm-modal-cancel">${cancelText}</button>
+        <button class="btn ${isDanger ? 'btn-danger' : 'btn-primary'}" id="confirm-modal-confirm">${confirmText}</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const closeModal = () => {
+    modal.remove();
+  };
+  
+  document.getElementById('confirm-modal-close').addEventListener('click', () => {
+    closeModal();
+    if (onCancel) onCancel();
+  });
+  
+  document.getElementById('confirm-modal-cancel').addEventListener('click', () => {
+    closeModal();
+    if (onCancel) onCancel();
+  });
+  
+  document.getElementById('confirm-modal-confirm').addEventListener('click', () => {
+    closeModal();
+    if (onConfirm) onConfirm();
+  });
+  
+  // Close on backdrop click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+      if (onCancel) onCancel();
+    }
+  });
+  
+  // Handle escape key
+  const handleKeydown = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      if (onCancel) onCancel();
+      document.removeEventListener('keydown', handleKeydown);
+    }
+  };
+  document.addEventListener('keydown', handleKeydown);
 }
 
 /**
@@ -1713,19 +1877,25 @@ async function handleExportKey() {
  * Handle add account
  */
 async function handleAddAccount() {
-  const name = prompt('Enter account name:');
-  if (!name) return;
-
-  try {
-    const result = await sendMessage('addAccount', { name });
-    if (result.success) {
-      showToast(`Account created: ${formatAddress(result.address)}`, 'success');
-    } else {
-      showToast(result.error || 'Failed to add account', 'error');
+  showInputModal({
+    title: 'Add New Account',
+    label: 'Account Name',
+    placeholder: 'Enter account name',
+    confirmText: 'Create',
+    onConfirm: async (name) => {
+      if (!name) return;
+      try {
+        const result = await sendMessage('addAccount', { name });
+        if (result.success) {
+          showToast(`Account created: ${formatAddress(result.address)}`, 'success');
+        } else {
+          showToast(result.error || 'Failed to add account', 'error');
+        }
+      } catch (error) {
+        showToast('Error adding account', 'error');
+      }
     }
-  } catch (error) {
-    showToast('Error adding account', 'error');
-  }
+  });
 }
 
 /**
@@ -2028,20 +2198,26 @@ async function loadCustomTokens() {
  * Remove a custom token
  */
 window.removeToken = async function(tokenAddress) {
-  if (!confirm('Remove this token from your wallet?')) return;
-
-  try {
-    const result = await sendMessage('removeToken', { tokenAddress });
-    
-    if (result.success) {
-      showToast('Token removed', 'success');
-      await loadCustomTokens();
-    } else {
-      showToast(result.error || 'Failed to remove token', 'error');
+  showConfirmModal({
+    title: 'Remove Token',
+    message: 'Are you sure you want to remove this token from your wallet?',
+    confirmText: 'Remove',
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        const result = await sendMessage('removeToken', { tokenAddress });
+        
+        if (result.success) {
+          showToast('Token removed', 'success');
+          await loadCustomTokens();
+        } else {
+          showToast(result.error || 'Failed to remove token', 'error');
+        }
+      } catch (error) {
+        showToast('Error removing token', 'error');
+      }
     }
-  } catch (error) {
-    showToast('Error removing token', 'error');
-  }
+  });
 };
 
 // ============================================
@@ -2586,24 +2762,30 @@ async function selectNetwork(chainId) {
  * Remove a custom network
  */
 window.removeNetwork = async function(networkKeyOrChainId) {
-  if (!confirm('Remove this custom network?')) return;
-
-  try {
-    // networkKeyOrChainId can be either the network key (custom_1370) or chainId (0x55a)
-    const isKey = networkKeyOrChainId.startsWith('custom_');
-    const result = await sendMessage('removeCustomNetwork', { 
-      networkKey: isKey ? networkKeyOrChainId : null,
-      chainId: isKey ? null : networkKeyOrChainId 
-    });
-    if (result.success) {
-      showToast('Network removed', 'success');
-      await loadNetworksList();
-    } else {
-      showToast(result.error || 'Failed to remove network', 'error');
+  showConfirmModal({
+    title: 'Remove Network',
+    message: 'Are you sure you want to remove this custom network?',
+    confirmText: 'Remove',
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        // networkKeyOrChainId can be either the network key (custom_1370) or chainId (0x55a)
+        const isKey = networkKeyOrChainId.startsWith('custom_');
+        const result = await sendMessage('removeCustomNetwork', { 
+          networkKey: isKey ? networkKeyOrChainId : null,
+          chainId: isKey ? null : networkKeyOrChainId 
+        });
+        if (result.success) {
+          showToast('Network removed', 'success');
+          await loadNetworksList();
+        } else {
+          showToast(result.error || 'Failed to remove network', 'error');
+        }
+      } catch (error) {
+        showToast('Error removing network', 'error');
+      }
     }
-  } catch (error) {
-    showToast('Error removing network', 'error');
-  }
+  });
 };
 
 /**
@@ -2803,6 +2985,10 @@ async function loadAccountsList() {
     
     const { accounts, masterWallets = [] } = result;
     
+    console.log('loadAccountsList - received accounts:', accounts.length);
+    console.log('loadAccountsList - received masterWallets:', masterWallets.length);
+    console.log('loadAccountsList - account types:', accounts.map(a => a.type));
+    
     let html = '';
     
     // Group accounts by master wallet
@@ -2827,6 +3013,10 @@ async function loadAccountsList() {
       }
     });
     
+    console.log('loadAccountsList - watch accounts:', watchAccounts.length);
+    console.log('loadAccountsList - imported accounts:', importedAccounts.length);
+    console.log('loadAccountsList - master wallet account groups:', Object.keys(masterWalletAccounts).length);
+    
     // Render Master Wallets with their accounts nested inside
     masterWallets.forEach((mw, mwIdx) => {
       const mwAccounts = masterWalletAccounts[mw.id] || [];
@@ -2834,9 +3024,17 @@ async function loadAccountsList() {
       // Sort accounts by accountIndex for proper order
       mwAccounts.sort((a, b) => (a.accountIndex || 0) - (b.accountIndex || 0));
       
+      // Check if this master wallet has an active account (should be expanded)
+      const hasActiveAccount = mwAccounts.some(acc => acc.isActive);
+      // Default collapsed, but expand if it has the active account
+      const isCollapsed = !hasActiveAccount;
+      
       html += `
-        <div class="master-wallet-group" data-master-id="${mw.id}">
+        <div class="master-wallet-group ${isCollapsed ? 'collapsed' : ''}" data-master-id="${mw.id}">
           <div class="master-wallet-header">
+            <button class="master-wallet-toggle" data-master-id="${mw.id}" title="Expand/Collapse">
+              <span class="toggle-icon">${isCollapsed ? '▶' : '▼'}</span>
+            </button>
             <div class="master-wallet-icon">🏦</div>
             <div class="master-wallet-info">
               <div class="master-wallet-name">${mw.name}</div>
@@ -2845,7 +3043,7 @@ async function loadAccountsList() {
             <button class="master-wallet-menu-btn" data-master-id="${mw.id}" title="Master Wallet Options">⋮</button>
             <span class="master-wallet-badge">HD</span>
           </div>
-          <div class="master-wallet-accounts">
+          <div class="master-wallet-accounts" style="${isCollapsed ? 'display: none;' : ''}">
             ${mwAccounts.map((acc, accIdx) => `
               <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}" data-address="${acc.address}" data-name="${acc.name}" data-type="${acc.type || 'derived'}" data-master-id="${mw.id}" data-account-index="${acc.accountIndex}">
                 <div class="account-avatar" style="background: linear-gradient(135deg, #4ade80, #22c55e);">${acc.name.charAt(0).toUpperCase()}</div>
@@ -2923,6 +3121,33 @@ async function loadAccountsList() {
     }
     
     container.innerHTML = html;
+    
+    // Add event listeners for master wallet toggle (expand/collapse)
+    container.querySelectorAll('.master-wallet-toggle').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const masterId = btn.dataset.masterId;
+        const group = container.querySelector(`.master-wallet-group[data-master-id="${masterId}"]`);
+        const accountsDiv = group?.querySelector('.master-wallet-accounts');
+        const toggleIcon = btn.querySelector('.toggle-icon');
+        
+        if (group && accountsDiv) {
+          const isCollapsed = group.classList.toggle('collapsed');
+          accountsDiv.style.display = isCollapsed ? 'none' : 'block';
+          toggleIcon.textContent = isCollapsed ? '▶' : '▼';
+        }
+      });
+    });
+    
+    // Also allow clicking on the header (but not buttons) to toggle
+    container.querySelectorAll('.master-wallet-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        // Don't toggle if clicking on menu button
+        if (e.target.closest('.master-wallet-menu-btn') || e.target.closest('.master-wallet-toggle')) return;
+        const toggleBtn = header.querySelector('.master-wallet-toggle');
+        if (toggleBtn) toggleBtn.click();
+      });
+    });
     
     // Add event listeners for account items (click to switch)
     container.querySelectorAll('.account-item').forEach(item => {
@@ -3290,6 +3515,11 @@ async function handleCreateMasterWallet() {
       document.getElementById('create-master-wallet-modal').classList.remove('show');
       document.getElementById('master-wallet-name').value = '';
       
+      // Update current wallet address to the new account
+      if (result.address) {
+        currentWalletAddress = result.address;
+      }
+      
       // Show the seed phrase to the user so they can back it up
       if (result.mnemonic) {
         // Set currentMnemonic for verification flow
@@ -3302,6 +3532,7 @@ async function handleCreateMasterWallet() {
         showScreen('seed');
       } else {
         await loadAccountsList();
+        await loadMainScreen();
       }
     } else {
       showToast(result.error || 'Failed to create Master Wallet', 'error');
@@ -3385,7 +3616,14 @@ async function confirmBulkAddToMaster() {
       showToast(`Added ${result.addedCount} accounts`, 'success');
       document.getElementById('bulk-add-master-modal').classList.remove('show');
       selectedMasterWalletId = null;
+      
+      // Update current wallet address to the first new account
+      if (result.accounts && result.accounts.length > 0) {
+        currentWalletAddress = result.accounts[0].address;
+      }
+      
       await loadAccountsList();
+      await loadMainScreen();
     } else {
       showToast(result.error || 'Failed to add accounts', 'error');
     }
@@ -3596,12 +3834,19 @@ async function handleImportWalletFromModal() {
       });
       
       if (result.success) {
-        showToast(`Imported ${result.count || result.addedCount || 1} account(s)`, 'success');
+        showToast(`Created "${result.masterWalletName}" with ${result.addedCount || 1} account(s)`, 'success');
         document.getElementById('import-wallet-modal').classList.remove('show');
         document.getElementById('import-wallet-seed').value = '';
         document.getElementById('import-wallet-seed-name').value = '';
         document.getElementById('import-wallet-seed-count').value = '1';
+        
+        // Update current wallet address if provided
+        if (result.accounts && result.accounts.length > 0) {
+          currentWalletAddress = result.accounts[0].address;
+        }
+        
         await loadAccountsList();
+        await loadMainScreen();
       } else {
         showToast(result.error || 'Failed to import wallet', 'error');
       }
@@ -3635,7 +3880,14 @@ async function handleImportWalletFromModal() {
         document.getElementById('import-wallet-modal').classList.remove('show');
         document.getElementById('import-wallet-key').value = '';
         document.getElementById('import-wallet-key-name').value = '';
+        
+        // Update current wallet address
+        if (result.address) {
+          currentWalletAddress = result.address;
+        }
+        
         await loadAccountsList();
+        await loadMainScreen();
       } else {
         showToast(result.error || 'Failed to import account', 'error');
       }
@@ -3674,7 +3926,14 @@ async function handleAddWatchWallet() {
       document.getElementById('watch-wallet-modal').classList.remove('show');
       document.getElementById('watch-wallet-name').value = '';
       document.getElementById('watch-wallet-address').value = '';
+      
+      // Update current wallet address to the new watch wallet
+      if (result.address) {
+        currentWalletAddress = result.address;
+      }
+      
       await loadAccountsList();
+      await loadMainScreen();
     } else {
       showToast(result.error || 'Failed to add watch wallet', 'error');
     }
@@ -3844,20 +4103,26 @@ window.editAccountName = async function(accountIndex, currentName) {
  * Delete an account
  */
 window.deleteAccount = async function(accountIndex) {
-  if (!confirm('Are you sure you want to remove this account? This cannot be undone.')) return;
-
-  try {
-    const result = await sendMessage('removeAccount', { accountIndex });
-    
-    if (result.success) {
-      showToast('Account removed', 'success');
-      await loadAccountsList();
-    } else {
-      showToast(result.error || 'Failed to remove account', 'error');
+  showConfirmModal({
+    title: 'Remove Account',
+    message: 'Are you sure you want to remove this account? This action cannot be undone.',
+    confirmText: 'Remove',
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        const result = await sendMessage('removeAccount', { accountIndex });
+        
+        if (result.success) {
+          showToast('Account removed', 'success');
+          await loadAccountsList();
+        } else {
+          showToast(result.error || 'Failed to remove account', 'error');
+        }
+      } catch (error) {
+        showToast('Error removing account', 'error');
+      }
     }
-  } catch (error) {
-    showToast('Error removing account', 'error');
-  }
+  });
 };
 
 // ============================================
@@ -4076,6 +4341,10 @@ function showMasterWalletMenu(btn, masterId) {
         <span class="menu-icon">➕</span>
         <span>Add New Account</span>
       </button>
+      <button class="context-menu-item" data-action="bulk-add">
+        <span class="menu-icon">📦</span>
+        <span>Bulk Add Accounts</span>
+      </button>
       <button class="context-menu-item" data-action="show-recovery-phrase">
         <span class="menu-icon">📝</span>
         <span>Show Recovery Phrase</span>
@@ -4127,16 +4396,24 @@ async function handleAccountMenuAction(action, accountIndex, address, name, mast
       break;
       
     case 'rename':
-      const newName = prompt('Enter new account name:', name);
-      if (newName && newName.trim()) {
-        const result = await sendMessage('renameAccount', { accountIndex, newName: newName.trim() });
-        if (result.success) {
-          showToast('Account renamed!', 'success');
-          await loadAccountsList();
-        } else {
-          showToast(result.error || 'Failed to rename', 'error');
+      showInputModal({
+        title: 'Rename Account',
+        label: 'Account Name',
+        placeholder: 'Enter new account name',
+        defaultValue: name,
+        confirmText: 'Rename',
+        onConfirm: async (newName) => {
+          if (newName && newName.trim()) {
+            const result = await sendMessage('renameAccount', { accountIndex, newName: newName.trim() });
+            if (result.success) {
+              showToast('Account renamed!', 'success');
+              await loadAccountsList();
+            } else {
+              showToast(result.error || 'Failed to rename', 'error');
+            }
+          }
         }
-      }
+      });
       break;
       
     case 'show-private-key':
@@ -4148,16 +4425,22 @@ async function handleAccountMenuAction(action, accountIndex, address, name, mast
       break;
       
     case 'remove':
-      if (confirm(`Are you sure you want to remove "${name}"? This action cannot be undone.`)) {
-        const result = await sendMessage('removeAccount', { accountIndex });
-        if (result.success) {
-          showToast('Account removed', 'success');
-          await loadAccountsList();
-          await loadMainScreen();
-        } else {
-          showToast(result.error || 'Failed to remove account', 'error');
+      showConfirmModal({
+        title: 'Remove Account',
+        message: `Are you sure you want to remove "${name}"? This action cannot be undone.`,
+        confirmText: 'Remove',
+        isDanger: true,
+        onConfirm: async () => {
+          const result = await sendMessage('removeAccount', { accountIndex });
+          if (result.success) {
+            showToast('Account removed', 'success');
+            await loadAccountsList();
+            await loadMainScreen();
+          } else {
+            showToast(result.error || 'Failed to remove account', 'error');
+          }
         }
-      }
+      });
       break;
   }
 }
@@ -4168,17 +4451,35 @@ async function handleAccountMenuAction(action, accountIndex, address, name, mast
 async function handleMasterWalletMenuAction(action, masterId, masterName) {
   switch (action) {
     case 'add-account':
-      const accountName = prompt('Enter account name (optional):');
-      const result = await sendMessage('addAccountToMaster', { 
-        masterWalletId: masterId, 
-        name: accountName?.trim() || undefined 
+      showInputModal({
+        title: 'Add New Account',
+        label: 'Account Name (optional)',
+        placeholder: 'Enter account name',
+        confirmText: 'Create',
+        onConfirm: async (accountName) => {
+          const result = await sendMessage('addAccountToMaster', { 
+            masterWalletId: masterId, 
+            name: accountName?.trim() || undefined 
+          });
+          if (result.success) {
+            showToast(`Account created: ${result.name}`, 'success');
+            
+            // Update current wallet address to the new account
+            if (result.address) {
+              currentWalletAddress = result.address;
+            }
+            
+            await loadAccountsList();
+            await loadMainScreen();
+          } else {
+            showToast(result.error || 'Failed to create account', 'error');
+          }
+        }
       });
-      if (result.success) {
-        showToast(`Account created: ${result.name}`, 'success');
-        await loadAccountsList();
-      } else {
-        showToast(result.error || 'Failed to create account', 'error');
-      }
+      break;
+      
+    case 'bulk-add':
+      showBulkAddModal(masterId);
       break;
       
     case 'show-recovery-phrase':

@@ -34,6 +34,82 @@ let enabledNetworks = [...DEFAULT_ENABLED_NETWORKS];
 let pendingDappRequests = new Map();
 
 /**
+ * Save session password to chrome.storage.session (persists across service worker restarts)
+ */
+async function saveSessionPassword(password) {
+  try {
+    await chrome.storage.session.set({ ramapay_session_password: password });
+    console.log('Session password saved to storage.session');
+  } catch (error) {
+    console.error('Failed to save session password:', error);
+  }
+}
+
+/**
+ * Get session password from chrome.storage.session
+ */
+async function getSessionPassword() {
+  try {
+    const result = await chrome.storage.session.get(['ramapay_session_password']);
+    return result.ramapay_session_password || null;
+  } catch (error) {
+    console.error('Failed to get session password:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear session password from chrome.storage.session
+ */
+async function clearSessionPassword() {
+  try {
+    await chrome.storage.session.remove(['ramapay_session_password']);
+    console.log('Session password cleared from storage.session');
+  } catch (error) {
+    console.error('Failed to clear session password:', error);
+  }
+}
+
+/**
+ * Ensure wallet is loaded and unlocked for internal operations
+ * This auto-restores the session from storage.session if available
+ * Used for internal operations like importing accounts that should work without manual unlock
+ */
+async function ensureWalletLoaded() {
+  // If already unlocked and loaded, return true
+  if (isUnlocked && currentWalletData && sessionPassword) {
+    return true;
+  }
+
+  // Try to restore session from storage.session
+  const storedPassword = await getSessionPassword();
+  if (!storedPassword) {
+    return false;
+  }
+
+  try {
+    const walletData = await storageManager.loadWallet(storedPassword);
+    if (!walletData) {
+      return false;
+    }
+
+    // Restore session state
+    isUnlocked = true;
+    sessionPassword = storedPassword;
+    currentWalletData = walletData;
+    
+    // Load custom networks from wallet data
+    loadCustomNetworksFromWallet();
+    
+    console.log('Session restored from storage.session');
+    return true;
+  } catch (error) {
+    console.error('Failed to restore session:', error);
+    return false;
+  }
+}
+
+/**
  * Initialize the extension
  */
 async function init() {
@@ -53,6 +129,11 @@ async function init() {
   // Check for existing wallet
   const hasWallet = await storageManager.hasWallet();
   console.log('Wallet exists:', hasWallet);
+  
+  // Try to restore session from storage.session (browser session persistence)
+  if (hasWallet) {
+    await ensureWalletLoaded();
+  }
   
   // Set up auto-lock alarm (checks every minute)
   setupAutoLockAlarm();
@@ -299,6 +380,9 @@ async function createWallet({ password }) {
     isUnlocked = true;
     sessionPassword = password;
     currentWalletData = fullData;
+    
+    // Save session password for persistence across service worker restarts
+    await saveSessionPassword(password);
 
     return { 
       success: true, 
@@ -364,6 +448,9 @@ async function importWallet({ password, mnemonic, privateKey, type }) {
     isUnlocked = true;
     sessionPassword = password;
     currentWalletData = fullData;
+    
+    // Save session password for persistence across service worker restarts
+    await saveSessionPassword(password);
 
     return { success: true, address: walletData.address };
   } catch (error) {
@@ -384,6 +471,9 @@ async function unlockWallet({ password }) {
     isUnlocked = true;
     sessionPassword = password;
     currentWalletData = walletData;
+    
+    // Save session password for persistence across service worker restarts
+    await saveSessionPassword(password);
     
     // Reset activity timer on unlock
     updateActivity();
@@ -416,10 +506,14 @@ async function unlockWallet({ password }) {
 /**
  * Lock wallet
  */
-function lockWallet() {
+async function lockWallet() {
   isUnlocked = false;
   sessionPassword = null;
   currentWalletData = null;
+  
+  // Clear session password from storage.session
+  await clearSessionPassword();
+  
   return { success: true };
 }
 
@@ -461,7 +555,12 @@ async function setAutoLockTimeout({ minutes }) {
 /**
  * Get wallet status
  */
-function getWalletStatus() {
+async function getWalletStatus() {
+  // Try to auto-restore session from storage.session if not already unlocked
+  if (!isUnlocked) {
+    await ensureWalletLoaded();
+  }
+  
   // Update activity on status check (popup is open)
   if (isUnlocked) {
     updateActivity();
@@ -502,9 +601,13 @@ async function handleGenerateQRCode({ text }) {
  * Get all accounts with hierarchical structure
  */
 async function getAccounts() {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    // No wallet data loaded - return empty
-    return { success: false, error: 'No wallet data', accounts: [], masterWallets: [] };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      // No wallet data loaded - return empty
+      return { success: false, error: 'No wallet data', accounts: [], masterWallets: [] };
+    }
   }
   
   // Initialize master wallets if needed and save if migration occurred
@@ -538,6 +641,10 @@ async function getAccounts() {
     };
   });
 
+  console.log('getAccounts - total accounts:', accounts.length);
+  console.log('getAccounts - watch accounts:', accounts.filter(a => a.type === 'watch').length);
+  console.log('getAccounts - master wallets:', masterWallets.length);
+
   return { 
     success: true, 
     accounts,
@@ -549,9 +656,13 @@ async function getAccounts() {
 /**
  * Get the next available account index for derived accounts
  */
-function getNextAccountIndex() {
+async function getNextAccountIndex() {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   // Find the highest existing account index from derived accounts
@@ -575,8 +686,12 @@ function getNextAccountIndex() {
  * Add a new account (derive from mnemonic)
  */
 async function addAccount({ name }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   if (!currentWalletData.mnemonic) {
@@ -617,8 +732,12 @@ async function addAccount({ name }) {
  * Users can have multiple Master Wallets, each with their own seed phrase
  */
 async function createHDWallet({ name }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -674,6 +793,7 @@ async function createHDWallet({ name }) {
       acc => acc.address.toLowerCase() === derivedAccount.address.toLowerCase()
     );
     
+    let newAccountIndex = null;
     if (!exists) {
       const newAccount = {
         address: derivedAccount.address,
@@ -685,6 +805,10 @@ async function createHDWallet({ name }) {
       };
       
       currentWalletData.accounts.push(newAccount);
+      newAccountIndex = currentWalletData.accounts.length - 1;
+      
+      // Switch to the newly created account
+      currentWalletData.activeAccountIndex = newAccountIndex;
     }
     
     await storageManager.saveWallet(currentWalletData, sessionPassword);
@@ -694,7 +818,9 @@ async function createHDWallet({ name }) {
       masterWalletId,
       masterWalletName: newMasterWallet.name,
       mnemonic: walletData.mnemonic,
-      hasMnemonic: true
+      hasMnemonic: true,
+      address: derivedAccount.address,
+      activeAccountIndex: newAccountIndex
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -712,8 +838,12 @@ function generateWalletId() {
  * Get all master wallets
  */
 async function getMasterWallets() {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
   
   // Initialize or migrate master wallets and save if needed
@@ -816,8 +946,12 @@ function initializeMasterWallets() {
  * Add account to a specific master wallet
  */
 async function addAccountToMaster({ masterWalletId, name }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
   
   initializeMasterWallets();
@@ -858,13 +992,19 @@ async function addAccountToMaster({ masterWalletId, name }) {
     };
     
     currentWalletData.accounts.push(newAccount);
+    
+    // Switch to the newly created account
+    const newAccountIdx = currentWalletData.accounts.length - 1;
+    currentWalletData.activeAccountIndex = newAccountIdx;
+    
     await storageManager.saveWallet(currentWalletData, sessionPassword);
     
     return { 
       success: true, 
       address: newAccount.address,
       name: newAccount.name,
-      accountIndex: newIndex
+      accountIndex: newIndex,
+      activeAccountIndex: newAccountIdx
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -875,8 +1015,12 @@ async function addAccountToMaster({ masterWalletId, name }) {
  * Bulk add accounts to a specific master wallet
  */
 async function bulkAddToMaster({ masterWalletId, count }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
   
   initializeMasterWallets();
@@ -888,6 +1032,7 @@ async function bulkAddToMaster({ masterWalletId, count }) {
   
   try {
     const addedAccounts = [];
+    let firstNewAccountIndex = null;
     
     // Find highest index for this master wallet
     let maxIndex = -1;
@@ -916,16 +1061,31 @@ async function bulkAddToMaster({ masterWalletId, count }) {
         };
         
         currentWalletData.accounts.push(newAccount);
+        
+        // Track the first added account index
+        if (firstNewAccountIndex === null) {
+          firstNewAccountIndex = currentWalletData.accounts.length - 1;
+        }
+        
         addedAccounts.push(newAccount);
       }
     }
     
+    // Switch to the first newly added account
+    if (firstNewAccountIndex !== null) {
+      currentWalletData.activeAccountIndex = firstNewAccountIndex;
+    }
+    
+    console.log('bulkAddToMaster - added accounts:', addedAccounts.length);
+    console.log('bulkAddToMaster - total accounts now:', currentWalletData.accounts.length);
+    console.log('bulkAddToMaster - switched to account index:', firstNewAccountIndex);
     await storageManager.saveWallet(currentWalletData, sessionPassword);
     
     return { 
       success: true, 
       addedCount: addedAccounts.length,
-      accounts: addedAccounts.map(a => ({ address: a.address, name: a.name }))
+      accounts: addedAccounts.map(a => ({ address: a.address, name: a.name })),
+      activeAccountIndex: firstNewAccountIndex
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -936,8 +1096,12 @@ async function bulkAddToMaster({ masterWalletId, count }) {
  * Switch to a different account
  */
 async function switchAccount({ accountIndex }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   if (accountIndex < 0 || accountIndex >= currentWalletData.accounts.length) {
@@ -960,8 +1124,12 @@ async function switchAccount({ accountIndex }) {
  * Rename an account
  */
 async function renameAccount({ accountIndex, newName }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   if (accountIndex < 0 || accountIndex >= currentWalletData.accounts.length) {
@@ -978,8 +1146,12 @@ async function renameAccount({ accountIndex, newName }) {
  * Remove an account (cannot remove last account or Account 1 if it's HD derived)
  */
 async function removeAccount({ accountIndex }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   if (currentWalletData.accounts.length <= 1) {
@@ -1011,8 +1183,12 @@ async function removeAccount({ accountIndex }) {
  * Import an additional account via private key
  */
 async function importPrivateKeyAccount({ privateKey, name }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -1036,12 +1212,17 @@ async function importPrivateKeyAccount({ privateKey, name }) {
     };
 
     currentWalletData.accounts.push(newAccount);
+    
+    // Switch to the newly imported account
+    const newAccountIndex = currentWalletData.accounts.length - 1;
+    currentWalletData.activeAccountIndex = newAccountIndex;
+    
     await storageManager.saveWallet(currentWalletData, sessionPassword);
 
     return { 
       success: true, 
       address: newAccount.address,
-      accountIndex: currentWalletData.accounts.length - 1
+      accountIndex: newAccountIndex
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -1052,8 +1233,12 @@ async function importPrivateKeyAccount({ privateKey, name }) {
  * Bulk add multiple derived accounts at once
  */
 async function bulkAddAccounts({ count, startIndex }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   if (!currentWalletData.mnemonic) {
@@ -1113,11 +1298,16 @@ async function bulkAddAccounts({ count, startIndex }) {
 }
 
 /**
- * Import accounts from an external seed phrase (different from main wallet)
+ * Import accounts from an external seed phrase - Creates a NEW Master Wallet
+ * This allows users to have multiple HD wallets from different seed phrases
  */
 async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   // Accept both seedPhrase and mnemonic parameters
@@ -1130,8 +1320,30 @@ async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name 
       return { success: false, error: 'Invalid seed phrase' };
     }
 
-    const addedAccounts = [];
+    // Initialize master wallets array if needed
+    if (!currentWalletData.masterWallets) {
+      currentWalletData.masterWallets = [];
+    }
+
+    // Create a new Master Wallet for this seed phrase
+    const masterWalletId = generateWalletId();
+    const masterWalletNumber = currentWalletData.masterWallets.length + 1;
+    const masterWalletName = name || `Master Wallet ${masterWalletNumber}`;
     
+    const newMasterWallet = {
+      id: masterWalletId,
+      name: masterWalletName,
+      mnemonic: phrase,
+      createdAt: Date.now(),
+      type: 'master'
+    };
+    
+    currentWalletData.masterWallets.push(newMasterWallet);
+    
+    const addedAccounts = [];
+    let firstAccountIndex = null;
+    
+    // Derive accounts under this new master wallet
     for (let i = 0; i < count; i++) {
       const walletData = await walletManager.deriveAccount(phrase, i);
       
@@ -1141,20 +1353,24 @@ async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name 
       );
       
       if (!exists) {
-        const accountName = count === 1 
-          ? (name || 'Imported Seed Account')
-          : `${name || 'Imported Seed'} ${i + 1}`;
+        const accountName = `Account ${i + 1}`;
           
         const newAccount = {
           address: walletData.address,
           privateKey: walletData.privateKey,
           name: accountName,
-          type: 'imported-seed',
+          type: 'derived',
           accountIndex: i,
-          seedPhraseHash: ethers.keccak256(ethers.toUtf8Bytes(phrase)).slice(0, 18)
+          masterWalletId: masterWalletId
         };
         
         currentWalletData.accounts.push(newAccount);
+        
+        // Track the first account index for switching
+        if (firstAccountIndex === null) {
+          firstAccountIndex = currentWalletData.accounts.length - 1;
+        }
+        
         addedAccounts.push({
           address: newAccount.address,
           name: newAccount.name,
@@ -1163,12 +1379,24 @@ async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name 
       }
     }
 
+    // Switch to the first newly added account
+    if (firstAccountIndex !== null) {
+      currentWalletData.activeAccountIndex = firstAccountIndex;
+    }
+
+    console.log('importSeedPhraseAccounts - created master wallet:', masterWalletName);
+    console.log('importSeedPhraseAccounts - added accounts:', addedAccounts.length);
+    console.log('importSeedPhraseAccounts - switched to account index:', firstAccountIndex);
+
     await storageManager.saveWallet(currentWalletData, sessionPassword);
 
     return { 
       success: true, 
       addedCount: addedAccounts.length,
-      accounts: addedAccounts
+      accounts: addedAccounts,
+      masterWalletId: masterWalletId,
+      masterWalletName: masterWalletName,
+      activeAccountIndex: firstAccountIndex
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -1179,8 +1407,12 @@ async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name 
  * Add a watch-only wallet (no private key)
  */
 async function addWatchWallet({ address, name }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -1208,12 +1440,21 @@ async function addWatchWallet({ address, name }) {
     };
 
     currentWalletData.accounts.push(newAccount);
+    
+    // Switch to the newly added watch wallet
+    const newAccountIndex = currentWalletData.accounts.length - 1;
+    currentWalletData.activeAccountIndex = newAccountIndex;
+    
+    console.log('addWatchWallet - added account:', newAccount.name, newAccount.type, newAccount.address);
+    console.log('addWatchWallet - switched to account index:', newAccountIndex);
+    console.log('addWatchWallet - total accounts now:', currentWalletData.accounts.length);
     await storageManager.saveWallet(currentWalletData, sessionPassword);
 
     return { 
       success: true, 
       address: newAccount.address,
-      name: newAccount.name
+      name: newAccount.name,
+      activeAccountIndex: newAccountIndex
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -1224,8 +1465,12 @@ async function addWatchWallet({ address, name }) {
  * Recover a specific account by index from a master wallet
  */
 async function recoverAccountByIndex({ masterWalletId, index }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   initializeMasterWallets();
@@ -1305,8 +1550,12 @@ async function getTokenBalance({ address, tokenAddress }) {
  * Send transaction
  */
 async function sendTransaction({ to, amount }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -1327,8 +1576,12 @@ async function sendTransaction({ to, amount }) {
  * Send token transaction
  */
 async function sendToken({ tokenAddress, to, amount }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -1354,8 +1607,12 @@ async function sendToken({ tokenAddress, to, amount }) {
  * Estimate gas
  */
 async function estimateGas({ to, amount }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -1386,8 +1643,12 @@ async function getTransactionHistory({ address }) {
  * Sign message
  */
 async function signMessage({ message }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -1403,8 +1664,12 @@ async function signMessage({ message }) {
  * Sign typed data (EIP-712)
  */
 async function signTypedData({ domain, types, value }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -1552,8 +1817,12 @@ async function approveDappConnection({ requestId }) {
     return { success: false, error: 'Request not found or expired' };
   }
 
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   // Add to connected sites
@@ -1712,8 +1981,12 @@ async function handleWeb3Request({ method, params }, sender) {
  * Add custom token to wallet
  */
 async function addCustomToken({ tokenAddress, chainId }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -1756,8 +2029,12 @@ async function addCustomToken({ tokenAddress, chainId }) {
  * Remove custom token from wallet
  */
 async function removeCustomToken({ tokenAddress, chainId }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -2713,8 +2990,12 @@ async function verifyPassword({ password }) {
  * Export private key for current account
  */
 async function exportPrivateKey({ password, accountIndex }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -2744,8 +3025,12 @@ async function exportPrivateKey({ password, accountIndex }) {
  * Export recovery phrase (mnemonic)
  */
 async function exportRecoveryPhrase({ password }) {
+  // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {

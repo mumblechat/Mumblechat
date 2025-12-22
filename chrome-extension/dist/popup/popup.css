@@ -2505,6 +2505,10 @@ body::before {
   margin-bottom: 16px;
 }
 
+.master-wallet-group.collapsed .master-wallet-header {
+  border-radius: 12px;
+}
+
 .master-wallet-header {
   display: flex;
   align-items: center;
@@ -2513,6 +2517,28 @@ body::before {
   border: 1px solid rgba(99, 102, 241, 0.3);
   border-radius: 12px 12px 0 0;
   cursor: pointer;
+}
+
+.master-wallet-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+  margin-right: 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.master-wallet-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.master-wallet-toggle .toggle-icon {
+  display: inline-block;
+  transition: transform 0.2s ease;
 }
 
 .master-wallet-icon {
