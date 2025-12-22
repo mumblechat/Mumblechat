@@ -4484,7 +4484,27 @@ async function handleMasterWalletMenuAction(action, masterId, masterName) {
       break;
       
     case 'rename-master':
-      showToast('Master wallet rename coming soon', 'info');
+      showInputModal({
+        title: 'Rename Master Wallet',
+        label: 'Wallet Name',
+        placeholder: 'Enter new wallet name',
+        defaultValue: masterName,
+        confirmText: 'Rename',
+        onConfirm: async (newName) => {
+          if (newName && newName.trim() && newName.trim() !== masterName) {
+            const result = await sendMessage('renameMasterWallet', { 
+              masterWalletId: masterId, 
+              newName: newName.trim() 
+            });
+            if (result.success) {
+              showToast('Wallet renamed successfully!', 'success');
+              await loadAccountsList();
+            } else {
+              showToast(result.error || 'Failed to rename wallet', 'error');
+            }
+          }
+        }
+      });
       break;
   }
 }

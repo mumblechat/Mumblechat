@@ -225,6 +225,8 @@ async function handleMessage(request, sender) {
       return await addAccountToMaster(data);
     case 'bulkAddToMaster':
       return await bulkAddToMaster(data);
+    case 'renameMasterWallet':
+      return await renameMasterWallet(data);
     case 'switchAccount':
       return await switchAccount(data);
     case 'renameAccount':
@@ -1005,6 +1007,48 @@ async function addAccountToMaster({ masterWalletId, name }) {
       name: newAccount.name,
       accountIndex: newIndex,
       activeAccountIndex: newAccountIdx
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Rename a master wallet
+ */
+async function renameMasterWallet({ masterWalletId, newName }) {
+  // Auto-restore session if needed for internal operations
+  if (!currentWalletData) {
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
+  }
+  
+  initializeMasterWallets();
+  
+  if (!newName || !newName.trim()) {
+    return { success: false, error: 'New name is required' };
+  }
+  
+  const masterWallet = currentWalletData.masterWallets.find(mw => mw.id === masterWalletId);
+  if (!masterWallet) {
+    return { success: false, error: 'Master wallet not found' };
+  }
+  
+  try {
+    const oldName = masterWallet.name;
+    masterWallet.name = newName.trim();
+    
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+    
+    console.log('renameMasterWallet - renamed from:', oldName, 'to:', masterWallet.name);
+    
+    return { 
+      success: true, 
+      masterWalletId: masterWalletId,
+      oldName: oldName,
+      newName: masterWallet.name
     };
   } catch (error) {
     return { success: false, error: error.message };
