@@ -1346,16 +1346,23 @@ async function bulkAddAccounts({ count, startIndex }) {
  * This allows users to have multiple HD wallets from different seed phrases
  */
 async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name }) {
+  console.log('importSeedPhraseAccounts - called with count:', count, 'name:', name);
+  
   // Auto-restore session if needed for internal operations
   if (!currentWalletData) {
+    console.log('importSeedPhraseAccounts - currentWalletData is null, restoring session...');
     const restored = await ensureWalletLoaded();
     if (!restored) {
+      console.log('importSeedPhraseAccounts - failed to restore session');
       return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
     }
+    console.log('importSeedPhraseAccounts - session restored successfully');
   }
 
   // Accept both seedPhrase and mnemonic parameters
   const phrase = (seedPhrase || mnemonic || '').trim();
+  
+  console.log('importSeedPhraseAccounts - phrase word count:', phrase.split(/\s+/).length);
   
   try {
     // Validate mnemonic

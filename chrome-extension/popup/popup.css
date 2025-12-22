@@ -1634,6 +1634,14 @@ body::before {
   padding: 16px;
 }
 
+.modal-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 .modal-info {
   color: var(--text-muted);
   font-size: 13px;

@@ -1491,9 +1491,9 @@ function showInputModal({ title, label, placeholder = '', defaultValue = '', con
           <input type="text" id="generic-input-value" class="form-control" placeholder="${placeholder}" value="${defaultValue}">
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="input-modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="input-modal-confirm">${confirmText}</button>
+      <div class="modal-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button class="btn btn-secondary" id="input-modal-cancel" style="flex: 1;">Cancel</button>
+        <button class="btn btn-primary" id="input-modal-confirm" style="flex: 1;">${confirmText}</button>
       </div>
     </div>
   `;
@@ -1557,9 +1557,9 @@ function showConfirmModal({ title = 'Confirm', message, confirmText = 'OK', canc
       <div class="modal-body">
         <p style="color: var(--text-secondary); margin: 0; line-height: 1.5;">${message}</p>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="confirm-modal-cancel">${cancelText}</button>
-        <button class="btn ${isDanger ? 'btn-danger' : 'btn-primary'}" id="confirm-modal-confirm">${confirmText}</button>
+      <div class="modal-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button class="btn btn-secondary" id="confirm-modal-cancel" style="flex: 1;">${cancelText}</button>
+        <button class="btn ${isDanger ? 'btn-danger' : 'btn-primary'}" id="confirm-modal-confirm" style="flex: 1;">${confirmText}</button>
       </div>
     </div>
   `;
