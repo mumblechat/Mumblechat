@@ -93,9 +93,6 @@ function setupEventListeners() {
     showScreen('verify-seed');
   });
 
-  // Seed verification - skip button
-  document.getElementById('btn-skip-verify')?.addEventListener('click', skipVerification);
-
   // Import wallet
   document.querySelectorAll('#import-screen .tab').forEach(tab => {
     tab.addEventListener('click', (e) => {
@@ -691,27 +688,6 @@ async function handleVerifyComplete() {
   
   // Refresh accounts list in case user navigates there
   await loadAccountsList();
-}
-
-/**
- * Skip verification (with confirmation)
- */
-async function skipVerification() {
-  showConfirmModal({
-    title: 'Skip Verification?',
-    message: 'Are you sure? Skipping verification means you may not have properly backed up your recovery phrase.',
-    confirmText: 'Skip',
-    isDanger: true,
-    onConfirm: async () => {
-      currentMnemonic = null;
-      sessionStorage.removeItem('temp_mnemonic');
-      verifyPositions = [];
-      verifyCurrentStep = 0;
-      await loadMainScreen();
-      showScreen('main');
-      await loadAccountsList();
-    }
-  });
 }
 
 /**
