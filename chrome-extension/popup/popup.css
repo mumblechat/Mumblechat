@@ -3140,6 +3140,9 @@ body::before {
 .dapp-connect-content {
   text-align: center;
   max-width: 340px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-radius: var(--border-radius);
   border: 1px solid rgba(99, 102, 241, 0.3);
@@ -3159,6 +3162,7 @@ body::before {
   border-bottom: 1px solid rgba(99, 102, 241, 0.2);
   background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%);
   border-radius: var(--border-radius) var(--border-radius) 0 0;
+  flex-shrink: 0;
 }
 
 .dapp-connect-header .dapp-icon {
@@ -3179,6 +3183,8 @@ body::before {
 
 .dapp-connect-body {
   padding: 20px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .dapp-origin {
@@ -3264,6 +3270,7 @@ body::before {
   border-top: 1px solid rgba(99, 102, 241, 0.2);
   background: rgba(0, 0, 0, 0.2);
   border-radius: 0 0 var(--border-radius) var(--border-radius);
+  flex-shrink: 0;
 }
 
 .dapp-connect-actions .btn {
