@@ -3,7 +3,7 @@
  * Handles extension lifecycle, message passing, and Web3 provider coordination
  */
 
-import { WalletManager, StorageManager, NETWORKS } from '../lib/wallet.js';
+import { WalletManager, StorageManager, NETWORKS, generateQRCode } from '../lib/wallet.js';
 
 const walletManager = new WalletManager();
 const storageManager = new StorageManager();
@@ -61,6 +61,8 @@ async function handleMessage(request, sender) {
       return lockWallet();
     case 'getWalletStatus':
       return getWalletStatus();
+    case 'generateQRCode':
+      return await handleGenerateQRCode(data);
     case 'getAccounts':
       return getAccounts();
     case 'addAccount':
@@ -286,6 +288,25 @@ function getWalletStatus() {
       : null,
     network: walletManager.currentNetwork
   };
+}
+
+/**
+ * Generate QR code for address
+ */
+async function handleGenerateQRCode({ text }) {
+  try {
+    console.log('Service worker generating QR for:', text);
+    const dataUrl = await generateQRCode(text);
+    console.log('QR dataUrl generated:', dataUrl ? 'success' : 'null');
+    if (dataUrl) {
+      return { success: true, dataUrl };
+    } else {
+      return { success: false, error: 'QR generation returned null' };
+    }
+  } catch (error) {
+    console.error('QR generation error:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 /**

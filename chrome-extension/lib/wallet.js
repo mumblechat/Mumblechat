@@ -4,6 +4,31 @@
  */
 
 import { ethers } from 'ethers';
+import QRCode from 'qrcode';
+
+// Export QR code generator
+export async function generateQRCode(text, options = {}) {
+  const defaultOptions = {
+    width: 200,
+    margin: 2,
+    color: {
+      dark: '#000000',
+      light: '#ffffff'
+    },
+    errorCorrectionLevel: 'M'
+  };
+  
+  try {
+    console.log('wallet.js generateQRCode called with:', text);
+    const merged = { ...defaultOptions, ...options };
+    const dataUrl = await QRCode.toDataURL(text, merged);
+    console.log('wallet.js QR generated, length:', dataUrl?.length);
+    return dataUrl;
+  } catch (error) {
+    console.error('wallet.js QR generation error:', error);
+    throw error; // Re-throw to let caller handle
+  }
+}
 
 // Ramestta Network Configurations
 export const NETWORKS = {

@@ -108,9 +108,9 @@ function setupEventListeners() {
   document.getElementById('network-select')?.addEventListener('change', handleNetworkChange);
   document.getElementById('btn-copy-address')?.addEventListener('click', handleCopyAddress);
   document.getElementById('btn-send')?.addEventListener('click', () => showScreen('send'));
-  document.getElementById('btn-receive')?.addEventListener('click', () => {
+  document.getElementById('btn-receive')?.addEventListener('click', async () => {
     showScreen('receive');
-    generateQRCode();
+    await generateQRCode();
   });
   document.getElementById('btn-swap')?.addEventListener('click', () => showToast('Swap coming soon!', 'info'));
   document.getElementById('btn-settings')?.addEventListener('click', () => showScreen('settings'));
@@ -983,39 +983,71 @@ async function handleSendTransaction() {
 /**
  * Generate QR code for receive address
  */
-function generateQRCode() {
+async function generateQRCode() {
   const container = document.getElementById('qr-code');
-  container.innerHTML = '';
+  if (!container) {
+    console.error('QR container not found');
+    return;
+  }
+  
+  container.innerHTML = '<div class="qr-loading">Generating...</div>';
 
   if (currentWalletAddress) {
-    // Simple QR code generation using canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = 180;
-    canvas.height = 180;
-    const ctx = canvas.getContext('2d');
-
-    // Draw a placeholder - in production, use a proper QR library
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 180, 180);
-    ctx.fillStyle = '#000000';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'center';
-    
-    // Draw address in a grid pattern as a simple visual
-    const addr = currentWalletAddress;
-    for (let i = 0; i < 6; i++) {
-      ctx.fillText(addr.substring(i * 7, (i + 1) * 7), 90, 30 + i * 25);
+    try {
+      // Use qrcode-generator library (loaded via CDN)
+      if (typeof qrcode === 'undefined') {
+        console.error('QR library not loaded');
+        container.innerHTML = `<div class="qr-fallback">${currentWalletAddress}</div>`;
+        return;
+      }
+      
+      const qr = qrcode(0, 'M');
+      qr.addData(currentWalletAddress);
+      qr.make();
+      
+      // Create canvas with black and blue colors
+      const moduleCount = qr.getModuleCount();
+      const cellSize = 5;
+      const margin = 16;
+      const size = moduleCount * cellSize + margin * 2;
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      // White background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Draw QR modules with gradient (black to blue)
+      for (let row = 0; row < moduleCount; row++) {
+        for (let col = 0; col < moduleCount; col++) {
+          if (qr.isDark(row, col)) {
+            // Create gradient from black to blue based on position
+            const progress = (row + col) / (moduleCount * 2);
+            const r = Math.round(0 + progress * 30);
+            const g = Math.round(0 + progress * 60);
+            const b = Math.round(0 + progress * 180);
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            ctx.fillRect(
+              margin + col * cellSize,
+              margin + row * cellSize,
+              cellSize,
+              cellSize
+            );
+          }
+        }
+      }
+      
+      container.innerHTML = '';
+      canvas.style.borderRadius = '8px';
+      container.appendChild(canvas);
+      
+    } catch (error) {
+      console.error('QR generation error:', error);
+      container.innerHTML = `<div class="qr-fallback">${currentWalletAddress}</div>`;
     }
-
-    container.appendChild(canvas);
-    
-    // Add note about QR
-    const note = document.createElement('p');
-    note.style.fontSize = '10px';
-    note.style.color = '#666';
-    note.style.marginTop = '8px';
-    note.textContent = 'Scan or copy address below';
-    container.appendChild(note);
   }
 }
 

@@ -934,10 +934,32 @@ body {
   border-radius: var(--border-radius);
   display: inline-block;
   margin-bottom: 20px;
+  min-width: 212px;
+  min-height: 212px;
+}
+
+.qr-code img {
+  display: block;
 }
 
 .qr-code canvas {
   display: block;
+}
+
+.qr-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 180px;
+}
+
+.qr-fallback {
+  font-size: 10px;
+  font-family: monospace;
+  word-break: break-all;
+  padding: 20px;
+  max-width: 180px;
 }
 
 .address-display {
