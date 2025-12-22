@@ -388,7 +388,8 @@ async function checkWalletStatus() {
     try {
       const status = await sendMessage('getWalletStatus');
       
-      if (!status.isUnlocked) {
+      // If wallet data exists but not loaded in memory, show lock screen to enter password
+      if (!status.hasWallet || !status.address) {
         showScreen('lock');
       } else {
         currentWalletAddress = status.address;
@@ -423,10 +424,29 @@ async function checkWalletStatus() {
  * Show a specific screen
  */
 function showScreen(screenName) {
+  // Simply show the requested screen - no lock checks during normal usage
   Object.values(screens).forEach(screen => screen.classList.remove('active'));
   if (screens[screenName]) {
     screens[screenName].classList.add('active');
     currentScreen = screenName;
+  }
+}
+
+/**
+ * Check if wallet data is loaded
+ * Returns true if wallet data is available, false otherwise
+ */
+async function ensureWalletLoaded() {
+  try {
+    const status = await sendMessage('getWalletStatus');
+    if (!status.address) {
+      showScreen('lock');
+      return false;
+    }
+    return true;
+  } catch (error) {
+    showScreen('lock');
+    return false;
   }
 }
 
@@ -545,9 +565,23 @@ function displaySeedPhrase(mnemonic) {
  * Handle copy seed phrase
  */
 function handleCopySeed() {
-  const mnemonic = document.getElementById('seed-phrase-display').dataset.mnemonic;
-  navigator.clipboard.writeText(mnemonic);
-  showToast('Recovery phrase copied!', 'success');
+  // Try to get from dataset first, then from currentMnemonic, then from sessionStorage
+  let mnemonic = document.getElementById('seed-phrase-display')?.dataset?.mnemonic;
+  
+  if (!mnemonic) {
+    mnemonic = currentMnemonic;
+  }
+  
+  if (!mnemonic) {
+    mnemonic = sessionStorage.getItem('temp_mnemonic');
+  }
+  
+  if (mnemonic && mnemonic !== 'undefined') {
+    navigator.clipboard.writeText(mnemonic);
+    showToast('Recovery phrase copied!', 'success');
+  } else {
+    showToast('No recovery phrase to copy', 'error');
+  }
 }
 
 /**
@@ -642,20 +676,30 @@ function handleWordSelect(selectedWord, correctWord, btn) {
 async function handleVerifyComplete() {
   showToast('Recovery phrase verified! 🎉', 'success');
   currentMnemonic = null; // Clear for security
+  sessionStorage.removeItem('temp_mnemonic');
   verifyPositions = [];
   verifyCurrentStep = 0;
+  
+  // Reload main screen properly
   await loadMainScreen();
   showScreen('main');
+  
+  // Refresh accounts list in case user navigates there
+  await loadAccountsList();
 }
 
 /**
  * Skip verification (with confirmation)
  */
-function skipVerification() {
+async function skipVerification() {
   if (confirm('Are you sure? Skipping verification means you may not have properly backed up your recovery phrase.')) {
     currentMnemonic = null;
-    loadMainScreen();
+    sessionStorage.removeItem('temp_mnemonic');
+    verifyPositions = [];
+    verifyCurrentStep = 0;
+    await loadMainScreen();
     showScreen('main');
+    await loadAccountsList();
   }
 }
 
@@ -845,9 +889,10 @@ async function handleUnlock() {
  */
 async function loadMainScreen() {
   try {
-    // Fetch wallet address and account info if not set
+    // Fetch wallet address and account info
+    const status = await sendMessage('getWalletStatus');
+    
     if (!currentWalletAddress) {
-      const status = await sendMessage('getWalletStatus');
       if (status.success && status.address) {
         currentWalletAddress = status.address;
       }
@@ -2032,7 +2077,7 @@ function updatePriceDisplay() {
   const price = tokenPrices[symbol] || 0;
   const balanceStr = elements.balanceValue?.textContent || '0';
   const balance = parseFloat(balanceStr) || 0;
-  const usdValue = (balance * price).toFixed(2);
+  const usdValue = (balance * price).toFixed(5);
 
   // Update main balance USD value
   const balanceUsd = document.getElementById('balance-usd');
@@ -2750,7 +2795,9 @@ async function loadAccountsList() {
     if (!container) return;
     
     if (!result.success) {
-      container.innerHTML = '<p class="empty-state">Error loading accounts</p>';
+      console.error('Failed to load accounts:', result.error);
+      // Show empty state if no accounts
+      container.innerHTML = '<p class="empty-state">No accounts yet. Create a master wallet to get started.</p>';
       return;
     }
     
@@ -2795,16 +2842,18 @@ async function loadAccountsList() {
               <div class="master-wallet-name">${mw.name}</div>
               <div class="master-wallet-meta">${mwAccounts.length} account${mwAccounts.length !== 1 ? 's' : ''}</div>
             </div>
+            <button class="master-wallet-menu-btn" data-master-id="${mw.id}" title="Master Wallet Options">⋮</button>
             <span class="master-wallet-badge">HD</span>
           </div>
           <div class="master-wallet-accounts">
             ${mwAccounts.map((acc, accIdx) => `
-              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}">
+              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}" data-address="${acc.address}" data-name="${acc.name}" data-type="${acc.type || 'derived'}" data-master-id="${mw.id}" data-account-index="${acc.accountIndex}">
                 <div class="account-avatar" style="background: linear-gradient(135deg, #4ade80, #22c55e);">${acc.name.charAt(0).toUpperCase()}</div>
                 <div class="account-info-main">
                   <div class="account-name-text">${acc.name}</div>
                   <div class="account-address-text">${formatAddress(acc.address)}</div>
                 </div>
+                <button class="account-menu-btn" data-index="${acc.index}" data-type="${acc.type || 'derived'}" data-master-id="${mw.id}" title="Account Options">⋮</button>
                 ${acc.isActive ? '<span class="account-checkmark">✓</span>' : ''}
               </div>
             `).join('')}
@@ -2823,12 +2872,13 @@ async function loadAccountsList() {
           </div>
           <div class="imported-accounts-list">
             ${importedAccounts.map(acc => `
-              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}">
-                <div class="account-avatar" style="background: linear-gradient(135deg, #4ade80, #22c55e);">${acc.name.charAt(0).toUpperCase()}</div>
+              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}" data-address="${acc.address}" data-name="${acc.name}" data-type="${acc.type || 'imported'}">
+                <div class="account-avatar" style="background: linear-gradient(135deg, #f59e0b, #d97706);">${acc.name.charAt(0).toUpperCase()}</div>
                 <div class="account-info-main">
                   <div class="account-name-text">${acc.name}</div>
                   <div class="account-address-text">${formatAddress(acc.address)}</div>
                 </div>
+                <button class="account-menu-btn" data-index="${acc.index}" data-type="${acc.type || 'imported'}" title="Account Options">⋮</button>
                 ${acc.isActive ? '<span class="account-checkmark">✓</span>' : ''}
               </div>
             `).join('')}
@@ -2847,12 +2897,13 @@ async function loadAccountsList() {
           </div>
           <div class="watch-accounts-list">
             ${watchAccounts.map(acc => `
-              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}">
+              <div class="account-item ${acc.isActive ? 'active' : ''}" data-index="${acc.index}" data-address="${acc.address}" data-name="${acc.name}" data-type="watch">
                 <div class="account-avatar" style="background: linear-gradient(135deg, #a78bfa, #8b5cf6);">${acc.name.charAt(0).toUpperCase()}</div>
                 <div class="account-info-main">
                   <div class="account-name-text">${acc.name} <span class="watch-badge">👁</span></div>
                   <div class="account-address-text">${formatAddress(acc.address)}</div>
                 </div>
+                <button class="account-menu-btn" data-index="${acc.index}" data-type="watch" title="Account Options">⋮</button>
                 ${acc.isActive ? '<span class="account-checkmark">✓</span>' : ''}
               </div>
             `).join('')}
@@ -2873,11 +2924,34 @@ async function loadAccountsList() {
     
     container.innerHTML = html;
     
-    // Add event listeners for account items
+    // Add event listeners for account items (click to switch)
     container.querySelectorAll('.account-item').forEach(item => {
-      item.addEventListener('click', async () => {
+      item.addEventListener('click', async (e) => {
+        // Don't switch if clicking on menu button
+        if (e.target.closest('.account-menu-btn')) return;
         const index = parseInt(item.dataset.index);
         await switchToAccount(index);
+      });
+    });
+    
+    // Add event listeners for account menu buttons
+    container.querySelectorAll('.account-menu-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const index = parseInt(btn.dataset.index);
+        const type = btn.dataset.type;
+        const masterId = btn.dataset.masterId;
+        const accountItem = btn.closest('.account-item');
+        showAccountMenu(accountItem, index, type, masterId);
+      });
+    });
+    
+    // Add event listeners for master wallet menu buttons
+    container.querySelectorAll('.master-wallet-menu-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const masterId = btn.dataset.masterId;
+        showMasterWalletMenu(btn, masterId);
       });
     });
     
@@ -3218,20 +3292,13 @@ async function handleCreateMasterWallet() {
       
       // Show the seed phrase to the user so they can back it up
       if (result.mnemonic) {
+        // Set currentMnemonic for verification flow
+        currentMnemonic = result.mnemonic;
         sessionStorage.setItem('temp_mnemonic', result.mnemonic);
         showToast(`${result.masterWalletName} created! Please backup seed phrase.`, 'success');
         
-        // Show seed phrase screen for backup
-        const seedDisplay = document.getElementById('seed-phrase-display');
-        if (seedDisplay) {
-          const words = result.mnemonic.split(' ');
-          seedDisplay.innerHTML = words.map((word, i) => `
-            <div class="seed-word">
-              <span class="word-number">${i + 1}</span>
-              <span class="word-text">${word}</span>
-            </div>
-          `).join('');
-        }
+        // Use displaySeedPhrase to properly set up the seed display with copy support
+        displaySeedPhrase(result.mnemonic);
         showScreen('seed');
       } else {
         await loadAccountsList();
@@ -3901,5 +3968,403 @@ async function rejectDappConnection() {
     }
   } catch (error) {
     console.error('Error rejecting connection:', error);
+  }
+}
+
+// ============================================
+// ACCOUNT CONTEXT MENU
+// ============================================
+
+let activeContextMenu = null;
+
+/**
+ * Show account context menu
+ */
+function showAccountMenu(accountItem, accountIndex, accountType, masterId) {
+  // Remove any existing menu
+  closeContextMenu();
+  
+  const address = accountItem.dataset.address;
+  const name = accountItem.dataset.name;
+  const isFirstAccount = accountItem.dataset.accountIndex === '0';
+  const isWatchOnly = accountType === 'watch';
+  const isDerived = accountType === 'derived';
+  
+  // Create menu
+  const menu = document.createElement('div');
+  menu.className = 'account-context-menu';
+  menu.innerHTML = `
+    <div class="context-menu-header">
+      <span class="context-menu-title">${name}</span>
+      <button class="context-menu-close">✕</button>
+    </div>
+    <div class="context-menu-items">
+      <button class="context-menu-item" data-action="copy-address">
+        <span class="menu-icon">📋</span>
+        <span>Copy Address</span>
+      </button>
+      <button class="context-menu-item" data-action="view-explorer">
+        <span class="menu-icon">🔍</span>
+        <span>View on Explorer</span>
+      </button>
+      <div class="context-menu-divider"></div>
+      <button class="context-menu-item" data-action="rename">
+        <span class="menu-icon">✏️</span>
+        <span>Rename Account</span>
+      </button>
+      ${!isWatchOnly ? `
+        <button class="context-menu-item" data-action="show-private-key">
+          <span class="menu-icon">🔑</span>
+          <span>Show Private Key</span>
+        </button>
+      ` : ''}
+      ${isDerived && isFirstAccount && masterId ? `
+        <button class="context-menu-item" data-action="show-recovery-phrase">
+          <span class="menu-icon">📝</span>
+          <span>Show Recovery Phrase</span>
+        </button>
+      ` : ''}
+      <div class="context-menu-divider"></div>
+      ${!isFirstAccount || !isDerived ? `
+        <button class="context-menu-item danger" data-action="remove">
+          <span class="menu-icon">🗑️</span>
+          <span>Remove Account</span>
+        </button>
+      ` : ''}
+    </div>
+  `;
+  
+  // Position menu
+  document.body.appendChild(menu);
+  activeContextMenu = menu;
+  
+  // Add event listeners
+  menu.querySelector('.context-menu-close').addEventListener('click', closeContextMenu);
+  
+  menu.querySelectorAll('.context-menu-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      const action = item.dataset.action;
+      await handleAccountMenuAction(action, accountIndex, address, name, masterId);
+      closeContextMenu();
+    });
+  });
+  
+  // Close on click outside
+  setTimeout(() => {
+    document.addEventListener('click', handleOutsideClick);
+  }, 10);
+}
+
+/**
+ * Show master wallet context menu
+ */
+function showMasterWalletMenu(btn, masterId) {
+  closeContextMenu();
+  
+  const masterGroup = btn.closest('.master-wallet-group');
+  const masterName = masterGroup?.querySelector('.master-wallet-name')?.textContent || 'Master Wallet';
+  
+  const menu = document.createElement('div');
+  menu.className = 'account-context-menu';
+  menu.innerHTML = `
+    <div class="context-menu-header">
+      <span class="context-menu-title">${masterName}</span>
+      <button class="context-menu-close">✕</button>
+    </div>
+    <div class="context-menu-items">
+      <button class="context-menu-item" data-action="add-account">
+        <span class="menu-icon">➕</span>
+        <span>Add New Account</span>
+      </button>
+      <button class="context-menu-item" data-action="show-recovery-phrase">
+        <span class="menu-icon">📝</span>
+        <span>Show Recovery Phrase</span>
+      </button>
+      <div class="context-menu-divider"></div>
+      <button class="context-menu-item" data-action="rename-master">
+        <span class="menu-icon">✏️</span>
+        <span>Rename Wallet</span>
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(menu);
+  activeContextMenu = menu;
+  
+  menu.querySelector('.context-menu-close').addEventListener('click', closeContextMenu);
+  
+  menu.querySelectorAll('.context-menu-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      const action = item.dataset.action;
+      await handleMasterWalletMenuAction(action, masterId, masterName);
+      closeContextMenu();
+    });
+  });
+  
+  setTimeout(() => {
+    document.addEventListener('click', handleOutsideClick);
+  }, 10);
+}
+
+/**
+ * Handle account menu actions
+ */
+async function handleAccountMenuAction(action, accountIndex, address, name, masterId) {
+  switch (action) {
+    case 'copy-address':
+      await navigator.clipboard.writeText(address);
+      showToast('Address copied!', 'success');
+      break;
+      
+    case 'view-explorer':
+      const network = await sendMessage('getCurrentNetwork');
+      if (network.success && network.network.explorerUrl) {
+        const explorerUrl = network.network.explorerUrl.replace(/\/$/, '');
+        window.open(`${explorerUrl}/address/${address}`, '_blank');
+      } else {
+        showToast('No explorer available for this network', 'error');
+      }
+      break;
+      
+    case 'rename':
+      const newName = prompt('Enter new account name:', name);
+      if (newName && newName.trim()) {
+        const result = await sendMessage('renameAccount', { accountIndex, newName: newName.trim() });
+        if (result.success) {
+          showToast('Account renamed!', 'success');
+          await loadAccountsList();
+        } else {
+          showToast(result.error || 'Failed to rename', 'error');
+        }
+      }
+      break;
+      
+    case 'show-private-key':
+      showPrivateKeyModal(accountIndex);
+      break;
+      
+    case 'show-recovery-phrase':
+      showRecoveryPhraseModal(masterId);
+      break;
+      
+    case 'remove':
+      if (confirm(`Are you sure you want to remove "${name}"? This action cannot be undone.`)) {
+        const result = await sendMessage('removeAccount', { accountIndex });
+        if (result.success) {
+          showToast('Account removed', 'success');
+          await loadAccountsList();
+          await loadMainScreen();
+        } else {
+          showToast(result.error || 'Failed to remove account', 'error');
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Handle master wallet menu actions
+ */
+async function handleMasterWalletMenuAction(action, masterId, masterName) {
+  switch (action) {
+    case 'add-account':
+      const accountName = prompt('Enter account name (optional):');
+      const result = await sendMessage('addAccountToMaster', { 
+        masterWalletId: masterId, 
+        name: accountName?.trim() || undefined 
+      });
+      if (result.success) {
+        showToast(`Account created: ${result.name}`, 'success');
+        await loadAccountsList();
+      } else {
+        showToast(result.error || 'Failed to create account', 'error');
+      }
+      break;
+      
+    case 'show-recovery-phrase':
+      showRecoveryPhraseModal(masterId);
+      break;
+      
+    case 'rename-master':
+      showToast('Master wallet rename coming soon', 'info');
+      break;
+  }
+}
+
+/**
+ * Show private key modal
+ */
+function showPrivateKeyModal(accountIndex) {
+  // Create or show the private key modal
+  let modal = document.getElementById('private-key-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'private-key-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🔑 Private Key</h3>
+          <button class="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="warning-box">
+            <span class="warning-icon">⚠️</span>
+            <p>Never share your private key! Anyone with this key can steal your funds.</p>
+          </div>
+          <div class="form-group">
+            <label>Enter Password to Reveal</label>
+            <input type="password" id="pk-password" class="form-control" placeholder="Your wallet password">
+          </div>
+          <div id="pk-reveal-area" class="hidden">
+            <div class="private-key-display">
+              <code id="pk-value"></code>
+            </div>
+            <button id="btn-copy-pk" class="btn btn-secondary">📋 Copy Private Key</button>
+          </div>
+          <button id="btn-reveal-pk" class="btn btn-primary">Reveal Private Key</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    modal.querySelector('.modal-close').addEventListener('click', () => {
+      modal.classList.remove('show');
+      document.getElementById('pk-password').value = '';
+      document.getElementById('pk-reveal-area').classList.add('hidden');
+      document.getElementById('btn-reveal-pk').classList.remove('hidden');
+    });
+    
+    document.getElementById('btn-copy-pk').addEventListener('click', () => {
+      const pk = document.getElementById('pk-value').textContent;
+      navigator.clipboard.writeText(pk);
+      showToast('Private key copied!', 'success');
+    });
+  }
+  
+  // Reset and show
+  document.getElementById('pk-password').value = '';
+  document.getElementById('pk-reveal-area').classList.add('hidden');
+  document.getElementById('btn-reveal-pk').classList.remove('hidden');
+  modal.classList.add('show');
+  
+  // Set up reveal button
+  const revealBtn = document.getElementById('btn-reveal-pk');
+  revealBtn.onclick = async () => {
+    const password = document.getElementById('pk-password').value;
+    if (!password) {
+      showToast('Please enter your password', 'error');
+      return;
+    }
+    
+    const result = await sendMessage('exportPrivateKey', { password, accountIndex });
+    if (result.success) {
+      document.getElementById('pk-value').textContent = result.privateKey;
+      document.getElementById('pk-reveal-area').classList.remove('hidden');
+      revealBtn.classList.add('hidden');
+    } else {
+      showToast(result.error || 'Incorrect password', 'error');
+    }
+  };
+}
+
+/**
+ * Show recovery phrase modal
+ */
+function showRecoveryPhraseModal(masterId) {
+  let modal = document.getElementById('recovery-phrase-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'recovery-phrase-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📝 Recovery Phrase</h3>
+          <button class="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="warning-box">
+            <span class="warning-icon">⚠️</span>
+            <p>Never share your recovery phrase! Anyone with these words can steal your funds.</p>
+          </div>
+          <div class="form-group">
+            <label>Enter Password to Reveal</label>
+            <input type="password" id="rp-password" class="form-control" placeholder="Your wallet password">
+          </div>
+          <div id="rp-reveal-area" class="hidden">
+            <div id="rp-words" class="seed-phrase-grid"></div>
+            <button id="btn-copy-rp" class="btn btn-secondary">📋 Copy Recovery Phrase</button>
+          </div>
+          <button id="btn-reveal-rp" class="btn btn-primary">Reveal Recovery Phrase</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    modal.querySelector('.modal-close').addEventListener('click', () => {
+      modal.classList.remove('show');
+      document.getElementById('rp-password').value = '';
+      document.getElementById('rp-reveal-area').classList.add('hidden');
+      document.getElementById('btn-reveal-rp').classList.remove('hidden');
+      document.getElementById('rp-words').innerHTML = '';
+    });
+  }
+  
+  // Reset and show
+  document.getElementById('rp-password').value = '';
+  document.getElementById('rp-reveal-area').classList.add('hidden');
+  document.getElementById('btn-reveal-rp').classList.remove('hidden');
+  document.getElementById('rp-words').innerHTML = '';
+  modal.classList.add('show');
+  
+  // Set up reveal button
+  const revealBtn = document.getElementById('btn-reveal-rp');
+  revealBtn.onclick = async () => {
+    const password = document.getElementById('rp-password').value;
+    if (!password) {
+      showToast('Please enter your password', 'error');
+      return;
+    }
+    
+    const result = await sendMessage('exportRecoveryPhrase', { password });
+    if (result.success) {
+      const words = result.mnemonic.split(' ');
+      document.getElementById('rp-words').innerHTML = words.map((word, i) => `
+        <div class="seed-word">
+          <span class="seed-word-num">${i + 1}</span>${word}
+        </div>
+      `).join('');
+      document.getElementById('rp-reveal-area').classList.remove('hidden');
+      revealBtn.classList.add('hidden');
+      
+      // Set up copy button
+      document.getElementById('btn-copy-rp').onclick = () => {
+        navigator.clipboard.writeText(result.mnemonic);
+        showToast('Recovery phrase copied!', 'success');
+      };
+    } else {
+      showToast(result.error || 'Incorrect password', 'error');
+    }
+  };
+}
+
+/**
+ * Close context menu
+ */
+function closeContextMenu() {
+  if (activeContextMenu) {
+    activeContextMenu.remove();
+    activeContextMenu = null;
+  }
+  document.removeEventListener('click', handleOutsideClick);
+}
+
+/**
+ * Handle click outside context menu
+ */
+function handleOutsideClick(e) {
+  if (activeContextMenu && !activeContextMenu.contains(e.target)) {
+    closeContextMenu();
   }
 }

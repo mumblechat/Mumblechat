@@ -856,9 +856,16 @@ body::before {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 
-    0 0 30px rgba(99, 102, 241, 0.4),
-    0 10px 40px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(99, 102, 241, 0.3),
+    0 8px 30px rgba(0, 0, 0, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes cardGlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.4), 0 10px 40px rgba(0, 0, 0, 0.3); }
+  50% { box-shadow: 0 0 50px rgba(139, 92, 246, 0.5), 0 10px 40px rgba(0, 0, 0, 0.3); }
 }
 
 .wallet-card::before {
@@ -891,57 +898,62 @@ body::before {
 
 .account-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 16px;
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
 .account-info {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
 }
 
 .account-selector-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 6px 12px;
   cursor: pointer;
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   transition: all 0.2s;
 }
 
 .account-selector-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .account-selector-btn .dropdown-arrow {
-  font-size: 10px;
-  opacity: 0.8;
+  font-size: 9px;
+  opacity: 0.7;
 }
 
 #account-name {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .copy-btn {
-  background: rgba(255, 255, 255, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 4px 8px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   transition: all 0.2s;
-  color: white;
+  backdrop-filter: blur(10px);
 }
 
 .copy-btn:hover {
@@ -951,18 +963,29 @@ body::before {
 
 .address {
   font-family: 'SF Mono', Monaco, monospace;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  position: relative;
+  z-index: 1;
   background: rgba(0, 0, 0, 0.25);
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 6px;
+  display: inline-block;
+}
+
+.account-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
 }
 
 .balance-section {
   text-align: center;
   position: relative;
   z-index: 1;
-  padding: 16px 0;
+  padding: 16px 0 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .balance-main {
@@ -971,8 +994,9 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   color: white;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .network-balance-icon {
@@ -981,18 +1005,19 @@ body::before {
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 #balance-symbol {
   font-size: 18px;
   opacity: 0.9;
+  margin-left: 4px;
+  font-weight: 500;
 }
 
 .balance-usd {
-  font-size: 14px;
-  opacity: 0.8;
-  margin-top: 4px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
   margin-top: 6px;
 }
 
@@ -3513,4 +3538,239 @@ a.animated-link:hover::after {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
   box-shadow: 0 0 15px var(--glow-primary);
+}
+
+/* ============================================
+   ACCOUNT CONTEXT MENU
+   ============================================ */
+
+.account-menu-btn,
+.master-wallet-menu-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.account-menu-btn:hover,
+.master-wallet-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.account-context-menu {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  min-width: 250px;
+  max-width: 300px;
+  z-index: 10000;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: menuFadeIn 0.2s ease;
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.context-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.context-menu-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.context-menu-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.context-menu-close:hover {
+  color: var(--text-primary);
+}
+
+.context-menu-items {
+  padding: 8px 0;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.context-menu-item:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.context-menu-item.danger {
+  color: var(--danger-color);
+}
+
+.context-menu-item.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.context-menu-item .menu-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 8px 0;
+}
+
+/* Private Key & Recovery Phrase Modals */
+.private-key-display {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  word-break: break-all;
+}
+
+.private-key-display code {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.seed-phrase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.warning-box {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.warning-box .warning-icon {
+  font-size: 18px;
+}
+
+.warning-box p {
+  color: #fca5a5;
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Account item with menu button */
+.account-item {
+  position: relative;
+}
+
+.account-item .account-menu-btn {
+  position: absolute;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.account-item:hover .account-menu-btn {
+  opacity: 1;
+}
+
+.account-item.active .account-menu-btn {
+  right: 50px;
+}
+
+/* Master wallet menu button positioning */
+.master-wallet-header {
+  position: relative;
+}
+
+.master-wallet-menu-btn {
+  margin-right: 8px;
+}
+
+/* ============================================
+   WALLET LOCKED STATE
+   ============================================ */
+
+.wallet-locked-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.wallet-locked-state .locked-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.wallet-locked-state .locked-text {
+  font-size: 16px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.wallet-locked-state .unlock-wallet-btn {
+  padding: 12px 32px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

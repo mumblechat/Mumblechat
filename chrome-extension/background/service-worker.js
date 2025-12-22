@@ -59,42 +59,31 @@ async function init() {
 }
 
 /**
- * Set up auto-lock alarm
+ * Set up auto-lock alarm - DISABLED
+ * Wallet only locks when browser restarts
  */
 function setupAutoLockAlarm() {
-  // Clear any existing alarm
+  // Auto-lock during usage is disabled
+  // Wallet will only lock when browser/service worker restarts
   chrome.alarms.clear('autoLockCheck');
-  
-  // Create alarm that fires every minute to check for auto-lock
-  chrome.alarms.create('autoLockCheck', {
-    periodInMinutes: 1
-  });
 }
 
 /**
  * Handle alarm events
  */
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'autoLockCheck') {
-    checkAutoLock();
-  }
+  // Auto-lock alarm disabled
+  // if (alarm.name === 'autoLockCheck') {
+  //   checkAutoLock();
+  // }
 });
 
 /**
- * Check if wallet should be auto-locked
+ * Check if wallet should be auto-locked - DISABLED
  */
 function checkAutoLock() {
-  if (!isUnlocked || autoLockMinutes === 0) {
-    return; // Not unlocked or auto-lock disabled
-  }
-  
-  const now = Date.now();
-  const inactiveMinutes = (now - lastActivityTime) / (1000 * 60);
-  
-  if (inactiveMinutes >= autoLockMinutes) {
-    console.log(`Auto-locking wallet after ${autoLockMinutes} minutes of inactivity`);
-    lockWallet();
-  }
+  // Disabled - wallet only locks on browser restart
+  return;
 }
 
 /**
@@ -121,6 +110,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  */
 async function handleMessage(request, sender) {
   const { action, data } = request;
+  
+  // Update activity on every user action (except status checks)
+  if (isUnlocked && !['getWalletStatus', 'getAutoLockSettings'].includes(action)) {
+    updateActivity();
+  }
 
   switch (action) {
     // Wallet Management
@@ -508,8 +502,9 @@ async function handleGenerateQRCode({ text }) {
  * Get all accounts with hierarchical structure
  */
 async function getAccounts() {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    // No wallet data loaded - return empty
+    return { success: false, error: 'No wallet data', accounts: [], masterWallets: [] };
   }
   
   // Initialize master wallets if needed and save if migration occurred
@@ -555,8 +550,8 @@ async function getAccounts() {
  * Get the next available account index for derived accounts
  */
 function getNextAccountIndex() {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   // Find the highest existing account index from derived accounts
@@ -580,8 +575,8 @@ function getNextAccountIndex() {
  * Add a new account (derive from mnemonic)
  */
 async function addAccount({ name }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   if (!currentWalletData.mnemonic) {
@@ -622,8 +617,8 @@ async function addAccount({ name }) {
  * Users can have multiple Master Wallets, each with their own seed phrase
  */
 async function createHDWallet({ name }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -717,8 +712,8 @@ function generateWalletId() {
  * Get all master wallets
  */
 async function getMasterWallets() {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
   
   // Initialize or migrate master wallets and save if needed
@@ -821,8 +816,8 @@ function initializeMasterWallets() {
  * Add account to a specific master wallet
  */
 async function addAccountToMaster({ masterWalletId, name }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
   
   initializeMasterWallets();
@@ -880,8 +875,8 @@ async function addAccountToMaster({ masterWalletId, name }) {
  * Bulk add accounts to a specific master wallet
  */
 async function bulkAddToMaster({ masterWalletId, count }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
   
   initializeMasterWallets();
@@ -941,8 +936,8 @@ async function bulkAddToMaster({ masterWalletId, count }) {
  * Switch to a different account
  */
 async function switchAccount({ accountIndex }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   if (accountIndex < 0 || accountIndex >= currentWalletData.accounts.length) {
@@ -965,8 +960,8 @@ async function switchAccount({ accountIndex }) {
  * Rename an account
  */
 async function renameAccount({ accountIndex, newName }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   if (accountIndex < 0 || accountIndex >= currentWalletData.accounts.length) {
@@ -983,8 +978,8 @@ async function renameAccount({ accountIndex, newName }) {
  * Remove an account (cannot remove last account or Account 1 if it's HD derived)
  */
 async function removeAccount({ accountIndex }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   if (currentWalletData.accounts.length <= 1) {
@@ -1016,8 +1011,8 @@ async function removeAccount({ accountIndex }) {
  * Import an additional account via private key
  */
 async function importPrivateKeyAccount({ privateKey, name }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1057,8 +1052,8 @@ async function importPrivateKeyAccount({ privateKey, name }) {
  * Bulk add multiple derived accounts at once
  */
 async function bulkAddAccounts({ count, startIndex }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   if (!currentWalletData.mnemonic) {
@@ -1121,8 +1116,8 @@ async function bulkAddAccounts({ count, startIndex }) {
  * Import accounts from an external seed phrase (different from main wallet)
  */
 async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   // Accept both seedPhrase and mnemonic parameters
@@ -1184,8 +1179,8 @@ async function importSeedPhraseAccounts({ seedPhrase, mnemonic, count = 1, name 
  * Add a watch-only wallet (no private key)
  */
 async function addWatchWallet({ address, name }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1229,8 +1224,8 @@ async function addWatchWallet({ address, name }) {
  * Recover a specific account by index from a master wallet
  */
 async function recoverAccountByIndex({ masterWalletId, index }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   initializeMasterWallets();
@@ -1310,8 +1305,8 @@ async function getTokenBalance({ address, tokenAddress }) {
  * Send transaction
  */
 async function sendTransaction({ to, amount }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1332,8 +1327,8 @@ async function sendTransaction({ to, amount }) {
  * Send token transaction
  */
 async function sendToken({ tokenAddress, to, amount }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1359,8 +1354,8 @@ async function sendToken({ tokenAddress, to, amount }) {
  * Estimate gas
  */
 async function estimateGas({ to, amount }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1391,8 +1386,8 @@ async function getTransactionHistory({ address }) {
  * Sign message
  */
 async function signMessage({ message }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1408,8 +1403,8 @@ async function signMessage({ message }) {
  * Sign typed data (EIP-712)
  */
 async function signTypedData({ domain, types, value }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1557,8 +1552,8 @@ async function approveDappConnection({ requestId }) {
     return { success: false, error: 'Request not found or expired' };
   }
 
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   // Add to connected sites
@@ -1611,8 +1606,8 @@ function rejectDappConnection({ requestId }) {
  * Connect dApp site (when already unlocked and approved)
  */
 async function connectSite({ origin }, sender) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   const siteOrigin = origin || new URL(sender.tab?.url || '').origin;
@@ -1717,8 +1712,8 @@ async function handleWeb3Request({ method, params }, sender) {
  * Add custom token to wallet
  */
 async function addCustomToken({ tokenAddress, chainId }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1761,8 +1756,8 @@ async function addCustomToken({ tokenAddress, chainId }) {
  * Remove custom token from wallet
  */
 async function removeCustomToken({ tokenAddress, chainId }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -1786,8 +1781,8 @@ async function removeCustomToken({ tokenAddress, chainId }) {
  * Get all custom tokens for current network
  */
 async function getCustomTokens({ chainId }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   const targetChainId = chainId || walletManager.currentNetwork.chainId;
@@ -1933,8 +1928,8 @@ async function scanTokenAllNetworks({ tokenAddress }) {
  * Scans common token addresses to find tokens with non-zero balance
  */
 async function autoFetchTokens({ address }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   const walletAddress = address || currentWalletData.accounts[currentWalletData.activeAccountIndex].address;
@@ -2415,8 +2410,8 @@ async function fetchPriceFromRamascan(symbol) {
  * Add a custom network
  */
 async function addCustomNetwork({ name, rpcUrl, chainId, symbol, explorerUrl }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -2491,8 +2486,8 @@ async function addCustomNetwork({ name, rpcUrl, chainId, symbol, explorerUrl }) 
  * Remove a custom network
  */
 async function removeCustomNetwork({ networkKey, chainId }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -2595,8 +2590,8 @@ function getEnabledNetworks() {
  * Enable a built-in network
  */
 async function enableBuiltinNetwork({ networkKey }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -2630,8 +2625,8 @@ async function enableBuiltinNetwork({ networkKey }) {
  * Disable a built-in network
  */
 async function disableBuiltinNetwork({ networkKey }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -2675,8 +2670,8 @@ async function disableBuiltinNetwork({ networkKey }) {
  * Change wallet password
  */
 async function changePassword({ currentPassword, newPassword }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -2705,7 +2700,7 @@ async function changePassword({ currentPassword, newPassword }) {
  */
 async function verifyPassword({ password }) {
   if (!isUnlocked) {
-    return { success: false, error: 'Wallet is locked' };
+    return { success: false, error: 'No wallet data' };
   }
 
   return { 
@@ -2718,8 +2713,8 @@ async function verifyPassword({ password }) {
  * Export private key for current account
  */
 async function exportPrivateKey({ password, accountIndex }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
@@ -2749,8 +2744,8 @@ async function exportPrivateKey({ password, accountIndex }) {
  * Export recovery phrase (mnemonic)
  */
 async function exportRecoveryPhrase({ password }) {
-  if (!isUnlocked || !currentWalletData) {
-    return { success: false, error: 'Wallet is locked' };
+  if (!currentWalletData) {
+    return { success: false, error: 'No wallet data' };
   }
 
   try {
