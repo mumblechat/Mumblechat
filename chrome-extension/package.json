@@ -1,0 +1,28 @@
+{
+  "name": "ramapay-chrome-extension",
+  "version": "1.0.0",
+  "description": "RamaPay Wallet Chrome Extension for Ramestta Blockchain",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "watch": "node build.js --watch",
+    "dev": "npm run watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "ethers": "^6.9.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.0"
+  },
+  "keywords": [
+    "ramestta",
+    "blockchain",
+    "wallet",
+    "chrome-extension",
+    "web3",
+    "cryptocurrency"
+  ],
+  "author": "RamaPay Team",
+  "license": "MIT"
+}

@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "RamaPay Wallet",
+  "version": "1.0.0",
+  "description": "Secure cryptocurrency wallet for Ramestta blockchain - Send, receive RAMA tokens and connect to dApps",
+  "author": "RamaPay Team",
+  "homepage_url": "https://github.com/obidua/RamaPay-android",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "RamaPay Wallet"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/inject.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "notifications",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://blockchain.ramestta.com/*",
+    "https://blockchain2.ramestta.com/*",
+    "https://testnet.ramestta.com/*",
+    "https://blockchain.rfrm.io/*",
+    "https://testnet.rfrm.io/*",
+    "https://*.ramascan.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inpage/provider.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

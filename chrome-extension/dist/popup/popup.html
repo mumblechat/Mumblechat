@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RamaPay Wallet</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+      <div class="loading-content">
+        <div class="logo-container">
+          <img src="../icons/icon128.png" alt="RamaPay" class="logo">
+        </div>
+        <div class="spinner"></div>
+        <p>Loading RamaPay...</p>
+      </div>
+    </div>
+
+    <!-- Welcome Screen (No Wallet) -->
+    <div id="welcome-screen" class="screen">
+      <div class="welcome-content">
+        <div class="logo-container">
+          <img src="../icons/icon128.png" alt="RamaPay" class="logo">
+        </div>
+        <h1>Welcome to RamaPay</h1>
+        <p class="subtitle">Secure wallet for Ramestta Blockchain</p>
+        
+        <div class="button-group">
+          <button id="btn-create-wallet" class="btn btn-primary">
+            <span class="icon">➕</span>
+            Create New Wallet
+          </button>
+          <button id="btn-import-wallet" class="btn btn-secondary">
+            <span class="icon">📥</span>
+            Import Existing Wallet
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Wallet Screen -->
+    <div id="create-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="welcome">←</button>
+        <h2>Create New Wallet</h2>
+      </div>
+      
+      <div class="form-content">
+        <div class="form-group">
+          <label for="create-password">Create Password</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="create-password" placeholder="Enter password (min 8 characters)">
+            <button type="button" class="password-toggle" data-target="create-password">
+              <span class="eye-icon">👁️</span>
+            </button>
+          </div>
+          <div class="password-strength" id="password-strength"></div>
+        </div>
+        <div class="form-group">
+          <label for="confirm-password">Confirm Password</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="confirm-password" placeholder="Confirm password">
+            <button type="button" class="password-toggle" data-target="confirm-password">
+              <span class="eye-icon">👁️</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="checkbox-group">
+          <input type="checkbox" id="agree-terms">
+          <label for="agree-terms">I understand that RamaPay cannot recover my password</label>
+        </div>
+        
+        <button id="btn-generate-wallet" class="btn btn-primary btn-full">
+          <span class="btn-text">Generate Wallet</span>
+          <span class="btn-loader hidden">
+            <span class="spinner-small"></span>
+            Creating...
+          </span>
+        </button>
+        
+        <!-- Progress Bar -->
+        <div id="create-progress" class="progress-container hidden">
+          <div class="progress-bar">
+            <div class="progress-fill" id="create-progress-fill"></div>
+          </div>
+          <p class="progress-text" id="create-progress-text">Generating secure wallet...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seed Phrase Display Screen -->
+    <div id="seed-screen" class="screen">
+      <div class="header">
+        <h2>🔐 Secret Recovery Phrase</h2>
+      </div>
+      
+      <div class="seed-content">
+        <div class="warning-box">
+          <p>⚠️ Write down these 12 words in order and keep them safe. This is the ONLY way to recover your wallet!</p>
+        </div>
+        
+        <div id="seed-phrase-display" class="seed-phrase-grid">
+          <!-- Words will be inserted here -->
+        </div>
+        
+        <button id="btn-copy-seed" class="btn btn-secondary btn-full">
+          📋 Copy to Clipboard
+        </button>
+        
+        <div class="checkbox-group">
+          <input type="checkbox" id="seed-saved">
+          <label for="seed-saved">I have saved my recovery phrase securely</label>
+        </div>
+        
+        <button id="btn-seed-continue" class="btn btn-primary btn-full" disabled>
+          Verify Recovery Phrase
+        </button>
+      </div>
+    </div>
+
+    <!-- Seed Phrase Verification Screen -->
+    <div id="verify-seed-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="seed">←</button>
+        <h2>✅ Verify Recovery Phrase</h2>
+      </div>
+      
+      <div class="verify-content">
+        <p class="verify-instruction">Select the correct word for each position to verify you've saved your recovery phrase.</p>
+        
+        <!-- Current word prompt -->
+        <div id="verify-prompt" class="verify-prompt">
+          <span class="verify-step">1 of 4</span>
+          <p>Select word <strong>#<span id="verify-word-num">1</span></strong></p>
+        </div>
+        
+        <!-- Progress dots -->
+        <div id="verify-progress" class="verify-progress-dots">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+        
+        <!-- Word options (4 choices) -->
+        <div id="verify-word-options" class="verify-options-grid">
+          <!-- Word options will be inserted here -->
+        </div>
+        
+        <button id="btn-skip-verify" class="btn btn-link">
+          Skip verification
+        </button>
+      </div>
+    </div>
+
+    <!-- Import Wallet Screen -->
+    <div id="import-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="welcome">←</button>
+        <h2>Import Wallet</h2>
+      </div>
+      
+      <div class="form-content">
+        <div class="tab-group">
+          <button class="tab active" data-tab="mnemonic">Seed Phrase</button>
+          <button class="tab" data-tab="privateKey">Private Key</button>
+        </div>
+        
+        <div id="import-mnemonic" class="tab-content active">
+          <div class="form-group">
+            <label for="import-seed">Recovery Phrase</label>
+            <textarea id="import-seed" placeholder="Enter your 12 or 24 word recovery phrase" rows="3"></textarea>
+          </div>
+        </div>
+        
+        <div id="import-privateKey" class="tab-content">
+          <div class="form-group">
+            <label for="import-key">Private Key</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="import-key" placeholder="Enter private key">
+              <button type="button" class="password-toggle" data-target="import-key">
+                <span class="eye-icon">👁️</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="import-password">Create Password</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="import-password" placeholder="Enter password (min 8 characters)">
+            <button type="button" class="password-toggle" data-target="import-password">
+              <span class="eye-icon">👁️</span>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="import-confirm-password">Confirm Password</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="import-confirm-password" placeholder="Confirm password">
+            <button type="button" class="password-toggle" data-target="import-confirm-password">
+              <span class="eye-icon">👁️</span>
+            </button>
+          </div>
+        </div>
+        
+        <button id="btn-import" class="btn btn-primary btn-full">
+          <span class="btn-text">Import Wallet</span>
+          <span class="btn-loader hidden">
+            <span class="spinner-small"></span>
+            Importing...
+          </span>
+        </button>
+        
+        <!-- Progress Bar -->
+        <div id="import-progress" class="progress-container hidden">
+          <div class="progress-bar">
+            <div class="progress-fill" id="import-progress-fill"></div>
+          </div>
+          <p class="progress-text" id="import-progress-text">Importing wallet...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lock Screen -->
+    <div id="lock-screen" class="screen">
+      <div class="lock-content">
+        <div class="logo-container">
+          <img src="../icons/icon128.png" alt="RamaPay" class="logo">
+        </div>
+        <h1>RamaPay</h1>
+        <p class="subtitle">Enter password to unlock</p>
+        
+        <div class="form-group">
+          <div class="password-input-wrapper">
+            <input type="password" id="unlock-password" placeholder="Password">
+            <button type="button" class="password-toggle" data-target="unlock-password">
+              <span class="eye-icon">👁️</span>
+            </button>
+          </div>
+        </div>
+        
+        <button id="btn-unlock" class="btn btn-primary btn-full">
+          <span class="btn-text">Unlock</span>
+          <span class="btn-loader hidden">
+            <span class="spinner-small"></span>
+            Unlocking...
+          </span>
+        </button>
+        
+        <!-- Progress Bar -->
+        <div id="unlock-progress" class="progress-container hidden">
+          <div class="progress-bar">
+            <div class="progress-fill" id="unlock-progress-fill"></div>
+          </div>
+          <p class="progress-text" id="unlock-progress-text">Decrypting wallet...</p>
+        </div>
+        
+        <p id="unlock-error" class="error-text"></p>
+      </div>
+    </div>
+
+    <!-- Main Wallet Screen -->
+    <div id="main-screen" class="screen">
+      <div class="main-header">
+        <div class="network-selector">
+          <select id="network-select">
+            <optgroup label="Built-in Networks">
+              <option value="0x55a">Ramestta Mainnet</option>
+              <option value="0x561">Ramestta Testnet</option>
+            </optgroup>
+            <!-- Custom networks will be added dynamically -->
+          </select>
+        </div>
+        <button id="btn-settings" class="icon-btn">⚙️</button>
+      </div>
+      
+      <div class="wallet-card">
+        <div class="account-info">
+          <button id="btn-account-selector" class="account-selector-btn">
+            <span id="account-name">Account 1</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+          <button id="btn-copy-address" class="copy-btn" title="Copy Address">📋</button>
+        </div>
+        <div id="wallet-address" class="address"></div>
+        
+        <div class="balance-section">
+          <div class="balance-main">
+            <span id="balance-value">0.00</span>
+            <span id="balance-symbol">RAMA</span>
+          </div>
+          <div id="balance-usd" class="balance-usd">≈ $0.00 USD</div>
+        </div>
+      </div>
+      
+      <div class="action-buttons">
+        <button id="btn-send" class="action-btn">
+          <span class="action-icon">↗️</span>
+          <span>Send</span>
+        </button>
+        <button id="btn-receive" class="action-btn">
+          <span class="action-icon">↙️</span>
+          <span>Receive</span>
+        </button>
+        <button id="btn-swap" class="action-btn">
+          <span class="action-icon">🔄</span>
+          <span>Swap</span>
+        </button>
+      </div>
+      
+      <div class="tabs">
+        <button class="tab active" data-tab="tokens">Tokens</button>
+        <button class="tab" data-tab="activity">Activity</button>
+      </div>
+      
+      <div id="tokens-tab" class="tab-panel active">
+        <div class="token-header">
+          <span>Your Tokens</span>
+          <button id="btn-add-token" class="btn-small">+ Add Token</button>
+        </div>
+        <div id="token-list" class="token-list">
+          <!-- Native token -->
+          <div class="token-item native-token" id="native-token-item">
+            <div class="token-info">
+              <img src="icons/rama-token.png" alt="RAMA" class="token-icon-img">
+              <div class="token-details">
+                <span class="token-name" id="native-token-name">RAMA</span>
+                <span class="token-network" id="native-token-network">Ramestta</span>
+              </div>
+            </div>
+            <div class="token-balance">
+              <span class="token-amount" id="native-token-amount">0.00</span>
+              <span class="token-value" id="native-token-value">$0.00</span>
+            </div>
+          </div>
+          <!-- Custom tokens will be inserted here -->
+          <div id="custom-tokens-container"></div>
+        </div>
+      </div>
+      
+      <div id="activity-tab" class="tab-panel">
+        <div id="activity-list" class="activity-list">
+          <p class="empty-state">No recent activity</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Send Screen -->
+    <div id="send-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="main">←</button>
+        <h2>Send RAMA</h2>
+      </div>
+      
+      <div class="form-content">
+        <div class="form-group">
+          <label for="send-to">Recipient Address</label>
+          <input type="text" id="send-to" placeholder="0x...">
+        </div>
+        
+        <div class="form-group">
+          <label for="send-amount">Amount</label>
+          <div class="input-with-max">
+            <input type="number" id="send-amount" placeholder="0.00" step="0.0001">
+            <button id="btn-max" class="btn-max">MAX</button>
+          </div>
+          <span id="send-balance" class="input-hint">Balance: 0.00 RAMA</span>
+        </div>
+        
+        <div class="gas-info">
+          <span>Estimated Gas:</span>
+          <span id="estimated-gas">~0.001 RAMA</span>
+        </div>
+        
+        <button id="btn-send-confirm" class="btn btn-primary btn-full">
+          Review Transaction
+        </button>
+      </div>
+    </div>
+
+    <!-- Confirm Transaction Screen -->
+    <div id="confirm-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="send">←</button>
+        <h2>Confirm Transaction</h2>
+      </div>
+      
+      <div class="confirm-content">
+        <div class="tx-summary">
+          <div class="tx-row">
+            <span class="tx-label">To:</span>
+            <span id="confirm-to" class="tx-value address">0x...</span>
+          </div>
+          <div class="tx-row">
+            <span class="tx-label">Amount:</span>
+            <span id="confirm-amount" class="tx-value">0.00 RAMA</span>
+          </div>
+          <div class="tx-row">
+            <span class="tx-label">Network:</span>
+            <span id="confirm-network" class="tx-value">Ramestta Mainnet</span>
+          </div>
+          <div class="tx-row">
+            <span class="tx-label">Gas Fee:</span>
+            <span id="confirm-gas" class="tx-value">~0.001 RAMA</span>
+          </div>
+          <div class="tx-row total">
+            <span class="tx-label">Total:</span>
+            <span id="confirm-total" class="tx-value">0.00 RAMA</span>
+          </div>
+        </div>
+        
+        <button id="btn-send-final" class="btn btn-primary btn-full">
+          Confirm & Send
+        </button>
+      </div>
+    </div>
+
+    <!-- Receive Screen -->
+    <div id="receive-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="main">←</button>
+        <h2>Receive</h2>
+      </div>
+      
+      <div class="receive-content">
+        <div id="qr-code" class="qr-code">
+          <!-- QR code will be generated here -->
+        </div>
+        
+        <div class="address-display">
+          <p class="label">Your Address:</p>
+          <p id="receive-address" class="address"></p>
+          <button id="btn-copy-receive-address" class="btn btn-secondary btn-full">
+            📋 Copy Address
+          </button>
+        </div>
+        
+        <p class="warning-text">
+          Only send RAMA or ERC-20 tokens to this address on the Ramestta network.
+        </p>
+      </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="main">←</button>
+        <h2>Settings</h2>
+      </div>
+      
+      <div class="settings-content">
+        <div class="settings-section">
+          <h3>Account</h3>
+          <div class="setting-item" id="btn-export-key">
+            <span>🔑 Export Private Key</span>
+            <span class="arrow">→</span>
+          </div>
+          <div class="setting-item" id="btn-export-seed">
+            <span>📝 Export Recovery Phrase</span>
+            <span class="arrow">→</span>
+          </div>
+          <div class="setting-item" id="btn-add-account">
+            <span>➕ Add Account</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>Networks</h3>
+          <div class="setting-item" id="btn-manage-networks">
+            <span>🌐 Manage Networks</span>
+            <span class="arrow">→</span>
+          </div>
+          <div class="setting-item" id="btn-add-network">
+            <span>➕ Add Custom Network</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>Security</h3>
+          <div class="setting-item" id="btn-change-password">
+            <span>🔐 Change Password</span>
+            <span class="arrow">→</span>
+          </div>
+          <div class="setting-item" id="btn-auto-lock">
+            <span>⏱️ Auto-Lock Timer</span>
+            <span class="setting-value" id="auto-lock-value">5 min</span>
+          </div>
+          <div class="setting-item" id="btn-lock">
+            <span>🔒 Lock Wallet Now</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>Connected Sites</h3>
+          <div id="connected-sites-list" class="connected-sites">
+            <p class="empty-state">No connected sites</p>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>About</h3>
+          <div class="setting-info">
+            <span>Version</span>
+            <span>1.0.0</span>
+          </div>
+          <div class="setting-item" id="btn-support">
+            <span>💬 Support & Feedback</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+        
+        <button id="btn-reset-wallet" class="btn btn-danger btn-full">
+          🗑️ Reset Wallet
+        </button>
+      </div>
+    </div>
+
+    <!-- Accounts Management Screen -->
+    <div id="accounts-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="main">←</button>
+        <h2>My Accounts</h2>
+      </div>
+      
+      <div class="accounts-content">
+        <div id="accounts-list" class="accounts-list">
+          <!-- Accounts will be inserted dynamically -->
+        </div>
+        
+        <div class="accounts-actions">
+          <button id="btn-derive-account" class="btn btn-primary btn-full">
+            ➕ Create New Account
+          </button>
+          <button id="btn-import-key-account" class="btn btn-secondary btn-full">
+            🔑 Import Private Key
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Private Key Account Modal -->
+    <div id="import-key-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import Account</h3>
+          <button id="close-import-key-modal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="import-key-name">Account Name</label>
+            <input type="text" id="import-key-name" placeholder="e.g., Trading Account">
+          </div>
+          <div class="form-group">
+            <label for="import-key-value">Private Key</label>
+            <input type="password" id="import-key-value" placeholder="Enter private key">
+          </div>
+          <button id="btn-confirm-import-key" class="btn btn-primary btn-full">
+            Import Account
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Network Management Screen -->
+    <div id="networks-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="settings">←</button>
+        <h2>Manage Networks</h2>
+      </div>
+      
+      <div class="networks-content">
+        <div class="networks-section">
+          <h3>Built-in Networks</h3>
+          <div id="builtin-networks-list" class="network-list">
+            <!-- Built-in networks will be inserted here -->
+          </div>
+        </div>
+        
+        <div class="networks-section">
+          <h3>Custom Networks</h3>
+          <div id="custom-networks-list" class="network-list">
+            <p class="empty-state">No custom networks added</p>
+          </div>
+        </div>
+        
+        <button id="btn-add-network-from-list" class="btn btn-primary btn-full">
+          ➕ Add Custom Network
+        </button>
+      </div>
+    </div>
+
+    <!-- Add Network Screen -->
+    <div id="add-network-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="settings">←</button>
+        <h2>Add Custom Network</h2>
+      </div>
+      
+      <div class="form-content">
+        <div class="form-group">
+          <label for="network-name">Network Name</label>
+          <input type="text" id="network-name" placeholder="e.g., My Network">
+        </div>
+        <div class="form-group">
+          <label for="network-rpc">RPC URL</label>
+          <input type="text" id="network-rpc" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label for="network-chain-id">Chain ID</label>
+          <input type="number" id="network-chain-id" placeholder="e.g., 1">
+        </div>
+        <div class="form-group">
+          <label for="network-symbol">Currency Symbol</label>
+          <input type="text" id="network-symbol" placeholder="e.g., ETH">
+        </div>
+        <div class="form-group">
+          <label for="network-explorer">Block Explorer URL (Optional)</label>
+          <input type="text" id="network-explorer" placeholder="https://...">
+        </div>
+        
+        <button id="btn-save-network" class="btn btn-primary btn-full">
+          Save Network
+        </button>
+      </div>
+    </div>
+
+    <!-- Change Password Screen -->
+    <div id="change-password-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="settings">←</button>
+        <h2>Change Password</h2>
+      </div>
+      
+      <div class="form-content">
+        <div class="form-group">
+          <label for="current-password">Current Password</label>
+          <input type="password" id="current-password" placeholder="Enter current password">
+        </div>
+        <div class="form-group">
+          <label for="new-password">New Password</label>
+          <input type="password" id="new-password" placeholder="Enter new password (min 8 chars)">
+        </div>
+        <div class="form-group">
+          <label for="confirm-new-password">Confirm New Password</label>
+          <input type="password" id="confirm-new-password" placeholder="Confirm new password">
+        </div>
+        
+        <button id="btn-save-password" class="btn btn-primary btn-full">
+          Update Password
+        </button>
+      </div>
+    </div>
+
+    <!-- Export Private Key Screen -->
+    <div id="export-key-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="settings">←</button>
+        <h2>Export Private Key</h2>
+      </div>
+      
+      <div class="export-content">
+        <div class="warning-box">
+          <p>⚠️ Never share your private key with anyone! Anyone with your private key can steal your funds.</p>
+        </div>
+        
+        <div id="export-key-auth" class="export-auth">
+          <div class="form-group">
+            <label for="export-key-password">Enter Password to Continue</label>
+            <input type="password" id="export-key-password" placeholder="Your wallet password">
+          </div>
+          <button id="btn-reveal-key" class="btn btn-primary btn-full">
+            Reveal Private Key
+          </button>
+        </div>
+        
+        <div id="export-key-display" class="export-display hidden">
+          <div class="secret-box">
+            <p class="secret-label">Your Private Key:</p>
+            <p id="private-key-value" class="secret-value"></p>
+          </div>
+          <button id="btn-copy-key" class="btn btn-secondary btn-full">
+            📋 Copy to Clipboard
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Recovery Phrase Screen -->
+    <div id="export-seed-screen" class="screen">
+      <div class="header">
+        <button class="btn-back" data-back="settings">←</button>
+        <h2>Recovery Phrase</h2>
+      </div>
+      
+      <div class="export-content">
+        <div class="warning-box">
+          <p>⚠️ Never share your recovery phrase! Anyone with these words can steal all your funds.</p>
+        </div>
+        
+        <div id="export-seed-auth" class="export-auth">
+          <div class="form-group">
+            <label for="export-seed-password">Enter Password to Continue</label>
+            <input type="password" id="export-seed-password" placeholder="Your wallet password">
+          </div>
+          <button id="btn-reveal-seed" class="btn btn-primary btn-full">
+            Reveal Recovery Phrase
+          </button>
+        </div>
+        
+        <div id="export-seed-display" class="export-display hidden">
+          <div id="export-seed-words" class="seed-phrase-grid">
+            <!-- Words will be inserted here -->
+          </div>
+          <button id="btn-copy-seed-export" class="btn btn-secondary btn-full">
+            📋 Copy to Clipboard
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Token Modal -->
+    <div id="add-token-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add Custom Token</h3>
+          <button class="modal-close" id="close-token-modal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="token-address">Token Contract Address</label>
+            <input type="text" id="token-address" placeholder="0x...">
+          </div>
+          <div id="token-preview" class="token-preview hidden">
+            <div class="preview-row">
+              <span>Name:</span>
+              <span id="preview-name">-</span>
+            </div>
+            <div class="preview-row">
+              <span>Symbol:</span>
+              <span id="preview-symbol">-</span>
+            </div>
+            <div class="preview-row">
+              <span>Decimals:</span>
+              <span id="preview-decimals">-</span>
+            </div>
+          </div>
+          <button id="btn-confirm-add-token" class="btn btn-primary btn-full" disabled>
+            Add Token
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
