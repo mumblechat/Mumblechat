@@ -269,11 +269,11 @@
       <div class="main-header">
         <div class="network-selector">
           <select id="network-select">
-            <optgroup label="Built-in Networks">
+            <optgroup label="🏠 Ramestta">
               <option value="0x55a">Ramestta Mainnet</option>
-              <option value="0x561">Ramestta Testnet</option>
+              <option value="0x559">Ramestta Testnet</option>
             </optgroup>
-            <!-- Custom networks will be added dynamically -->
+            <!-- Other enabled networks will be added dynamically -->
           </select>
         </div>
         <button id="btn-settings" class="icon-btn">⚙️</button>
@@ -291,6 +291,7 @@
         
         <div class="balance-section">
           <div class="balance-main">
+            <img id="current-network-icon" src="icons/rama.png" alt="Network" class="network-balance-icon">
             <span id="balance-value">0.00</span>
             <span id="balance-symbol">RAMA</span>
           </div>
@@ -327,7 +328,7 @@
           <!-- Native token -->
           <div class="token-item native-token" id="native-token-item">
             <div class="token-info">
-              <img src="icons/rama-token.png" alt="RAMA" class="token-icon-img">
+              <img src="icons/rama.png" alt="RAMA" class="token-icon-img" id="native-token-icon">
               <div class="token-details">
                 <span class="token-name" id="native-token-name">RAMA</span>
                 <span class="token-network" id="native-token-network">Ramestta</span>
@@ -530,17 +531,135 @@
         <h2>My Accounts</h2>
       </div>
       
-      <div class="accounts-content">
+      <div class="accounts-content" style="overflow-y: auto; max-height: 480px;">
         <div id="accounts-list" class="accounts-list">
-          <!-- Accounts will be inserted dynamically -->
+          <!-- Accounts will be inserted dynamically with hierarchy -->
         </div>
         
-        <div class="accounts-actions">
-          <button id="btn-derive-account" class="btn btn-primary btn-full">
-            ➕ Create New Account
+        <div class="accounts-actions" style="margin-top: 16px;">
+          <button id="btn-add-account-select" class="btn btn-primary btn-full">
+            ➕ Add Account
+          </button>
+          <button id="btn-create-master-wallet" class="btn btn-secondary btn-full">
+            🏦 Create New Master Wallet
           </button>
           <button id="btn-import-key-account" class="btn btn-secondary btn-full">
             🔑 Import Private Key
+          </button>
+          <button id="btn-import-seed-account" class="btn btn-secondary btn-full">
+            🌱 Import Seed Phrase
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Select Master Wallet Modal (for adding account) -->
+    <div id="select-master-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Select Master Wallet</h3>
+          <button id="close-select-master-modal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-info" style="margin-bottom: 16px;">Choose which Master Wallet to derive a new account from:</p>
+          <div id="master-wallet-list" class="master-wallet-list">
+            <!-- Master wallets will be inserted dynamically -->
+          </div>
+          <div class="form-group" style="margin-top: 16px;">
+            <label for="new-derived-account-name">Account Name (optional)</label>
+            <input type="text" id="new-derived-account-name" placeholder="Auto-generated if empty">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Add to Master Modal -->
+    <div id="bulk-add-master-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Bulk Add Accounts</h3>
+          <button id="close-bulk-add-master-modal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-info" style="margin-bottom: 16px;">Select Master Wallet and number of accounts to add:</p>
+          <div id="bulk-master-wallet-list" class="master-wallet-list">
+            <!-- Master wallets will be inserted dynamically -->
+          </div>
+          <div class="form-group" style="margin-top: 16px;">
+            <label for="bulk-add-master-count">Number of accounts</label>
+            <input type="number" id="bulk-add-master-count" min="1" max="20" value="5">
+          </div>
+          <button id="btn-confirm-bulk-add-master" class="btn btn-primary btn-full" disabled>
+            Add Accounts
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Account Modal -->
+    <div id="create-account-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Create New Account</h3>
+          <button id="close-create-account-modal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="new-account-name">Account Name</label>
+            <input type="text" id="new-account-name" placeholder="e.g., Savings Account">
+          </div>
+          <p class="modal-info">This will derive a new account from your HD wallet.</p>
+          <button id="btn-confirm-create-account" class="btn btn-primary btn-full">
+            Create Account
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Master Wallet Modal -->
+    <div id="create-master-wallet-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🏦 Create Master Wallet</h3>
+          <button id="close-create-master-wallet-modal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="info-box" style="background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <p style="color: var(--text-secondary); font-size: 13px;">
+              ✅ A Master Wallet is an HD wallet with its own 12-word seed phrase. You can create unlimited accounts from each Master Wallet.
+            </p>
+          </div>
+          <div class="form-group">
+            <label for="master-wallet-name">Master Wallet Name</label>
+            <input type="text" id="master-wallet-name" placeholder="e.g., Personal Wallet">
+          </div>
+          <div class="warning-box" style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+            <p style="color: var(--warning); font-size: 12px;">
+              ⚠️ Make sure to backup the seed phrase after creation!
+            </p>
+          </div>
+          <button id="btn-confirm-create-master-wallet" class="btn btn-primary btn-full">
+            Generate Master Wallet
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Add Accounts Modal (Legacy - can be removed later) -->
+    <div id="bulk-add-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Bulk Add Accounts</h3>
+          <button id="close-bulk-add-modal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="bulk-add-count">Number of accounts to add</label>
+            <input type="number" id="bulk-add-count" min="1" max="20" value="5" placeholder="5">
+          </div>
+          <p class="modal-info">This will derive multiple new accounts from your HD wallet.</p>
+          <button id="btn-confirm-bulk-add" class="btn btn-primary btn-full">
+            Add Accounts
           </button>
         </div>
       </div>
@@ -560,11 +679,62 @@
           </div>
           <div class="form-group">
             <label for="import-key-value">Private Key</label>
-            <input type="password" id="import-key-value" placeholder="Enter private key">
+            <input type="password" id="import-key-value" placeholder="Enter private key (with or without 0x)">
           </div>
           <button id="btn-confirm-import-key" class="btn btn-primary btn-full">
             Import Account
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Seed Phrase Modal -->
+    <div id="import-seed-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import HD Wallet</h3>
+          <button id="close-import-seed-modal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="import-seed-name">Wallet Name</label>
+            <input type="text" id="import-seed-name" placeholder="e.g., Secondary Wallet">
+          </div>
+          <div class="form-group">
+            <label for="import-seed-value">Seed Phrase (12 or 24 words)</label>
+            <textarea id="import-seed-value" rows="3" placeholder="Enter your seed phrase..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="import-seed-count">Number of accounts to derive</label>
+            <input type="number" id="import-seed-count" min="1" max="20" value="1">
+          </div>
+          <button id="btn-confirm-import-seed" class="btn btn-primary btn-full">
+            Import Wallet
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset Wallet Confirmation Modal -->
+    <div id="reset-wallet-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>⚠️ Reset Wallet</h3>
+          <button id="close-reset-wallet-modal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="warning-box" style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <p style="color: var(--error); font-weight: 600; margin-bottom: 8px;">⚠️ Warning: This action cannot be undone!</p>
+            <p style="color: var(--text-muted); font-size: 13px;">All wallet data will be permanently deleted. Make sure you have backed up your recovery phrase before proceeding.</p>
+          </div>
+          <div class="form-group">
+            <label for="reset-confirm-text">Type "RESET" to confirm</label>
+            <input type="text" id="reset-confirm-text" placeholder="Type RESET">
+          </div>
+          <div class="button-row" style="display: flex; gap: 12px;">
+            <button id="btn-cancel-reset" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+            <button id="btn-confirm-reset" class="btn btn-danger" style="flex: 1;" disabled>Reset Wallet</button>
+          </div>
         </div>
       </div>
     </div>
@@ -576,23 +746,26 @@
         <h2>Manage Networks</h2>
       </div>
       
-      <div class="networks-content">
+      <div class="networks-content" style="overflow-y: auto; max-height: 450px;">
+        <p class="section-description" style="color: var(--text-muted); font-size: 12px; margin-bottom: 16px;">
+          Ramestta is your primary network. Enable additional networks below or add custom networks via RPC.
+        </p>
+        
         <div class="networks-section">
-          <h3>Built-in Networks</h3>
           <div id="builtin-networks-list" class="network-list">
-            <!-- Built-in networks will be inserted here -->
+            <!-- Pre-built networks with enable/disable will be inserted here -->
           </div>
         </div>
         
-        <div class="networks-section">
-          <h3>Custom Networks</h3>
+        <div class="networks-section" style="margin-top: 20px;">
+          <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--text-secondary);">🔗 Custom Networks (RPC)</h3>
           <div id="custom-networks-list" class="network-list">
             <p class="empty-state">No custom networks added</p>
           </div>
         </div>
         
-        <button id="btn-add-network-from-list" class="btn btn-primary btn-full">
-          ➕ Add Custom Network
+        <button id="btn-add-network-from-list" class="btn btn-secondary btn-full" style="margin-top: 16px;">
+          ➕ Add Custom Network via RPC
         </button>
       </div>
     </div>

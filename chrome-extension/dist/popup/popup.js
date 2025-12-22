@@ -8,6 +8,7 @@ let currentScreen = 'loading';
 let currentWalletAddress = null;
 let currentNetwork = null;
 let importType = 'mnemonic';
+let pendingDappRequest = null;
 
 // DOM Elements cache
 const screens = {};
@@ -19,6 +20,16 @@ const elements = {};
 document.addEventListener('DOMContentLoaded', async () => {
   cacheElements();
   setupEventListeners();
+  
+  // Check for dApp connection request from URL params
+  const urlParams = new URLSearchParams(window.location.search);
+  const dappRequestId = urlParams.get('dappRequest');
+  const dappOrigin = urlParams.get('origin');
+  
+  if (dappRequestId && dappOrigin) {
+    pendingDappRequest = { id: dappRequestId, origin: decodeURIComponent(dappOrigin) };
+  }
+  
   await checkWalletStatus();
 });
 
@@ -142,6 +153,22 @@ function setupEventListeners() {
   document.getElementById('btn-reset-wallet')?.addEventListener('click', handleResetWallet);
   document.getElementById('btn-export-key')?.addEventListener('click', () => showScreen('export-key'));
   document.getElementById('btn-export-seed')?.addEventListener('click', () => showScreen('export-seed'));
+  
+  // Reset Wallet Modal
+  document.getElementById('close-reset-wallet-modal')?.addEventListener('click', () => {
+    document.getElementById('reset-wallet-modal').classList.remove('show');
+  });
+  document.getElementById('btn-cancel-reset')?.addEventListener('click', () => {
+    document.getElementById('reset-wallet-modal').classList.remove('show');
+  });
+  document.getElementById('reset-confirm-text')?.addEventListener('input', (e) => {
+    const btn = document.getElementById('btn-confirm-reset');
+    if (btn) {
+      btn.disabled = e.target.value.trim() !== 'RESET';
+    }
+  });
+  document.getElementById('btn-confirm-reset')?.addEventListener('click', confirmResetWallet);
+  
   document.getElementById('btn-add-account')?.addEventListener('click', () => {
     loadAccountsList();
     showScreen('accounts');
@@ -159,7 +186,29 @@ function setupEventListeners() {
     loadAccountsList();
     showScreen('accounts');
   });
-  document.getElementById('btn-derive-account')?.addEventListener('click', handleDeriveAccount);
+  
+  // Add Account - Show master wallet selection
+  document.getElementById('btn-add-account-select')?.addEventListener('click', showAddAccountModal);
+  document.getElementById('close-select-master-modal')?.addEventListener('click', () => {
+    document.getElementById('select-master-modal').classList.remove('show');
+  });
+  
+  // Create Master Wallet
+  document.getElementById('btn-create-master-wallet')?.addEventListener('click', () => {
+    document.getElementById('create-master-wallet-modal').classList.add('show');
+  });
+  document.getElementById('close-create-master-wallet-modal')?.addEventListener('click', () => {
+    document.getElementById('create-master-wallet-modal').classList.remove('show');
+  });
+  document.getElementById('btn-confirm-create-master-wallet')?.addEventListener('click', handleCreateMasterWallet);
+  
+  // Bulk add to master
+  document.getElementById('close-bulk-add-master-modal')?.addEventListener('click', () => {
+    document.getElementById('bulk-add-master-modal').classList.remove('show');
+  });
+  document.getElementById('btn-confirm-bulk-add-master')?.addEventListener('click', confirmBulkAddToMaster);
+  
+  // Import Private Key
   document.getElementById('btn-import-key-account')?.addEventListener('click', () => {
     document.getElementById('import-key-modal').classList.add('show');
   });
@@ -167,6 +216,26 @@ function setupEventListeners() {
     document.getElementById('import-key-modal').classList.remove('show');
   });
   document.getElementById('btn-confirm-import-key')?.addEventListener('click', handleImportKeyAccount);
+  
+  // Legacy - Create Account Modal (keep for backwards compatibility)
+  document.getElementById('close-create-account-modal')?.addEventListener('click', () => {
+    document.getElementById('create-account-modal').classList.remove('show');
+  });
+  document.getElementById('btn-confirm-create-account')?.addEventListener('click', confirmCreateAccount);
+  
+  // Legacy - Bulk Add Accounts
+  document.getElementById('btn-bulk-add-accounts')?.addEventListener('click', handleBulkAddAccounts);
+  document.getElementById('close-bulk-add-modal')?.addEventListener('click', () => {
+    document.getElementById('bulk-add-modal').classList.remove('show');
+  });
+  document.getElementById('btn-confirm-bulk-add')?.addEventListener('click', confirmBulkAdd);
+  
+  // Import Seed Phrase
+  document.getElementById('btn-import-seed-account')?.addEventListener('click', showImportSeedModal);
+  document.getElementById('close-import-seed-modal')?.addEventListener('click', () => {
+    document.getElementById('import-seed-modal').classList.remove('show');
+  });
+  document.getElementById('btn-confirm-import-seed')?.addEventListener('click', handleImportSeedAccount);
 
   // Export Private Key Screen
   document.getElementById('btn-reveal-key')?.addEventListener('click', handleRevealPrivateKey);
@@ -246,6 +315,19 @@ async function checkWalletStatus() {
         currentWalletAddress = status.address;
         currentNetwork = status.network;
         await loadMainScreen();
+        
+        // Check for pending dApp connection requests
+        if (pendingDappRequest) {
+          showDappConnectionRequest(pendingDappRequest);
+        } else {
+          // Also check if there's a pending request from background
+          const pendingResult = await sendMessage('getPendingDappRequest');
+          if (pendingResult.success && pendingResult.request) {
+            pendingDappRequest = pendingResult.request;
+            showDappConnectionRequest(pendingDappRequest);
+          }
+        }
+        
         showScreen('main');
       }
     } catch (bgError) {
@@ -651,6 +733,19 @@ async function handleUnlock() {
       errorEl.textContent = '';
       document.getElementById('unlock-password').value = '';
       await loadMainScreen();
+      
+      // Check for pending dApp connection requests after unlock
+      if (pendingDappRequest) {
+        showDappConnectionRequest(pendingDappRequest);
+      } else {
+        // Check if there's a pending request from background
+        const pendingResult = await sendMessage('getPendingDappRequest');
+        if (pendingResult.success && pendingResult.request) {
+          pendingDappRequest = pendingResult.request;
+          showDappConnectionRequest(pendingDappRequest);
+        }
+      }
+      
       showScreen('main');
     } else {
       errorEl.textContent = result.error || 'Incorrect password';
@@ -694,11 +789,21 @@ async function loadMainScreen() {
       currentNetwork = networkResult.network;
       elements.balanceSymbol.textContent = currentNetwork.symbol;
       
+      // Update network icon
+      updateNetworkIcon(currentNetwork);
+      
       // Update native token display
       const nativeTokenName = document.getElementById('native-token-name');
       const nativeTokenNetwork = document.getElementById('native-token-network');
+      const nativeTokenIcon = document.getElementById('native-token-icon');
       if (nativeTokenName) nativeTokenName.textContent = currentNetwork.symbol;
       if (nativeTokenNetwork) nativeTokenNetwork.textContent = currentNetwork.name;
+      if (nativeTokenIcon) {
+        let iconUrl = currentNetwork.icon || getNetworkIconUrl(currentNetwork.category || 'ramestta');
+        if (iconUrl && iconUrl.startsWith('icons/')) iconUrl = chrome.runtime.getURL(iconUrl);
+        nativeTokenIcon.src = iconUrl;
+        nativeTokenIcon.onerror = function() { this.src = chrome.runtime.getURL('icons/rama.png'); };
+      }
       
       // Load custom networks into dropdown
       await loadNetworkDropdown();
@@ -738,23 +843,46 @@ async function loadMainScreen() {
 }
 
 /**
- * Load networks into the dropdown selector
+ * Load networks into the dropdown selector (only enabled networks)
  */
 async function loadNetworkDropdown() {
   const networkSelect = elements.networkSelect;
   if (!networkSelect) return;
 
+  // Load enabled networks
+  await loadEnabledNetworks();
+
   // Clear existing options
   networkSelect.innerHTML = '';
 
-  // Add built-in networks
-  const builtinOptgroup = document.createElement('optgroup');
-  builtinOptgroup.label = 'Built-in Networks';
+  // Add Ramestta networks (always first, always available)
+  const ramestttaOptgroup = document.createElement('optgroup');
+  ramestttaOptgroup.label = '🏠 Ramestta';
   
-  builtinOptgroup.appendChild(createOption('0x55a', 'Ramestta Mainnet'));
-  builtinOptgroup.appendChild(createOption('0x561', 'Ramestta Testnet'));
+  if (ALL_BUILTIN_NETWORKS.ramestta_mainnet) {
+    ramestttaOptgroup.appendChild(createOption('0x55a', 'Ramestta Mainnet'));
+  }
+  if (ALL_BUILTIN_NETWORKS.ramestta_testnet && enabledNetworks.includes('ramestta_testnet')) {
+    ramestttaOptgroup.appendChild(createOption('0x559', 'Ramestta Testnet'));
+  }
   
-  networkSelect.appendChild(builtinOptgroup);
+  networkSelect.appendChild(ramestttaOptgroup);
+
+  // Add other enabled built-in networks
+  const otherEnabled = enabledNetworks.filter(key => !key.startsWith('ramestta_') && ALL_BUILTIN_NETWORKS[key]);
+  if (otherEnabled.length > 0) {
+    const builtinOptgroup = document.createElement('optgroup');
+    builtinOptgroup.label = '🌐 Other Networks';
+    
+    otherEnabled.forEach(key => {
+      const network = ALL_BUILTIN_NETWORKS[key];
+      if (network) {
+        builtinOptgroup.appendChild(createOption(network.chainId, network.name));
+      }
+    });
+    
+    networkSelect.appendChild(builtinOptgroup);
+  }
 
   // Add custom networks
   try {
@@ -818,40 +946,102 @@ function updateTokenList(balance) {
 }
 
 /**
+ * Format Wei to Ether
+ */
+function formatWeiToEther(weiValue) {
+  if (!weiValue) return '0.0000';
+  try {
+    const wei = BigInt(weiValue);
+    const ether = Number(wei) / 1e18;
+    if (ether < 0.0001 && ether > 0) return '< 0.0001';
+    return ether.toFixed(4);
+  } catch {
+    return '0.0000';
+  }
+}
+
+/**
+ * Format timestamp to relative time
+ */
+function formatTimeAgo(timestamp) {
+  if (!timestamp) return '';
+  const seconds = Math.floor(Date.now() / 1000 - parseInt(timestamp));
+  
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  
+  const date = new Date(parseInt(timestamp) * 1000);
+  return date.toLocaleDateString();
+}
+
+/**
  * Load transaction history
  */
 async function loadTransactionHistory() {
+  const activityList = document.getElementById('activity-list');
+  if (!activityList) return;
+  
+  // Show loading state
+  activityList.innerHTML = '<div class="loading-activity"><div class="spinner-small"></div> Loading transactions...</div>';
+  
   try {
     const result = await sendMessage('getTransactionHistory', { address: currentWalletAddress });
     
-    if (result.success && result.history.length > 0) {
-      const activityList = document.getElementById('activity-list');
+    if (result.success && result.history && result.history.length > 0) {
       activityList.innerHTML = '';
+      const symbol = currentNetwork?.symbol || 'RAMA';
 
-      result.history.slice(0, 10).forEach(tx => {
+      result.history.slice(0, 20).forEach(tx => {
         const isReceive = tx.to?.toLowerCase() === currentWalletAddress?.toLowerCase();
+        const isContract = tx.input && tx.input !== '0x' && tx.input.length > 10;
+        const isFailed = tx.isError || tx.txreceipt_status === '0';
+        
+        let txType = isReceive ? 'Received' : 'Sent';
+        let txIcon = isReceive ? '↙️' : '↗️';
+        
+        if (isContract && !isReceive) {
+          txType = tx.functionName ? tx.functionName.split('(')[0] : 'Contract Call';
+          txIcon = '📄';
+        }
+        
+        if (isFailed) {
+          txType = 'Failed';
+          txIcon = '❌';
+        }
+        
+        const timeAgo = formatTimeAgo(tx.timeStamp);
+        const amount = formatWeiToEther(tx.value);
+        const explorerUrl = currentNetwork?.explorerUrl;
+        
         activityList.innerHTML += `
-          <div class="activity-item">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <div class="activity-icon ${isReceive ? 'receive' : 'send'}">
-                ${isReceive ? '↙️' : '↗️'}
+          <div class="activity-item ${isFailed ? 'failed' : ''}" data-tx-hash="${tx.hash}">
+            <div class="activity-left">
+              <div class="activity-icon ${isReceive ? 'receive' : 'send'} ${isFailed ? 'failed' : ''}">
+                ${txIcon}
               </div>
-              <div>
-                <div style="font-weight: 500;">${isReceive ? 'Received' : 'Sent'}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">${formatAddress(isReceive ? tx.from : tx.to)}</div>
+              <div class="activity-details">
+                <div class="activity-type">${txType}</div>
+                <div class="activity-address">${formatAddress(isReceive ? tx.from : tx.to)}</div>
+                <div class="activity-time">${timeAgo}</div>
               </div>
             </div>
-            <div style="text-align: right;">
-              <div style="font-weight: 500; color: ${isReceive ? 'var(--secondary-color)' : 'var(--text-primary)'}">
-                ${isReceive ? '+' : '-'}${formatAmount(tx.value)} RAMA
+            <div class="activity-right">
+              <div class="activity-amount ${isReceive ? 'receive' : 'send'}">
+                ${isReceive ? '+' : '-'}${amount} ${symbol}
               </div>
+              ${explorerUrl ? `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" class="activity-link">View ↗</a>` : ''}
             </div>
           </div>
         `;
       });
+    } else {
+      activityList.innerHTML = '<div class="empty-activity">No recent activity</div>';
     }
   } catch (error) {
     console.error('Error loading history:', error);
+    activityList.innerHTML = '<div class="empty-activity">Failed to load activity</div>';
   }
 }
 
@@ -867,11 +1057,50 @@ async function handleNetworkChange(e) {
     if (result.success) {
       currentNetwork = result.network;
       elements.balanceSymbol.textContent = currentNetwork.symbol;
+      
+      // Update network icon
+      updateNetworkIcon(currentNetwork);
+      
+      // Update native token display
+      const nativeTokenName = document.getElementById('native-token-name');
+      const nativeTokenNetwork = document.getElementById('native-token-network');
+      const nativeTokenIcon = document.getElementById('native-token-icon');
+      if (nativeTokenName) nativeTokenName.textContent = currentNetwork.symbol;
+      if (nativeTokenNetwork) nativeTokenNetwork.textContent = currentNetwork.name;
+      if (nativeTokenIcon) {
+        let iconUrl = currentNetwork.icon || getNetworkIconUrl(currentNetwork.category || 'ramestta');
+        if (iconUrl && iconUrl.startsWith('icons/')) iconUrl = chrome.runtime.getURL(iconUrl);
+        nativeTokenIcon.src = iconUrl;
+        nativeTokenIcon.onerror = function() { this.src = chrome.runtime.getURL('icons/rama.png'); };
+      }
+      
       await refreshBalance();
       showToast(`Switched to ${currentNetwork.name}`, 'success');
     }
   } catch (error) {
     showToast('Failed to switch network', 'error');
+  }
+}
+
+/**
+ * Update the network icon in the balance section
+ */
+function updateNetworkIcon(network) {
+  const networkIcon = document.getElementById('current-network-icon');
+  if (networkIcon && network) {
+    // Get icon URL from network config or fallback to category
+    let iconUrl = network.icon || getNetworkIconUrl(network.category || 'ramestta');
+    // For local icons, use chrome.runtime.getURL
+    if (iconUrl && iconUrl.startsWith('icons/')) {
+      iconUrl = chrome.runtime.getURL(iconUrl);
+    }
+    networkIcon.src = iconUrl;
+    networkIcon.alt = network.name || 'Network';
+    
+    // Handle load error - fall back to Ramestta icon
+    networkIcon.onerror = function() {
+      this.src = chrome.runtime.getURL('icons/rama.png');
+    };
   }
 }
 
@@ -913,11 +1142,16 @@ async function updateGasEstimate() {
     try {
       const result = await sendMessage('estimateGas', { to, amount });
       if (result.success) {
-        const gasCost = (BigInt(result.gasInfo.gasLimit) * BigInt(result.gasInfo.gasPrice || '1000000000')) / BigInt(10**18);
-        document.getElementById('estimated-gas').textContent = `~${(Number(gasCost) / 1000).toFixed(6)} ${currentNetwork?.symbol || 'RAMA'}`;
+        // gasLimit * gasPrice / 10^18 = gas cost in native token
+        const gasLimit = BigInt(result.gasInfo.gasLimit || '21000');
+        const gasPrice = BigInt(result.gasInfo.gasPrice || result.gasInfo.maxFeePerGas || '1000000000');
+        const gasCostWei = gasLimit * gasPrice;
+        const gasCostEther = Number(gasCostWei) / 1e18;
+        document.getElementById('estimated-gas').textContent = `~${gasCostEther.toFixed(6)} ${currentNetwork?.symbol || 'RAMA'}`;
       }
     } catch (error) {
-      // Ignore gas estimation errors
+      // Ignore gas estimation errors, show default
+      document.getElementById('estimated-gas').textContent = `~0.001000 ${currentNetwork?.symbol || 'RAMA'}`;
     }
   }
 }
@@ -939,12 +1173,17 @@ function handleSendReview() {
     return;
   }
 
+  // Get gas estimate value
+  const gasText = document.getElementById('estimated-gas').textContent || '~0.001000';
+  const gasMatch = gasText.match(/~?([\d.]+)/);
+  const gasAmount = gasMatch ? parseFloat(gasMatch[1]) : 0.001;
+
   // Fill confirm screen
   document.getElementById('confirm-to').textContent = to;
   document.getElementById('confirm-amount').textContent = `${amount} ${currentNetwork?.symbol || 'RAMA'}`;
   document.getElementById('confirm-network').textContent = currentNetwork?.name || 'Ramestta Mainnet';
-  document.getElementById('confirm-gas').textContent = document.getElementById('estimated-gas').textContent;
-  document.getElementById('confirm-total').textContent = `${(parseFloat(amount) + 0.001).toFixed(6)} ${currentNetwork?.symbol || 'RAMA'}`;
+  document.getElementById('confirm-gas').textContent = gasText;
+  document.getElementById('confirm-total').textContent = `${(parseFloat(amount) + gasAmount).toFixed(6)} ${currentNetwork?.symbol || 'RAMA'}`;
 
   showScreen('confirm');
 }
@@ -964,7 +1203,22 @@ async function handleSendTransaction() {
     const result = await sendMessage('sendTransaction', { to, amount });
     
     if (result.success) {
-      showToast('Transaction sent successfully!', 'success');
+      // Show success with tx hash
+      const txHash = result.txHash;
+      const explorerUrl = currentNetwork?.explorerUrl;
+      
+      if (txHash && explorerUrl) {
+        showToast(`Transaction sent! Hash: ${txHash.slice(0, 10)}...`, 'success');
+        // Open explorer in new tab
+        setTimeout(() => {
+          if (confirm('View transaction on explorer?')) {
+            window.open(`${explorerUrl}/tx/${txHash}`, '_blank');
+          }
+        }, 500);
+      } else {
+        showToast('Transaction sent successfully!', 'success');
+      }
+      
       document.getElementById('send-to').value = '';
       document.getElementById('send-amount').value = '';
       await refreshBalance();
@@ -973,7 +1227,7 @@ async function handleSendTransaction() {
       showToast(result.error || 'Transaction failed', 'error');
     }
   } catch (error) {
-    showToast('Error sending transaction: ' + error.message, 'error');
+    showToast('Error: ' + (error.message || 'Transaction failed'), 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Confirm & Send';
@@ -1066,19 +1320,97 @@ async function handleLock() {
 }
 
 /**
- * Handle reset wallet
+ * Handle reset wallet - show confirmation modal
  */
 async function handleResetWallet() {
-  if (confirm('Are you sure you want to reset your wallet? This cannot be undone. Make sure you have backed up your recovery phrase!')) {
-    try {
-      await chrome.storage.local.clear();
-      currentWalletAddress = null;
-      showScreen('welcome');
-      showToast('Wallet reset successfully', 'success');
-    } catch (error) {
-      showToast('Error resetting wallet', 'error');
-    }
+  // Show the reset confirmation modal
+  document.getElementById('reset-confirm-text').value = '';
+  document.getElementById('btn-confirm-reset').disabled = true;
+  document.getElementById('reset-wallet-modal').classList.add('show');
+}
+
+/**
+ * Confirm reset wallet after modal verification
+ */
+async function confirmResetWallet() {
+  const confirmText = document.getElementById('reset-confirm-text')?.value.trim();
+  if (confirmText !== 'RESET') {
+    showToast('Please type RESET to confirm', 'error');
+    return;
   }
+  
+  try {
+    await chrome.storage.local.clear();
+    currentWalletAddress = null;
+    
+    // Clear all form fields to prevent old data showing
+    clearAllFormFields();
+    
+    document.getElementById('reset-wallet-modal').classList.remove('show');
+    showScreen('welcome');
+    showToast('Wallet reset successfully', 'success');
+  } catch (error) {
+    showToast('Error resetting wallet', 'error');
+  }
+}
+
+/**
+ * Clear all form fields in the app
+ */
+function clearAllFormFields() {
+  // Welcome/Create/Import screens
+  const fieldsToReset = [
+    'create-password',
+    'confirm-password',
+    'import-seed',
+    'import-key',
+    'import-password',
+    'import-confirm-password',
+    'reset-confirm-text',
+    // Account management
+    'import-key-value',
+    'import-key-name',
+    'import-seed-value',
+    'import-seed-name',
+    'import-seed-count',
+    'bulk-add-count',
+    'create-account-name',
+    // Export key
+    'export-key-password',
+    // Send screen
+    'send-address',
+    'send-amount',
+    // Other fields
+    'unlock-password'
+  ];
+  
+  fieldsToReset.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (el.tagName === 'TEXTAREA') {
+        el.value = '';
+      } else if (el.type === 'checkbox') {
+        el.checked = false;
+      } else {
+        el.value = '';
+      }
+    }
+  });
+  
+  // Reset checkboxes
+  const checkboxes = ['agree-terms', 'seed-saved'];
+  checkboxes.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+  
+  // Clear seed phrase display
+  const seedDisplay = document.getElementById('seed-phrase-display');
+  if (seedDisplay) seedDisplay.innerHTML = '';
+  
+  // Clear private key display
+  const pkDisplay = document.getElementById('private-key-value');
+  if (pkDisplay) pkDisplay.textContent = '';
 }
 
 /**
@@ -1247,6 +1579,8 @@ function closeAddTokenModal() {
  * Handle token address input - fetch token info
  */
 let tokenFetchTimeout = null;
+let foundTokensOnNetworks = []; // Store tokens found across networks
+
 async function handleTokenAddressInput(e) {
   const address = e.target.value.trim();
   
@@ -1255,36 +1589,159 @@ async function handleTokenAddressInput(e) {
   
   // Hide preview initially
   document.getElementById('token-preview')?.classList.add('hidden');
+  document.getElementById('token-network-list')?.classList.add('hidden');
   document.getElementById('btn-confirm-add-token').disabled = true;
   pendingTokenInfo = null;
+  foundTokensOnNetworks = [];
 
   // Validate address format
   if (!address || !address.startsWith('0x') || address.length !== 42) {
     return;
   }
 
+  // Show scanning indicator
+  const previewDiv = document.getElementById('token-preview');
+  if (previewDiv) {
+    previewDiv.classList.remove('hidden');
+    previewDiv.innerHTML = `
+      <div class="scanning-indicator">
+        <div class="spinner"></div>
+        <p>Scanning all networks for token...</p>
+      </div>
+    `;
+  }
+
   // Debounce the API call
   tokenFetchTimeout = setTimeout(async () => {
     try {
-      const result = await sendMessage('getTokenInfo', { tokenAddress: address });
+      // Scan all networks for the token
+      const result = await sendMessage('scanTokenAllNetworks', { tokenAddress: address });
       
-      if (result.success && result.token) {
-        pendingTokenInfo = result.token;
+      if (result.success && result.tokens && result.tokens.length > 0) {
+        foundTokensOnNetworks = result.tokens;
         
-        // Show preview
-        document.getElementById('preview-name').textContent = result.token.name;
-        document.getElementById('preview-symbol').textContent = result.token.symbol;
-        document.getElementById('preview-decimals').textContent = result.token.decimals;
-        document.getElementById('token-preview')?.classList.remove('hidden');
-        document.getElementById('btn-confirm-add-token').disabled = false;
+        // If found on only one network, auto-select it
+        if (result.tokens.length === 1) {
+          pendingTokenInfo = result.tokens[0];
+          showTokenPreview(pendingTokenInfo);
+        } else {
+          // Show list of networks where token was found
+          showTokenNetworkList(result.tokens);
+        }
       } else {
-        showToast('Invalid token address or token not found', 'error');
+        // Fallback to current network only
+        const fallbackResult = await sendMessage('getTokenInfo', { tokenAddress: address });
+        if (fallbackResult.success && fallbackResult.token) {
+          pendingTokenInfo = fallbackResult.token;
+          showTokenPreview(pendingTokenInfo);
+        } else {
+          previewDiv.innerHTML = `
+            <div class="token-not-found">
+              <p>❌ Token not found on any network</p>
+              <p class="hint">Scanned ${result.scannedNetworks || 'all'} networks</p>
+            </div>
+          `;
+        }
       }
     } catch (error) {
-      console.error('Token fetch error:', error);
+      console.error('Token scan error:', error);
+      previewDiv.innerHTML = `<p class="error">Error scanning networks</p>`;
     }
   }, 500);
 }
+
+/**
+ * Show token preview for selected token
+ */
+function showTokenPreview(token) {
+  const previewDiv = document.getElementById('token-preview');
+  if (!previewDiv) return;
+  
+  previewDiv.classList.remove('hidden');
+  previewDiv.innerHTML = `
+    <div class="preview-row">
+      <span>Name</span>
+      <span id="preview-name">${token.name || 'Unknown'}</span>
+    </div>
+    <div class="preview-row">
+      <span>Symbol</span>
+      <span id="preview-symbol">${token.symbol || 'TOKEN'}</span>
+    </div>
+    <div class="preview-row">
+      <span>Decimals</span>
+      <span id="preview-decimals">${token.decimals || 18}</span>
+    </div>
+    <div class="preview-row network-row">
+      <span>Network</span>
+      <span id="preview-network">${token.network || 'Current Network'}</span>
+    </div>
+  `;
+  document.getElementById('btn-confirm-add-token').disabled = false;
+}
+
+/**
+ * Show list of networks where token was found
+ */
+function showTokenNetworkList(tokens) {
+  const previewDiv = document.getElementById('token-preview');
+  if (!previewDiv) return;
+  
+  previewDiv.classList.remove('hidden');
+  previewDiv.innerHTML = `
+    <div class="token-network-found">
+      <p class="found-header">✅ Token found on ${tokens.length} networks</p>
+      <p class="found-subtitle">Select which network to add from:</p>
+      <div class="network-token-list">
+        ${tokens.map((token, index) => `
+          <div class="network-token-option ${index === 0 ? 'selected' : ''}" 
+               data-select-network="${index}" 
+               data-index="${index}">
+            <div class="network-token-info">
+              <span class="token-symbol">${token.symbol}</span>
+              <span class="token-name">${token.name}</span>
+            </div>
+            <div class="network-info">
+              <span class="network-name">${token.network}</span>
+              <span class="network-symbol">${token.networkSymbol}</span>
+            </div>
+            ${index === 0 ? '<span class="selected-check">✓</span>' : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  
+  // Add event listeners for network selection
+  previewDiv.querySelectorAll('[data-select-network]').forEach(el => {
+    el.addEventListener('click', () => {
+      window.selectTokenNetwork(parseInt(el.dataset.selectNetwork));
+    });
+  });
+  
+  // Auto-select first token
+  pendingTokenInfo = tokens[0];
+  document.getElementById('btn-confirm-add-token').disabled = false;
+}
+
+/**
+ * Select a token from the network list
+ */
+window.selectTokenNetwork = function(index) {
+  if (index >= 0 && index < foundTokensOnNetworks.length) {
+    pendingTokenInfo = foundTokensOnNetworks[index];
+    
+    // Update UI
+    document.querySelectorAll('.network-token-option').forEach((el, i) => {
+      el.classList.toggle('selected', i === index);
+      const check = el.querySelector('.selected-check');
+      if (i === index && !check) {
+        el.insertAdjacentHTML('beforeend', '<span class="selected-check">✓</span>');
+      } else if (i !== index && check) {
+        check.remove();
+      }
+    });
+  }
+};
 
 /**
  * Handle add token confirmation
@@ -1294,7 +1751,8 @@ async function handleAddToken() {
 
   try {
     const result = await sendMessage('addToken', {
-      tokenAddress: pendingTokenInfo.address
+      tokenAddress: pendingTokenInfo.address,
+      chainId: pendingTokenInfo.chainId || null
     });
 
     if (result.success) {
@@ -1336,11 +1794,18 @@ async function loadCustomTokens() {
               <span class="token-amount">${parseFloat(token.balance || 0).toFixed(4)}</span>
               <span class="token-value">$${(parseFloat(token.balance || 0) * (tokenPrices[token.symbol] || 0)).toFixed(2)}</span>
             </div>
-            <button class="token-delete" onclick="removeToken('${token.address}')">Remove</button>
+            <button class="token-delete" data-remove-token="${token.address}">Remove</button>
           </div>
         `;
         container.innerHTML += tokenHtml;
       }
+      
+      // Add event listeners for remove buttons
+      container.querySelectorAll('[data-remove-token]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.removeToken(btn.dataset.removeToken);
+        });
+      });
     }
   } catch (error) {
     console.error('Error loading tokens:', error);
@@ -1437,36 +1902,231 @@ setInterval(fetchPrices, 60000); // Every minute
 // NETWORK MANAGEMENT
 // ============================================
 
-// Built-in networks
-const BUILTIN_NETWORKS = [
-  { name: 'Ramestta Mainnet', chainId: '0x55a', rpcUrl: 'https://blockchain.ramestta.com/', symbol: 'RAMA', explorer: 'https://ramascan.com' },
-  { name: 'Ramestta Testnet', chainId: '0x561', rpcUrl: 'https://testnet.ramestta.com/', symbol: 'RAMA', explorer: 'https://testnet.ramascan.com' }
-];
+// ============================================
+// ALL PRE-BUILT NETWORKS
+// Complete list matching Android app networks
+// Users can enable/disable these from settings
+// ============================================
+const ALL_BUILTIN_NETWORKS = {
+  // Ramestta (Primary - Always enabled)
+  ramestta_mainnet: { name: 'Ramestta Mainnet', chainId: '0x55a', rpcUrl: 'https://blockchain.ramestta.com/', symbol: 'RAMA', explorer: 'https://ramascan.com', category: 'ramestta', isDefault: true },
+  ramestta_testnet: { name: 'Ramestta Testnet', chainId: '0x559', rpcUrl: 'https://testnet.ramestta.com/', symbol: 'RAMA', explorer: 'https://testnet.ramascan.com', category: 'ramestta', isDefault: true },
+  
+  // Ethereum
+  ethereum_mainnet: { name: 'Ethereum Mainnet', chainId: '0x1', rpcUrl: 'https://eth.llamarpc.com', symbol: 'ETH', explorer: 'https://etherscan.io', category: 'ethereum' },
+  ethereum_classic: { name: 'Ethereum Classic', chainId: '0x3d', rpcUrl: 'https://www.ethercluster.com/etc', symbol: 'ETC', explorer: 'https://blockscout.com/etc/mainnet', category: 'ethereum' },
+  sepolia_testnet: { name: 'Sepolia Testnet', chainId: '0xaa36a7', rpcUrl: 'https://rpc.sepolia.org', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io', category: 'ethereum', isTestnet: true },
+  holesky_testnet: { name: 'Holesky Testnet', chainId: '0x4268', rpcUrl: 'https://rpc.holesky.ethpandaops.io', symbol: 'ETH', explorer: 'https://holesky.etherscan.io', category: 'ethereum', isTestnet: true },
+  
+  // Polygon
+  polygon_mainnet: { name: 'Polygon Mainnet', chainId: '0x89', rpcUrl: 'https://polygon.llamarpc.com', symbol: 'MATIC', explorer: 'https://polygonscan.com', category: 'polygon' },
+  polygon_amoy: { name: 'Polygon Amoy Testnet', chainId: '0x13882', rpcUrl: 'https://rpc-amoy.polygon.technology', symbol: 'MATIC', explorer: 'https://amoy.polygonscan.com', category: 'polygon', isTestnet: true },
+  
+  // Binance Smart Chain
+  binance_mainnet: { name: 'BNB Smart Chain', chainId: '0x38', rpcUrl: 'https://bsc-dataseed.binance.org', symbol: 'BNB', explorer: 'https://bscscan.com', category: 'binance' },
+  binance_testnet: { name: 'BNB Chain Testnet', chainId: '0x61', rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545', symbol: 'tBNB', explorer: 'https://testnet.bscscan.com', category: 'binance', isTestnet: true },
+  
+  // Avalanche
+  avalanche_mainnet: { name: 'Avalanche C-Chain', chainId: '0xa86a', rpcUrl: 'https://api.avax.network/ext/bc/C/rpc', symbol: 'AVAX', explorer: 'https://snowtrace.io', category: 'avalanche' },
+  avalanche_fuji: { name: 'Avalanche Fuji Testnet', chainId: '0xa869', rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc', symbol: 'AVAX', explorer: 'https://testnet.snowtrace.io', category: 'avalanche', isTestnet: true },
+  
+  // Arbitrum
+  arbitrum_mainnet: { name: 'Arbitrum One', chainId: '0xa4b1', rpcUrl: 'https://arb1.arbitrum.io/rpc', symbol: 'ETH', explorer: 'https://arbiscan.io', category: 'arbitrum' },
+  arbitrum_sepolia: { name: 'Arbitrum Sepolia', chainId: '0x66eee', rpcUrl: 'https://arbitrum-sepolia.drpc.org', symbol: 'ETH', explorer: 'https://sepolia.arbiscan.io', category: 'arbitrum', isTestnet: true },
+  
+  // Optimism
+  optimism_mainnet: { name: 'Optimism', chainId: '0xa', rpcUrl: 'https://mainnet.optimism.io', symbol: 'ETH', explorer: 'https://optimistic.etherscan.io', category: 'optimism' },
+  
+  // Base
+  base_mainnet: { name: 'Base', chainId: '0x2105', rpcUrl: 'https://base-rpc.publicnode.com', symbol: 'ETH', explorer: 'https://basescan.org', category: 'base' },
+  base_sepolia: { name: 'Base Sepolia', chainId: '0x14a34', rpcUrl: 'https://sepolia.base.org', symbol: 'ETH', explorer: 'https://sepolia.basescan.org', category: 'base', isTestnet: true },
+  
+  // Fantom
+  fantom_mainnet: { name: 'Fantom Opera', chainId: '0xfa', rpcUrl: 'https://rpcapi.fantom.network', symbol: 'FTM', explorer: 'https://ftmscan.com', category: 'fantom' },
+  fantom_testnet: { name: 'Fantom Testnet', chainId: '0xfa2', rpcUrl: 'https://rpc.testnet.fantom.network', symbol: 'FTM', explorer: 'https://testnet.ftmscan.com', category: 'fantom', isTestnet: true },
+  
+  // Gnosis
+  gnosis_mainnet: { name: 'Gnosis Chain', chainId: '0x64', rpcUrl: 'https://rpc.gnosischain.com', symbol: 'xDAI', explorer: 'https://gnosisscan.io', category: 'gnosis' },
+  
+  // Cronos
+  cronos_mainnet: { name: 'Cronos Mainnet', chainId: '0x19', rpcUrl: 'https://evm.cronos.org', symbol: 'CRO', explorer: 'https://cronoscan.com', category: 'cronos' },
+  cronos_testnet: { name: 'Cronos Testnet', chainId: '0x152', rpcUrl: 'https://evm-t3.cronos.org', symbol: 'tCRO', explorer: 'https://testnet.cronoscan.com', category: 'cronos', isTestnet: true },
+  
+  // Linea
+  linea_mainnet: { name: 'Linea Mainnet', chainId: '0xe708', rpcUrl: 'https://rpc.linea.build', symbol: 'ETH', explorer: 'https://lineascan.build', category: 'linea' },
+  linea_testnet: { name: 'Linea Sepolia', chainId: '0xe705', rpcUrl: 'https://rpc.sepolia.linea.build', symbol: 'ETH', explorer: 'https://sepolia.lineascan.build', category: 'linea', isTestnet: true },
+  
+  // Mantle
+  mantle_mainnet: { name: 'Mantle', chainId: '0x1388', rpcUrl: 'https://rpc.mantle.xyz', symbol: 'MNT', explorer: 'https://explorer.mantle.xyz', category: 'mantle' },
+  mantle_testnet: { name: 'Mantle Sepolia', chainId: '0x138b', rpcUrl: 'https://rpc.sepolia.mantle.xyz', symbol: 'MNT', explorer: 'https://sepolia.mantlescan.xyz', category: 'mantle', isTestnet: true },
+  
+  // Klaytn/Kaia
+  klaytn_mainnet: { name: 'Kaia Mainnet', chainId: '0x2019', rpcUrl: 'https://klaytn.blockpi.network/v1/rpc/public', symbol: 'KAIA', explorer: 'https://scope.klaytn.com', category: 'klaytn' },
+  klaytn_baobab: { name: 'Kaia Kairos Testnet', chainId: '0x3e9', rpcUrl: 'https://klaytn-baobab.blockpi.network/v1/rpc/public', symbol: 'KAIA', explorer: 'https://baobab.scope.klaytn.com', category: 'klaytn', isTestnet: true },
+  
+  // Aurora
+  aurora_mainnet: { name: 'Aurora Mainnet', chainId: '0x4e454152', rpcUrl: 'https://mainnet.aurora.dev', symbol: 'ETH', explorer: 'https://aurorascan.dev', category: 'aurora' },
+  aurora_testnet: { name: 'Aurora Testnet', chainId: '0x4e454153', rpcUrl: 'https://testnet.aurora.dev', symbol: 'ETH', explorer: 'https://testnet.aurorascan.dev', category: 'aurora', isTestnet: true },
+  
+  // IoTeX
+  iotex_mainnet: { name: 'IoTeX Mainnet', chainId: '0x1251', rpcUrl: 'https://babel-api.mainnet.iotex.io', symbol: 'IOTX', explorer: 'https://iotexscan.io', category: 'iotex' },
+  iotex_testnet: { name: 'IoTeX Testnet', chainId: '0x1252', rpcUrl: 'https://babel-api.testnet.iotex.io', symbol: 'IOTX', explorer: 'https://testnet.iotexscan.io', category: 'iotex', isTestnet: true },
+  
+  // Rootstock
+  rootstock_mainnet: { name: 'Rootstock Mainnet', chainId: '0x1e', rpcUrl: 'https://public-node.rsk.co', symbol: 'RBTC', explorer: 'https://explorer.rsk.co', category: 'rootstock' },
+  rootstock_testnet: { name: 'Rootstock Testnet', chainId: '0x1f', rpcUrl: 'https://public-node.testnet.rsk.co', symbol: 'tRBTC', explorer: 'https://explorer.testnet.rsk.co', category: 'rootstock', isTestnet: true },
+  
+  // OKX Chain
+  okx_mainnet: { name: 'OKXChain Mainnet', chainId: '0x42', rpcUrl: 'https://exchainrpc.okex.org', symbol: 'OKT', explorer: 'https://www.oklink.com/oktc', category: 'okx' },
+  
+  // Palm
+  palm_mainnet: { name: 'Palm Mainnet', chainId: '0x2a15c308d', rpcUrl: 'https://palm-mainnet.public.blastapi.io', symbol: 'PALM', explorer: 'https://explorer.palm.io', category: 'palm' },
+  palm_testnet: { name: 'Palm Testnet', chainId: '0x2a15c3083', rpcUrl: 'https://palm-testnet.public.blastapi.io', symbol: 'PALM', explorer: 'https://explorer.palm-uat.xyz', category: 'palm', isTestnet: true },
+  
+  // Milkomeda
+  milkomeda_c1: { name: 'Milkomeda Cardano', chainId: '0x7d1', rpcUrl: 'https://rpc-mainnet-cardano-evm.c1.milkomeda.com', symbol: 'milkADA', explorer: 'https://explorer-mainnet-cardano-evm.c1.milkomeda.com', category: 'milkomeda' },
+  
+  // Mint
+  mint_mainnet: { name: 'Mint Mainnet', chainId: '0xb9', rpcUrl: 'https://global.rpc.mintchain.io', symbol: 'ETH', explorer: 'https://explorer.mintchain.io', category: 'mint' },
+  mint_sepolia: { name: 'Mint Sepolia', chainId: '0x697', rpcUrl: 'https://sepolia-testnet-rpc.mintchain.io', symbol: 'ETH', explorer: 'https://sepolia-testnet-explorer.mintchain.io', category: 'mint', isTestnet: true }
+};
+
+// Default enabled networks (only Ramestta when wallet is first created)
+const DEFAULT_ENABLED_NETWORKS = ['ramestta_mainnet', 'ramestta_testnet'];
+
+// Current enabled networks (loaded from storage)
+let enabledNetworks = [...DEFAULT_ENABLED_NETWORKS];
+
+// Legacy BUILTIN_NETWORKS for backwards compatibility
+const BUILTIN_NETWORKS = Object.entries(ALL_BUILTIN_NETWORKS)
+  .filter(([key]) => DEFAULT_ENABLED_NETWORKS.includes(key))
+  .map(([key, network]) => ({ ...network, key }));
 
 /**
- * Load networks list
+ * Load enabled networks from storage
+ */
+async function loadEnabledNetworks() {
+  try {
+    const result = await sendMessage('getEnabledNetworks');
+    if (result.success && result.enabledNetworks) {
+      enabledNetworks = result.enabledNetworks;
+    }
+  } catch (error) {
+    console.log('Using default enabled networks');
+    enabledNetworks = [...DEFAULT_ENABLED_NETWORKS];
+  }
+}
+
+/**
+ * Load networks list with enable/disable functionality
  */
 async function loadNetworksList() {
   try {
-    // Load built-in networks
+    // Load enabled networks first
+    await loadEnabledNetworks();
+    
     const builtinContainer = document.getElementById('builtin-networks-list');
     if (builtinContainer) {
-      builtinContainer.innerHTML = BUILTIN_NETWORKS.map(network => `
-        <div class="network-item ${currentNetwork?.chainId === network.chainId ? 'active' : ''}" data-chain-id="${network.chainId}">
-          <div class="network-icon">🌐</div>
-          <div class="network-info">
-            <div class="network-name">${network.name}</div>
-            <div class="network-details">Chain ID: ${parseInt(network.chainId, 16)}</div>
+      // Group networks by category
+      const categories = {};
+      Object.entries(ALL_BUILTIN_NETWORKS).forEach(([key, network]) => {
+        const cat = network.category || 'other';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push({ key, ...network });
+      });
+      
+      // Define category order and display names with icon URLs
+      const categoryOrder = [
+        { key: 'ramestta', name: 'Ramestta (Primary)', isPrimary: true, icon: 'icons/rama.png' },
+        { key: 'ethereum', name: 'Ethereum', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png' },
+        { key: 'polygon', name: 'Polygon', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png' },
+        { key: 'binance', name: 'BNB Smart Chain', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png' },
+        { key: 'arbitrum', name: 'Arbitrum', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png' },
+        { key: 'optimism', name: 'Optimism', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png' },
+        { key: 'base', name: 'Base', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png' },
+        { key: 'avalanche', name: 'Avalanche', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png' },
+        { key: 'fantom', name: 'Fantom', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/fantom/info/logo.png' },
+        { key: 'linea', name: 'Linea', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/linea/info/logo.png' },
+        { key: 'mantle', name: 'Mantle', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png' },
+        { key: 'gnosis', name: 'Gnosis', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png' },
+        { key: 'cronos', name: 'Cronos', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/info/logo.png' },
+        { key: 'klaytn', name: 'Klaytn/Kaia', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png' },
+        { key: 'aurora', name: 'Aurora', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png' },
+        { key: 'iotex', name: 'IoTeX', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/iotex/info/logo.png' },
+        { key: 'rootstock', name: 'Rootstock', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/rootstock/info/logo.png' },
+        { key: 'okx', name: 'OKX Chain', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/okc/info/logo.png' },
+        { key: 'palm', name: 'Palm', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/palm/info/logo.png' },
+        { key: 'milkomeda', name: 'Milkomeda', icon: 'https://raw.githubusercontent.com/milkomeda-com/assets/main/milkomeda-logo.png' },
+        { key: 'mint', name: 'Mint', icon: 'https://mintchain.io/favicon.png' }
+      ];
+      
+      let html = '';
+      
+      // Show all networks grouped by category
+      categoryOrder.forEach(catInfo => {
+        const networks = categories[catInfo.key];
+        if (!networks || networks.length === 0) return;
+        
+        const categoryClass = catInfo.isPrimary ? 'ramestta-category' : '';
+        const emoji = getCategoryEmoji(catInfo.key);
+        
+        html += `<div class="network-category ${categoryClass}">
+          <h4>
+            <img src="${catInfo.icon}" alt="${catInfo.name}" class="category-icon" data-fallback-emoji="${emoji}">
+            <span class="category-emoji" style="display:none;">${emoji}</span>
+            ${catInfo.name}
+          </h4>
+          <div class="network-list">
+            ${networks.map(network => createNetworkItemHtml(network, enabledNetworks.includes(network.key), catInfo.isPrimary)).join('')}
           </div>
-          <div class="network-status">
-            ${currentNetwork?.chainId === network.chainId ? '<span class="network-checkmark">✓</span>' : ''}
-          </div>
-        </div>
-      `).join('');
+        </div>`;
+      });
+      
+      builtinContainer.innerHTML = html;
+      
+      // Add error handlers for category icons
+      builtinContainer.querySelectorAll('.category-icon').forEach(img => {
+        img.addEventListener('error', function() {
+          this.style.display = 'none';
+          if (this.nextElementSibling) this.nextElementSibling.style.display = 'inline';
+        });
+      });
+      
+      // Add error handlers for network icons
+      builtinContainer.querySelectorAll('.network-icon-img').forEach(img => {
+        img.addEventListener('error', function() {
+          this.style.display = 'none';
+          if (this.nextElementSibling) this.nextElementSibling.style.display = 'flex';
+        });
+      });
 
-      // Add click handlers
+      // Add click handlers for enabling/disabling networks
+      builtinContainer.querySelectorAll('.network-toggle').forEach(toggle => {
+        toggle.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const networkKey = toggle.dataset.networkKey;
+          const isEnabled = toggle.dataset.enabled === 'true';
+          
+          if (isEnabled) {
+            await disableNetworkFromList(networkKey);
+          } else {
+            await enableNetworkFromList(networkKey);
+          }
+        });
+      });
+      
+      // Add click handlers for selecting network
       builtinContainer.querySelectorAll('.network-item').forEach(item => {
-        item.addEventListener('click', () => selectNetwork(item.dataset.chainId));
+        item.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('network-toggle')) {
+            const networkKey = item.dataset.networkKey;
+            if (enabledNetworks.includes(networkKey)) {
+              selectNetworkByKey(networkKey);
+            } else {
+              showToast('Enable this network first', 'info');
+            }
+          }
+        });
       });
     }
 
@@ -1475,19 +2135,31 @@ async function loadNetworksList() {
     const customContainer = document.getElementById('custom-networks-list');
     if (customContainer) {
       if (result.success && result.networks.length > 0) {
-        customContainer.innerHTML = result.networks.map(network => `
-          <div class="network-item custom ${currentNetwork?.chainId === network.chainId ? 'active' : ''}" data-chain-id="${network.chainId}">
+        customContainer.innerHTML = result.networks.map(network => {
+          const chainIdHex = network.chainIdHex || ('0x' + network.chainId.toString(16));
+          const chainIdNum = typeof network.chainId === 'number' ? network.chainId : parseInt(chainIdHex, 16);
+          const isActive = currentNetwork?.chainId === chainIdNum || currentNetwork?.chainIdHex === chainIdHex;
+          return `
+          <div class="network-item custom ${isActive ? 'active' : ''}" data-chain-id="${chainIdHex}">
             <div class="network-icon">🔗</div>
             <div class="network-info">
               <div class="network-name">${network.name}</div>
-              <div class="network-details">Chain ID: ${parseInt(network.chainId, 16)}</div>
+              <div class="network-details">${network.symbol} • Chain ID: ${chainIdNum}</div>
             </div>
             <div class="network-status">
-              ${currentNetwork?.chainId === network.chainId ? '<span class="network-checkmark">✓</span>' : ''}
-              <button class="network-delete" onclick="removeNetwork('${network.chainId}')">Remove</button>
+              ${isActive ? '<span class="network-checkmark">✓</span>' : ''}
+              <button class="network-delete" data-remove-network="${network.key || chainIdHex}">Remove</button>
             </div>
           </div>
-        `).join('');
+        `}).join('');
+
+        // Add event listeners for custom network delete buttons
+        customContainer.querySelectorAll('[data-remove-network]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.removeNetwork(btn.dataset.removeNetwork);
+          });
+        });
 
         customContainer.querySelectorAll('.network-item').forEach(item => {
           item.addEventListener('click', (e) => {
@@ -1503,6 +2175,179 @@ async function loadNetworksList() {
   } catch (error) {
     console.error('Error loading networks:', error);
     showToast('Error loading networks', 'error');
+  }
+}
+
+/**
+ * Create HTML for a network item
+ */
+function createNetworkItemHtml(network, isEnabled, isRamestta) {
+  const isActive = currentNetwork?.chainIdHex === network.chainId || currentNetwork?.chainId === network.chainId;
+  const testnetBadge = network.isTestnet ? '<span class="testnet-badge">Testnet</span>' : '';
+  let iconUrl = network.icon || getNetworkIconUrl(network.category);
+  // For local icons, use chrome.runtime.getURL
+  if (iconUrl && iconUrl.startsWith('icons/')) {
+    iconUrl = chrome.runtime.getURL(iconUrl);
+  }
+  
+  return `
+    <div class="network-item ${isActive ? 'active' : ''} ${isEnabled ? 'enabled' : 'disabled'}" 
+         data-network-key="${network.key}" data-chain-id="${network.chainId}">
+      <div class="network-icon">
+        <img src="${iconUrl}" alt="${network.name}" class="network-icon-img" data-fallback="${getCategoryEmoji(network.category)}" />
+        <span class="network-icon-fallback" style="display:none;">${getCategoryEmoji(network.category)}</span>
+      </div>
+      <div class="network-info">
+        <div class="network-name">${network.name} ${testnetBadge}</div>
+        <div class="network-details">${network.symbol} • Chain ID: ${parseInt(network.chainId, 16)}</div>
+      </div>
+      <div class="network-status">
+        ${isActive ? '<span class="network-checkmark">✓</span>' : ''}
+        ${!isRamestta ? `<button class="network-toggle ${isEnabled ? 'enabled' : ''}" 
+                                  data-network-key="${network.key}" 
+                                  data-enabled="${isEnabled}">
+          ${isEnabled ? '✓ Enabled' : '+ Add'}
+        </button>` : '<span class="primary-badge">Primary</span>'}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Get emoji fallback for network category
+ */
+function getCategoryEmoji(category) {
+  const emojis = {
+    ramestta: '🏠',
+    ethereum: '💎',
+    polygon: '💜',
+    binance: '💛',
+    avalanche: '🔺',
+    arbitrum: '🔵',
+    optimism: '🔴',
+    base: '🔷',
+    fantom: '👻',
+    gnosis: '🦉',
+    cronos: '🔷',
+    linea: '📐',
+    mantle: '🟢',
+    klaytn: '🟡',
+    aurora: '🌅',
+    iotex: '🔌',
+    rootstock: '🟠',
+    okx: '⭕',
+    palm: '🌴',
+    milkomeda: '🥛',
+    mint: '🌿'
+  };
+  return emojis[category] || '🌐';
+}
+
+/**
+ * Get icon URL for network category
+ */
+function getNetworkIconUrl(category) {
+  const icons = {
+    ramestta: 'icons/rama.png',
+    ethereum: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    polygon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+    binance: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png',
+    avalanche: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
+    arbitrum: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
+    optimism: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
+    base: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
+    fantom: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/fantom/info/logo.png',
+    gnosis: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
+    cronos: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/info/logo.png',
+    linea: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/linea/info/logo.png',
+    mantle: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png',
+    klaytn: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png',
+    aurora: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png',
+    iotex: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/iotex/info/logo.png',
+    rootstock: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/rootstock/info/logo.png',
+    okx: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/okc/info/logo.png',
+    palm: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/palm/info/logo.png',
+    milkomeda: 'https://raw.githubusercontent.com/milkomeda-com/assets/main/milkomeda-logo.png',
+    mint: 'https://mintchain.io/favicon.png'
+  };
+  const iconPath = icons[category] || 'icons/rama.png';
+  // For local icons, use chrome.runtime.getURL to get the proper extension URL
+  if (iconPath.startsWith('icons/')) {
+    return chrome.runtime.getURL(iconPath);
+  }
+  return iconPath;
+}
+
+/**
+ * Toggle network category visibility
+ */
+window.toggleNetworkCategory = function(header) {
+  const content = header.nextElementSibling;
+  const arrow = header.querySelector('.collapse-arrow');
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    arrow.textContent = '▲';
+  } else {
+    content.style.display = 'none';
+    arrow.textContent = '▼';
+  }
+};
+
+/**
+ * Enable a network from the pre-built list
+ */
+async function enableNetworkFromList(networkKey) {
+  try {
+    const result = await sendMessage('enableBuiltinNetwork', { networkKey });
+    if (result.success) {
+      enabledNetworks = result.enabledNetworks;
+      showToast(`${ALL_BUILTIN_NETWORKS[networkKey]?.name || networkKey} enabled`, 'success');
+      await loadNetworksList();
+      await loadNetworkDropdown();
+    } else {
+      showToast(result.error || 'Failed to enable network', 'error');
+    }
+  } catch (error) {
+    showToast('Error enabling network', 'error');
+  }
+}
+
+/**
+ * Disable a network from the list
+ */
+async function disableNetworkFromList(networkKey) {
+  // Don't allow disabling Ramestta
+  if (networkKey === 'ramestta_mainnet') {
+    showToast('Cannot disable primary network', 'error');
+    return;
+  }
+  
+  try {
+    const result = await sendMessage('disableBuiltinNetwork', { networkKey });
+    if (result.success) {
+      enabledNetworks = result.enabledNetworks;
+      showToast(`${ALL_BUILTIN_NETWORKS[networkKey]?.name || networkKey} disabled`, 'success');
+      await loadNetworksList();
+      await loadNetworkDropdown();
+    } else {
+      showToast(result.error || 'Failed to disable network', 'error');
+    }
+  } catch (error) {
+    showToast('Error disabling network', 'error');
+  }
+}
+
+/**
+ * Select a network by its key
+ */
+async function selectNetworkByKey(networkKey) {
+  try {
+    const network = ALL_BUILTIN_NETWORKS[networkKey];
+    if (network) {
+      await selectNetwork(network.chainId);
+    }
+  } catch (error) {
+    showToast('Error switching network', 'error');
   }
 }
 
@@ -1528,11 +2373,16 @@ async function selectNetwork(chainId) {
 /**
  * Remove a custom network
  */
-window.removeNetwork = async function(chainId) {
+window.removeNetwork = async function(networkKeyOrChainId) {
   if (!confirm('Remove this custom network?')) return;
 
   try {
-    const result = await sendMessage('removeCustomNetwork', { chainId });
+    // networkKeyOrChainId can be either the network key (custom_1370) or chainId (0x55a)
+    const isKey = networkKeyOrChainId.startsWith('custom_');
+    const result = await sendMessage('removeCustomNetwork', { 
+      networkKey: isKey ? networkKeyOrChainId : null,
+      chainId: isKey ? null : networkKeyOrChainId 
+    });
     if (result.success) {
       showToast('Network removed', 'success');
       await loadNetworksList();
@@ -1662,9 +2512,16 @@ async function loadConnectedSites() {
             <div class="site-icon">🌐</div>
             <span class="site-url">${site}</span>
           </div>
-          <button class="btn-disconnect" onclick="disconnectSite('${site}')">Disconnect</button>
+          <button class="btn-disconnect" data-disconnect-site="${site}">Disconnect</button>
         </div>
       `).join('');
+      
+      // Add event listeners for disconnect buttons
+      container.querySelectorAll('[data-disconnect-site]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.disconnectSite(btn.dataset.disconnectSite);
+        });
+      });
     } else {
       container.innerHTML = '<p class="empty-state">No connected sites</p>';
     }
@@ -1725,42 +2582,138 @@ async function loadAccountsList() {
     
     if (!container) return;
     
-    if (result.success && result.accounts.length > 0) {
-      container.innerHTML = result.accounts.map((account, index) => `
-        <div class="account-item ${account.isActive ? 'active' : ''}" data-index="${index}">
-          <div class="account-avatar">${account.name.charAt(0).toUpperCase()}</div>
-          <div class="account-info-main">
-            <div class="account-name-text">
-              ${account.name}
-              ${account.type === 'imported' ? '<span class="account-type-badge imported">Imported</span>' : ''}
+    if (!result.success) {
+      container.innerHTML = '<p class="empty-state">Error loading accounts</p>';
+      return;
+    }
+    
+    const { accounts, masterWallets = [] } = result;
+    
+    let html = '';
+    
+    // Group accounts by master wallet
+    const masterWalletAccounts = {};
+    const importedAccounts = [];
+    
+    accounts.forEach((acc, idx) => {
+      acc.index = idx; // Store original index for switching
+      if (acc.masterWalletId) {
+        if (!masterWalletAccounts[acc.masterWalletId]) {
+          masterWalletAccounts[acc.masterWalletId] = [];
+        }
+        masterWalletAccounts[acc.masterWalletId].push(acc);
+      } else if (acc.type === 'imported' || acc.type === 'imported-seed') {
+        importedAccounts.push(acc);
+      } else {
+        // Legacy derived accounts without masterWalletId - treat as imported
+        importedAccounts.push(acc);
+      }
+    });
+    
+    // Render Master Wallets with their accounts
+    masterWallets.forEach(mw => {
+      const mwAccounts = masterWalletAccounts[mw.id] || [];
+      html += `
+        <div class="master-wallet-group" data-master-id="${mw.id}">
+          <div class="master-wallet-header">
+            <div class="master-wallet-icon">🏦</div>
+            <div class="master-wallet-info">
+              <div class="master-wallet-name">${mw.name}</div>
+              <div class="master-wallet-meta">${mwAccounts.length} account${mwAccounts.length !== 1 ? 's' : ''}</div>
             </div>
-            <div class="account-address-text">${formatAddress(account.address)}</div>
+            <span class="master-wallet-badge">HD</span>
           </div>
-          ${account.isActive ? '<span class="account-checkmark">✓</span>' : ''}
-          <div class="account-actions">
-            <button class="account-action-btn" onclick="editAccountName(${index}, '${account.name}')" title="Rename">✏️</button>
-            ${index !== 0 || account.type === 'imported' ? `<button class="account-action-btn delete" onclick="deleteAccount(${index})" title="Remove">🗑️</button>` : ''}
+          <div class="master-wallet-accounts">
+            ${mwAccounts.map(acc => renderAccountItem(acc)).join('')}
           </div>
         </div>
-      `).join('');
-
-      // Add click handlers for switching accounts
-      container.querySelectorAll('.account-item').forEach(item => {
-        item.addEventListener('click', async (e) => {
-          // Don't switch if clicking action buttons
-          if (e.target.closest('.account-actions')) return;
-          
-          const index = parseInt(item.dataset.index);
-          await switchToAccount(index);
-        });
-      });
-    } else {
-      container.innerHTML = '<p class="empty-state">No accounts found</p>';
+      `;
+    });
+    
+    // Render Imported/Legacy Accounts
+    if (importedAccounts.length > 0) {
+      html += `
+        <div class="imported-accounts-section">
+          <div class="imported-accounts-header">
+            <span class="section-icon">🔑</span>
+            <span class="section-title">Imported Accounts</span>
+          </div>
+          <div class="imported-accounts-list">
+            ${importedAccounts.map(acc => renderAccountItem(acc)).join('')}
+          </div>
+        </div>
+      `;
     }
+    
+    if (!html) {
+      html = '<p class="empty-state">No accounts found. Create a Master Wallet to get started!</p>';
+    }
+    
+    container.innerHTML = html;
+    
+    // Add event listeners
+    attachAccountEventListeners(container);
+    
   } catch (error) {
     console.error('Error loading accounts:', error);
     showToast('Error loading accounts', 'error');
   }
+}
+
+/**
+ * Render a single account item
+ */
+function renderAccountItem(account) {
+  const typeLabel = account.type === 'imported' ? 'Key' : 
+                    account.type === 'imported-seed' ? 'Seed' : '';
+  
+  return `
+    <div class="account-item ${account.isActive ? 'active' : ''}" data-index="${account.index}">
+      <div class="account-avatar">${account.name.charAt(0).toUpperCase()}</div>
+      <div class="account-info-main">
+        <div class="account-name-text">
+          ${account.name}
+          ${typeLabel ? `<span class="account-type-badge imported">${typeLabel}</span>` : ''}
+        </div>
+        <div class="account-address-text">${formatAddress(account.address)}</div>
+      </div>
+      ${account.isActive ? '<span class="account-checkmark">✓</span>' : ''}
+      <div class="account-actions">
+        <button class="account-action-btn" data-edit-account="${account.index}" data-account-name="${account.name}" title="Rename">✏️</button>
+        ${account.index !== 0 || account.type === 'imported' ? `<button class="account-action-btn delete" data-delete-account="${account.index}" title="Remove">🗑️</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Attach event listeners to account items
+ */
+function attachAccountEventListeners(container) {
+  // Edit buttons
+  container.querySelectorAll('[data-edit-account]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.editAccountName(parseInt(btn.dataset.editAccount), btn.dataset.accountName);
+    });
+  });
+  
+  // Delete buttons
+  container.querySelectorAll('[data-delete-account]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.deleteAccount(parseInt(btn.dataset.deleteAccount));
+    });
+  });
+
+  // Click to switch account
+  container.querySelectorAll('.account-item').forEach(item => {
+    item.addEventListener('click', async (e) => {
+      if (e.target.closest('.account-actions')) return;
+      const index = parseInt(item.dataset.index);
+      await switchToAccount(index);
+    });
+  });
 }
 
 /**
@@ -1788,14 +2741,34 @@ async function switchToAccount(accountIndex) {
  * Derive a new account from HD wallet
  */
 async function handleDeriveAccount() {
-  const name = prompt('Enter account name:', `Account ${Date.now() % 1000}`);
-  if (!name) return;
+  // Show custom modal instead of browser prompt
+  const modal = document.getElementById('create-account-modal');
+  if (modal) {
+    // Get next account number
+    const result = await sendMessage('getAccounts');
+    const hdAccountCount = result.accounts?.filter(a => a.type !== 'imported').length || 0;
+    document.getElementById('new-account-name').value = `Account ${hdAccountCount + 1}`;
+    modal.classList.add('show');
+  }
+}
+
+/**
+ * Confirm create account from modal
+ */
+async function confirmCreateAccount() {
+  const name = document.getElementById('new-account-name')?.value?.trim();
+  if (!name) {
+    showToast('Please enter an account name', 'error');
+    return;
+  }
 
   try {
     const result = await sendMessage('addAccount', { name });
     
     if (result.success) {
       showToast(`Created ${name}`, 'success');
+      document.getElementById('create-account-modal').classList.remove('show');
+      document.getElementById('new-account-name').value = '';
       await loadAccountsList();
     } else {
       showToast(result.error || 'Failed to create account', 'error');
@@ -1805,15 +2778,297 @@ async function handleDeriveAccount() {
   }
 }
 
+// Track selected master wallet for add account
+let selectedMasterWalletId = null;
+
+/**
+ * Show Add Account modal with master wallet selection
+ */
+async function showAddAccountModal() {
+  try {
+    const result = await sendMessage('getMasterWallets');
+    
+    if (!result.success || !result.masterWallets || result.masterWallets.length === 0) {
+      showToast('No Master Wallets found. Create one first!', 'error');
+      document.getElementById('create-master-wallet-modal').classList.add('show');
+      return;
+    }
+    
+    const listContainer = document.getElementById('master-wallet-list');
+    if (listContainer) {
+      listContainer.innerHTML = result.masterWallets.map(mw => `
+        <div class="master-wallet-option" data-master-id="${mw.id}">
+          <div class="wallet-icon">🏦</div>
+          <div class="wallet-details">
+            <div class="wallet-name">${mw.name}</div>
+            <div class="wallet-accounts">${mw.accountCount} account${mw.accountCount !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      // Add click handlers
+      listContainer.querySelectorAll('.master-wallet-option').forEach(option => {
+        option.addEventListener('click', () => handleSelectMasterWallet(option.dataset.masterId));
+      });
+    }
+    
+    selectedMasterWalletId = null;
+    document.getElementById('select-master-modal').classList.add('show');
+  } catch (error) {
+    console.error('Error loading master wallets:', error);
+    showToast('Error loading wallets', 'error');
+  }
+}
+
+/**
+ * Handle selecting a master wallet and adding account to it
+ */
+async function handleSelectMasterWallet(masterWalletId) {
+  const name = document.getElementById('new-derived-account-name')?.value?.trim();
+  
+  try {
+    const result = await sendMessage('addAccountToMaster', { 
+      masterWalletId, 
+      name 
+    });
+    
+    if (result.success) {
+      showToast(`Created ${result.name}`, 'success');
+      document.getElementById('select-master-modal').classList.remove('show');
+      document.getElementById('new-derived-account-name').value = '';
+      await loadAccountsList();
+    } else {
+      showToast(result.error || 'Failed to create account', 'error');
+    }
+  } catch (error) {
+    console.error('Error adding account:', error);
+    showToast('Error creating account', 'error');
+  }
+}
+
+/**
+ * Create new Master Wallet
+ */
+async function handleCreateMasterWallet() {
+  const name = document.getElementById('master-wallet-name')?.value?.trim() || 'Master Wallet';
+  
+  try {
+    const result = await sendMessage('createHDWallet', { name });
+    
+    if (result.success) {
+      document.getElementById('create-master-wallet-modal').classList.remove('show');
+      document.getElementById('master-wallet-name').value = '';
+      
+      // Show the seed phrase to the user so they can back it up
+      if (result.mnemonic) {
+        sessionStorage.setItem('temp_mnemonic', result.mnemonic);
+        showToast(`${result.masterWalletName} created! Please backup seed phrase.`, 'success');
+        
+        // Show seed phrase screen for backup
+        const seedDisplay = document.getElementById('seed-phrase-display');
+        if (seedDisplay) {
+          const words = result.mnemonic.split(' ');
+          seedDisplay.innerHTML = words.map((word, i) => `
+            <div class="seed-word">
+              <span class="word-number">${i + 1}</span>
+              <span class="word-text">${word}</span>
+            </div>
+          `).join('');
+        }
+        showScreen('seed');
+      } else {
+        await loadAccountsList();
+      }
+    } else {
+      showToast(result.error || 'Failed to create Master Wallet', 'error');
+    }
+  } catch (error) {
+    console.error('Error creating Master Wallet:', error);
+    showToast('Error creating Master Wallet', 'error');
+  }
+}
+
+/**
+ * Show bulk add to master modal
+ */
+async function showBulkAddMasterModal() {
+  try {
+    const result = await sendMessage('getMasterWallets');
+    
+    if (!result.success || !result.masterWallets || result.masterWallets.length === 0) {
+      showToast('No Master Wallets found. Create one first!', 'error');
+      return;
+    }
+    
+    const listContainer = document.getElementById('bulk-master-wallet-list');
+    if (listContainer) {
+      listContainer.innerHTML = result.masterWallets.map(mw => `
+        <div class="master-wallet-option" data-master-id="${mw.id}">
+          <div class="wallet-icon">🏦</div>
+          <div class="wallet-details">
+            <div class="wallet-name">${mw.name}</div>
+            <div class="wallet-accounts">${mw.accountCount} account${mw.accountCount !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      // Add click handlers
+      listContainer.querySelectorAll('.master-wallet-option').forEach(option => {
+        option.addEventListener('click', () => {
+          // Deselect all
+          listContainer.querySelectorAll('.master-wallet-option').forEach(o => o.classList.remove('selected'));
+          // Select this one
+          option.classList.add('selected');
+          selectedMasterWalletId = option.dataset.masterId;
+          // Enable confirm button
+          document.getElementById('btn-confirm-bulk-add-master').disabled = false;
+        });
+      });
+    }
+    
+    selectedMasterWalletId = null;
+    document.getElementById('btn-confirm-bulk-add-master').disabled = true;
+    document.getElementById('bulk-add-master-modal').classList.add('show');
+  } catch (error) {
+    console.error('Error loading master wallets:', error);
+    showToast('Error loading wallets', 'error');
+  }
+}
+
+/**
+ * Confirm bulk add accounts to selected master wallet
+ */
+async function confirmBulkAddToMaster() {
+  if (!selectedMasterWalletId) {
+    showToast('Please select a Master Wallet', 'error');
+    return;
+  }
+  
+  const count = parseInt(document.getElementById('bulk-add-master-count')?.value) || 5;
+  
+  if (count < 1 || count > 20) {
+    showToast('Please enter a number between 1 and 20', 'error');
+    return;
+  }
+
+  try {
+    const result = await sendMessage('bulkAddToMaster', { 
+      masterWalletId: selectedMasterWalletId, 
+      count 
+    });
+    
+    if (result.success) {
+      showToast(`Added ${result.addedCount} accounts`, 'success');
+      document.getElementById('bulk-add-master-modal').classList.remove('show');
+      selectedMasterWalletId = null;
+      await loadAccountsList();
+    } else {
+      showToast(result.error || 'Failed to add accounts', 'error');
+    }
+  } catch (error) {
+    showToast('Error adding accounts', 'error');
+  }
+}
+
+/**
+ * Legacy: Handle create HD wallet (kept for backwards compatibility)
+ */
+async function handleCreateHDWallet() {
+  const name = document.getElementById('hd-wallet-name')?.value?.trim() || 'Account 1';
+  
+  try {
+    const result = await sendMessage('createHDWallet', { name });
+    
+    if (result.success) {
+      document.getElementById('create-hd-wallet-modal')?.classList.remove('show');
+      
+      // Show the seed phrase to the user so they can back it up
+      if (result.mnemonic) {
+        // Store mnemonic temporarily for display
+        sessionStorage.setItem('temp_mnemonic', result.mnemonic);
+        showToast('HD Wallet created! Please backup your seed phrase.', 'success');
+        
+        // Show seed phrase screen for backup
+        const seedDisplay = document.getElementById('seed-phrase-display');
+        if (seedDisplay) {
+          const words = result.mnemonic.split(' ');
+          seedDisplay.innerHTML = words.map((word, i) => `
+            <div class="seed-word">
+              <span class="word-number">${i + 1}</span>
+              <span class="word-text">${word}</span>
+            </div>
+          `).join('');
+        }
+        showScreen('seed');
+      } else {
+        await loadAccountsList();
+      }
+    } else {
+      showToast(result.error || 'Failed to create HD wallet', 'error');
+    }
+  } catch (error) {
+    console.error('Error creating HD wallet:', error);
+    showToast('Error creating HD wallet', 'error');
+  }
+}
+
+/**
+ * Handle bulk add accounts
+ */
+async function handleBulkAddAccounts() {
+  const modal = document.getElementById('bulk-add-modal');
+  if (modal) {
+    modal.classList.add('show');
+  }
+}
+
+/**
+ * Confirm bulk add accounts
+ */
+async function confirmBulkAdd() {
+  const countInput = document.getElementById('bulk-add-count');
+  const count = parseInt(countInput?.value) || 5;
+  
+  if (count < 1 || count > 20) {
+    showToast('Please enter a number between 1 and 20', 'error');
+    return;
+  }
+
+  try {
+    const result = await sendMessage('bulkAddAccounts', { count });
+    
+    if (result.success) {
+      showToast(`Added ${count} accounts`, 'success');
+      document.getElementById('bulk-add-modal').classList.remove('show');
+      await loadAccountsList();
+    } else {
+      showToast(result.error || 'Failed to add accounts', 'error');
+    }
+  } catch (error) {
+    showToast('Error adding accounts', 'error');
+  }
+}
+
 /**
  * Import account via private key
  */
 async function handleImportKeyAccount() {
   const name = document.getElementById('import-key-name')?.value?.trim();
-  const privateKey = document.getElementById('import-key-value')?.value?.trim();
+  let privateKey = document.getElementById('import-key-value')?.value?.trim();
 
   if (!privateKey) {
     showToast('Please enter a private key', 'error');
+    return;
+  }
+
+  // Add 0x prefix if missing
+  if (!privateKey.startsWith('0x')) {
+    privateKey = '0x' + privateKey;
+  }
+
+  // Validate private key length (64 hex chars + 0x prefix = 66)
+  if (privateKey.length !== 66) {
+    showToast('Invalid private key length', 'error');
     return;
   }
 
@@ -1830,36 +3085,141 @@ async function handleImportKeyAccount() {
       showToast(result.error || 'Failed to import account', 'error');
     }
   } catch (error) {
-    showToast('Error importing account', 'error');
+    showToast('Error importing account: ' + error.message, 'error');
   }
 }
 
 /**
- * Edit account name
+ * Show import seed modal
  */
-window.editAccountName = async function(accountIndex, currentName) {
-  const newName = prompt('Enter new account name:', currentName);
-  if (!newName || newName === currentName) return;
+function showImportSeedModal() {
+  const modal = document.getElementById('import-seed-modal');
+  if (modal) {
+    modal.classList.add('show');
+  }
+}
+
+/**
+ * Import HD wallet from seed phrase
+ */
+async function handleImportSeedAccount() {
+  const name = document.getElementById('import-seed-name')?.value?.trim();
+  const seedPhrase = document.getElementById('import-seed-value')?.value?.trim();
+  const count = parseInt(document.getElementById('import-seed-count')?.value) || 1;
+
+  if (!seedPhrase) {
+    showToast('Please enter a seed phrase', 'error');
+    return;
+  }
+
+  // Validate seed phrase (12 or 24 words)
+  const words = seedPhrase.split(/\s+/).filter(w => w.length > 0);
+  if (words.length !== 12 && words.length !== 24) {
+    showToast('Seed phrase must be 12 or 24 words', 'error');
+    return;
+  }
 
   try {
-    const result = await sendMessage('renameAccount', { accountIndex, newName });
+    const result = await sendMessage('importSeedPhraseAccounts', { 
+      mnemonic: seedPhrase, 
+      name, 
+      count 
+    });
     
     if (result.success) {
-      showToast('Account renamed', 'success');
+      showToast(`Imported ${result.count} account(s)`, 'success');
+      document.getElementById('import-seed-modal').classList.remove('show');
+      document.getElementById('import-seed-name').value = '';
+      document.getElementById('import-seed-value').value = '';
+      document.getElementById('import-seed-count').value = '1';
       await loadAccountsList();
-      
-      // Update main screen if this is the active account
-      const status = await sendMessage('getWalletStatus');
-      if (status.success) {
-        document.getElementById('account-name').textContent = 
-          (await sendMessage('getAccounts')).accounts?.find(a => a.isActive)?.name || 'Account 1';
-      }
     } else {
-      showToast(result.error || 'Failed to rename account', 'error');
+      showToast(result.error || 'Failed to import wallet', 'error');
     }
   } catch (error) {
-    showToast('Error renaming account', 'error');
+    showToast('Error importing wallet: ' + error.message, 'error');
   }
+}
+
+/**
+ * Edit account name - show custom modal
+ */
+window.editAccountName = async function(accountIndex, currentName) {
+  // Create a temporary input modal
+  const existingModal = document.getElementById('rename-account-modal');
+  if (existingModal) existingModal.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'rename-account-modal';
+  modal.className = 'modal show';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Rename Account</h3>
+        <button class="modal-close" id="close-rename-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="rename-account-input">Account Name</label>
+          <input type="text" id="rename-account-input" value="${currentName}" placeholder="Enter new name">
+        </div>
+        <button id="btn-confirm-rename" class="btn btn-primary btn-full">
+          Save
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  // Focus the input
+  const input = document.getElementById('rename-account-input');
+  input.focus();
+  input.select();
+  
+  // Handle close
+  document.getElementById('close-rename-modal').addEventListener('click', () => {
+    modal.remove();
+  });
+  
+  // Handle confirm
+  document.getElementById('btn-confirm-rename').addEventListener('click', async () => {
+    const newName = input.value.trim();
+    if (!newName || newName === currentName) {
+      modal.remove();
+      return;
+    }
+
+    try {
+      const result = await sendMessage('renameAccount', { accountIndex, newName });
+      
+      if (result.success) {
+        showToast('Account renamed', 'success');
+        modal.remove();
+        await loadAccountsList();
+        
+        // Update main screen if this is the active account
+        const status = await sendMessage('getWalletStatus');
+        if (status.success) {
+          const accounts = await sendMessage('getAccounts');
+          document.getElementById('account-name').textContent = 
+            accounts.accounts?.find(a => a.isActive)?.name || 'Account 1';
+        }
+      } else {
+        showToast(result.error || 'Failed to rename account', 'error');
+      }
+    } catch (error) {
+      showToast('Error renaming account', 'error');
+    }
+  });
+  
+  // Handle Enter key
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('btn-confirm-rename').click();
+    } else if (e.key === 'Escape') {
+      modal.remove();
+    }
+  });
 };
 
 /**
@@ -1881,3 +3241,114 @@ window.deleteAccount = async function(accountIndex) {
     showToast('Error removing account', 'error');
   }
 };
+
+// ============================================
+// DAPP CONNECTION REQUESTS
+// ============================================
+
+/**
+ * Show dApp connection request modal
+ */
+function showDappConnectionRequest(request) {
+  if (!request) return;
+  
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('dapp-connect-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dapp-connect-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content dapp-connect-content">
+        <div class="dapp-connect-header">
+          <div class="dapp-icon">🌐</div>
+          <h3>Connection Request</h3>
+        </div>
+        <div class="dapp-connect-body">
+          <p class="dapp-origin" id="dapp-origin"></p>
+          <p class="dapp-message">This site wants to connect to your wallet</p>
+          <div class="dapp-permissions">
+            <p class="permission-title">This will allow the site to:</p>
+            <ul>
+              <li>✓ See your wallet address</li>
+              <li>✓ Request transaction approvals</li>
+              <li>✓ Request message signatures</li>
+            </ul>
+          </div>
+          <div class="dapp-account-info">
+            <span class="label">Account:</span>
+            <span class="account-address" id="dapp-account-address"></span>
+          </div>
+          <div class="dapp-network-info">
+            <span class="label">Network:</span>
+            <span class="network-name" id="dapp-network-name"></span>
+          </div>
+        </div>
+        <div class="dapp-connect-actions">
+          <button class="btn btn-secondary" id="btn-reject-dapp">Reject</button>
+          <button class="btn btn-primary" id="btn-approve-dapp">Connect</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Add event listeners
+    document.getElementById('btn-approve-dapp').addEventListener('click', approveDappConnection);
+    document.getElementById('btn-reject-dapp').addEventListener('click', rejectDappConnection);
+  }
+  
+  // Update modal content
+  document.getElementById('dapp-origin').textContent = request.origin;
+  document.getElementById('dapp-account-address').textContent = formatAddress(currentWalletAddress);
+  document.getElementById('dapp-network-name').textContent = currentNetwork?.name || 'Ramestta Mainnet';
+  
+  // Show modal
+  modal.classList.add('active');
+}
+
+/**
+ * Approve dApp connection
+ */
+async function approveDappConnection() {
+  if (!pendingDappRequest) return;
+  
+  try {
+    const result = await sendMessage('approveDappConnection', { requestId: pendingDappRequest.id });
+    
+    if (result.success) {
+      showToast('Connected to ' + pendingDappRequest.origin, 'success');
+      document.getElementById('dapp-connect-modal')?.classList.remove('active');
+      pendingDappRequest = null;
+      
+      // Close popup if opened from window
+      if (window.location.search.includes('dappRequest')) {
+        window.close();
+      }
+    } else {
+      showToast(result.error || 'Failed to connect', 'error');
+    }
+  } catch (error) {
+    showToast('Error connecting to site', 'error');
+  }
+}
+
+/**
+ * Reject dApp connection
+ */
+async function rejectDappConnection() {
+  if (!pendingDappRequest) return;
+  
+  try {
+    await sendMessage('rejectDappConnection', { requestId: pendingDappRequest.id });
+    showToast('Connection rejected', 'info');
+    document.getElementById('dapp-connect-modal')?.classList.remove('active');
+    pendingDappRequest = null;
+    
+    // Close popup if opened from window
+    if (window.location.search.includes('dappRequest')) {
+      window.close();
+    }
+  } catch (error) {
+    console.error('Error rejecting connection:', error);
+  }
+}

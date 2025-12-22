@@ -30,8 +30,47 @@ export async function generateQRCode(text, options = {}) {
   }
 }
 
-// Ramestta Network Configurations
-export const NETWORKS = {
+// ============================================
+// NETWORK CONFIGURATIONS
+// All available networks from RamaPay Android app
+// Ramestta is the default and primary network
+// ============================================
+
+// Network Icons - CDN URLs for major blockchain networks
+export const NETWORK_ICONS = {
+  // Ramestta - use local icon
+  ramestta: 'icons/rama.png',
+  // Ethereum ecosystem
+  ethereum: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+  etc: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/classic/info/logo.png',
+  // Layer 2s
+  polygon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+  arbitrum: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
+  optimism: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
+  base: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
+  linea: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/linea/info/logo.png',
+  mantle: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png',
+  // Other chains
+  binance: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png',
+  avalanche: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
+  fantom: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/fantom/info/logo.png',
+  gnosis: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
+  cronos: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/info/logo.png',
+  klaytn: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png',
+  aurora: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png',
+  iotex: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/iotex/info/logo.png',
+  rootstock: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/rootstock/info/logo.png',
+  okx: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/okc/info/logo.png',
+  palm: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/palm/info/logo.png',
+  milkomeda: 'https://raw.githubusercontent.com/milkomeda-com/assets/main/milkomeda-logo.png',
+  mint: 'https://mint.club/assets/logo/mint-logo.png'
+};
+
+// All available networks (full list from Android app)
+export const ALL_NETWORKS = {
+  // ============================================
+  // RAMESTTA NETWORKS (Primary - Default Enabled)
+  // ============================================
   ramestta_mainnet: {
     chainId: 1370,
     chainIdHex: '0x55a',
@@ -45,12 +84,15 @@ export const NETWORKS = {
       'https://blockchain.rfrm.io'
     ],
     explorerUrl: 'https://ramascan.com',
-    isTestnet: false
+    isTestnet: false,
+    isDefault: true,
+    category: 'ramestta',
+    icon: 'icons/rama.png'
   },
   ramestta_testnet: {
-    chainId: 1377,
-    chainIdHex: '0x561',
-    name: 'Ramestta Testnet (Pingaksha)',
+    chainId: 1369,
+    chainIdHex: '0x559',
+    name: 'Ramestta Testnet',
     symbol: 'RAMA',
     decimals: 18,
     rpcUrl: 'https://testnet.ramestta.com',
@@ -58,9 +100,16 @@ export const NETWORKS = {
       'https://testnet.ramestta.com',
       'https://testnet.rfrm.io'
     ],
-    explorerUrl: 'https://pingaksha.ramascan.com',
-    isTestnet: true
+    explorerUrl: 'https://testnet.ramascan.com',
+    isTestnet: true,
+    isDefault: true,
+    category: 'ramestta',
+    icon: 'icons/rama.png'
   },
+
+  // ============================================
+  // ETHEREUM NETWORKS
+  // ============================================
   ethereum_mainnet: {
     chainId: 1,
     chainIdHex: '0x1',
@@ -68,11 +117,672 @@ export const NETWORKS = {
     symbol: 'ETH',
     decimals: 18,
     rpcUrl: 'https://eth.llamarpc.com',
-    rpcUrls: ['https://eth.llamarpc.com', 'https://ethereum.publicnode.com'],
+    rpcUrls: [
+      'https://eth.llamarpc.com',
+      'https://ethereum.publicnode.com',
+      'https://rpc.payload.de',
+      'https://eth-mainnet.public.blastapi.io'
+    ],
     explorerUrl: 'https://etherscan.io',
-    isTestnet: false
+    isTestnet: false,
+    category: 'ethereum',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png'
+  },
+  ethereum_classic: {
+    chainId: 61,
+    chainIdHex: '0x3d',
+    name: 'Ethereum Classic',
+    symbol: 'ETC',
+    decimals: 18,
+    rpcUrl: 'https://www.ethercluster.com/etc',
+    rpcUrls: ['https://www.ethercluster.com/etc', 'https://etc.rivet.link'],
+    explorerUrl: 'https://blockscout.com/etc/mainnet',
+    isTestnet: false,
+    category: 'ethereum',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/classic/info/logo.png'
+  },
+  sepolia_testnet: {
+    chainId: 11155111,
+    chainIdHex: '0xaa36a7',
+    name: 'Sepolia Testnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://rpc.sepolia.org',
+    rpcUrls: ['https://rpc.sepolia.org', 'https://sepolia.drpc.org'],
+    explorerUrl: 'https://sepolia.etherscan.io',
+    isTestnet: true,
+    category: 'ethereum',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png'
+  },
+  holesky_testnet: {
+    chainId: 17000,
+    chainIdHex: '0x4268',
+    name: 'Holesky Testnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://rpc.holesky.ethpandaops.io',
+    rpcUrls: ['https://rpc.holesky.ethpandaops.io', 'https://holesky.drpc.org'],
+    explorerUrl: 'https://holesky.etherscan.io',
+    isTestnet: true,
+    category: 'ethereum',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png'
+  },
+
+  // ============================================
+  // POLYGON NETWORKS
+  // ============================================
+  polygon_mainnet: {
+    chainId: 137,
+    chainIdHex: '0x89',
+    name: 'Polygon Mainnet',
+    symbol: 'MATIC',
+    decimals: 18,
+    rpcUrl: 'https://polygon.llamarpc.com',
+    rpcUrls: [
+      'https://polygon.llamarpc.com',
+      'https://polygon-rpc.com',
+      'https://polygon.lava.build'
+    ],
+    explorerUrl: 'https://polygonscan.com',
+    isTestnet: false,
+    category: 'polygon',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png'
+  },
+  polygon_amoy: {
+    chainId: 80002,
+    chainIdHex: '0x13882',
+    name: 'Polygon Amoy Testnet',
+    symbol: 'MATIC',
+    decimals: 18,
+    rpcUrl: 'https://rpc-amoy.polygon.technology',
+    rpcUrls: ['https://rpc-amoy.polygon.technology', 'https://polygon-amoy.drpc.org'],
+    explorerUrl: 'https://amoy.polygonscan.com',
+    isTestnet: true,
+    category: 'polygon',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png'
+  },
+
+  // ============================================
+  // BINANCE SMART CHAIN
+  // ============================================
+  binance_mainnet: {
+    chainId: 56,
+    chainIdHex: '0x38',
+    name: 'BNB Smart Chain',
+    symbol: 'BNB',
+    decimals: 18,
+    rpcUrl: 'https://bsc-dataseed.binance.org',
+    rpcUrls: [
+      'https://bsc-dataseed.binance.org',
+      'https://binance.llamarpc.com',
+      'https://bsc-rpc.publicnode.com'
+    ],
+    explorerUrl: 'https://bscscan.com',
+    isTestnet: false,
+    category: 'binance',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png'
+  },
+  binance_testnet: {
+    chainId: 97,
+    chainIdHex: '0x61',
+    name: 'BNB Smart Chain Testnet',
+    symbol: 'tBNB',
+    decimals: 18,
+    rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545',
+    rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org:8545', 'https://bsc-testnet.drpc.org'],
+    explorerUrl: 'https://testnet.bscscan.com',
+    isTestnet: true,
+    category: 'binance',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png'
+  },
+
+  // ============================================
+  // AVALANCHE NETWORKS
+  // ============================================
+  avalanche_mainnet: {
+    chainId: 43114,
+    chainIdHex: '0xa86a',
+    name: 'Avalanche C-Chain',
+    symbol: 'AVAX',
+    decimals: 18,
+    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+    rpcUrls: [
+      'https://api.avax.network/ext/bc/C/rpc',
+      'https://avax.meowrpc.com',
+      'https://avalanche.drpc.org'
+    ],
+    explorerUrl: 'https://snowtrace.io',
+    isTestnet: false,
+    category: 'avalanche',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png'
+  },
+  avalanche_fuji: {
+    chainId: 43113,
+    chainIdHex: '0xa869',
+    name: 'Avalanche Fuji Testnet',
+    symbol: 'AVAX',
+    decimals: 18,
+    rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc',
+    rpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc', 'https://avalanche-fuji.drpc.org'],
+    explorerUrl: 'https://testnet.snowtrace.io',
+    isTestnet: true,
+    category: 'avalanche',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png'
+  },
+
+  // ============================================
+  // ARBITRUM NETWORKS
+  // ============================================
+  arbitrum_mainnet: {
+    chainId: 42161,
+    chainIdHex: '0xa4b1',
+    name: 'Arbitrum One',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://arb1.arbitrum.io/rpc',
+    rpcUrls: [
+      'https://arb1.arbitrum.io/rpc',
+      'https://arbitrum.meowrpc.com',
+      'https://rpc.ankr.com/arbitrum'
+    ],
+    explorerUrl: 'https://arbiscan.io',
+    isTestnet: false,
+    category: 'arbitrum',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png'
+  },
+  arbitrum_sepolia: {
+    chainId: 421614,
+    chainIdHex: '0x66eee',
+    name: 'Arbitrum Sepolia Testnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://arbitrum-sepolia.drpc.org',
+    rpcUrls: ['https://arbitrum-sepolia.drpc.org', 'https://sepolia-rollup.arbitrum.io/rpc'],
+    explorerUrl: 'https://sepolia.arbiscan.io',
+    isTestnet: true,
+    category: 'arbitrum',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png'
+  },
+
+  // ============================================
+  // OPTIMISM NETWORKS
+  // ============================================
+  optimism_mainnet: {
+    chainId: 10,
+    chainIdHex: '0xa',
+    name: 'Optimism',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://mainnet.optimism.io',
+    rpcUrls: ['https://mainnet.optimism.io', 'https://optimism.drpc.org'],
+    explorerUrl: 'https://optimistic.etherscan.io',
+    isTestnet: false,
+    category: 'optimism',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png'
+  },
+
+  // ============================================
+  // BASE NETWORKS
+  // ============================================
+  base_mainnet: {
+    chainId: 8453,
+    chainIdHex: '0x2105',
+    name: 'Base',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://base-rpc.publicnode.com',
+    rpcUrls: ['https://base-rpc.publicnode.com', 'https://base.drpc.org'],
+    explorerUrl: 'https://basescan.org',
+    isTestnet: false,
+    category: 'base',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png'
+  },
+  base_sepolia: {
+    chainId: 84532,
+    chainIdHex: '0x14a34',
+    name: 'Base Sepolia Testnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://sepolia.base.org',
+    rpcUrls: ['https://sepolia.base.org', 'https://base-sepolia-rpc.publicnode.com'],
+    explorerUrl: 'https://sepolia.basescan.org',
+    isTestnet: true,
+    category: 'base',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png'
+  },
+
+  // ============================================
+  // FANTOM NETWORKS
+  // ============================================
+  fantom_mainnet: {
+    chainId: 250,
+    chainIdHex: '0xfa',
+    name: 'Fantom Opera',
+    symbol: 'FTM',
+    decimals: 18,
+    rpcUrl: 'https://rpcapi.fantom.network',
+    rpcUrls: ['https://rpcapi.fantom.network', 'https://rpc.fantom.network'],
+    explorerUrl: 'https://ftmscan.com',
+    isTestnet: false,
+    category: 'fantom',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/fantom/info/logo.png'
+  },
+  fantom_testnet: {
+    chainId: 4002,
+    chainIdHex: '0xfa2',
+    name: 'Fantom Testnet',
+    symbol: 'FTM',
+    decimals: 18,
+    rpcUrl: 'https://rpc.testnet.fantom.network',
+    rpcUrls: ['https://rpc.testnet.fantom.network'],
+    explorerUrl: 'https://testnet.ftmscan.com',
+    isTestnet: true,
+    category: 'fantom',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/fantom/info/logo.png'
+  },
+
+  // ============================================
+  // GNOSIS CHAIN
+  // ============================================
+  gnosis_mainnet: {
+    chainId: 100,
+    chainIdHex: '0x64',
+    name: 'Gnosis Chain',
+    symbol: 'xDAI',
+    decimals: 18,
+    rpcUrl: 'https://rpc.gnosischain.com',
+    rpcUrls: ['https://rpc.gnosischain.com', '0xrpc.io/gno'],
+    explorerUrl: 'https://gnosisscan.io',
+    isTestnet: false,
+    category: 'gnosis',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png'
+  },
+
+  // ============================================
+  // CRONOS NETWORKS
+  // ============================================
+  cronos_mainnet: {
+    chainId: 25,
+    chainIdHex: '0x19',
+    name: 'Cronos Mainnet',
+    symbol: 'CRO',
+    decimals: 18,
+    rpcUrl: 'https://evm.cronos.org',
+    rpcUrls: ['https://evm.cronos.org', 'https://cronos.drpc.org'],
+    explorerUrl: 'https://cronoscan.com',
+    isTestnet: false,
+    category: 'cronos',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/info/logo.png'
+  },
+  cronos_testnet: {
+    chainId: 338,
+    chainIdHex: '0x152',
+    name: 'Cronos Testnet',
+    symbol: 'tCRO',
+    decimals: 18,
+    rpcUrl: 'https://evm-t3.cronos.org',
+    rpcUrls: ['https://evm-t3.cronos.org', 'https://cronos-testnet.drpc.org'],
+    explorerUrl: 'https://testnet.cronoscan.com',
+    isTestnet: true,
+    category: 'cronos',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/info/logo.png'
+  },
+
+  // ============================================
+  // LINEA NETWORKS
+  // ============================================
+  linea_mainnet: {
+    chainId: 59144,
+    chainIdHex: '0xe708',
+    name: 'Linea Mainnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://rpc.linea.build',
+    rpcUrls: ['https://rpc.linea.build', 'https://linea.drpc.org'],
+    explorerUrl: 'https://lineascan.build',
+    isTestnet: false,
+    category: 'linea',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/linea/info/logo.png'
+  },
+  linea_testnet: {
+    chainId: 59141,
+    chainIdHex: '0xe705',
+    name: 'Linea Sepolia Testnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://rpc.sepolia.linea.build',
+    rpcUrls: ['https://rpc.sepolia.linea.build'],
+    explorerUrl: 'https://sepolia.lineascan.build',
+    isTestnet: true,
+    category: 'linea',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/linea/info/logo.png'
+  },
+
+  // ============================================
+  // MANTLE NETWORKS
+  // ============================================
+  mantle_mainnet: {
+    chainId: 5000,
+    chainIdHex: '0x1388',
+    name: 'Mantle',
+    symbol: 'MNT',
+    decimals: 18,
+    rpcUrl: 'https://rpc.mantle.xyz',
+    rpcUrls: ['https://rpc.mantle.xyz', 'https://mantle-mainnet.public.blastapi.io'],
+    explorerUrl: 'https://explorer.mantle.xyz',
+    isTestnet: false,
+    category: 'mantle',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png'
+  },
+  mantle_testnet: {
+    chainId: 5003,
+    chainIdHex: '0x138b',
+    name: 'Mantle Sepolia Testnet',
+    symbol: 'MNT',
+    decimals: 18,
+    rpcUrl: 'https://rpc.sepolia.mantle.xyz',
+    rpcUrls: ['https://rpc.sepolia.mantle.xyz'],
+    explorerUrl: 'https://sepolia.mantlescan.xyz',
+    isTestnet: true,
+    category: 'mantle',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png'
+  },
+
+  // ============================================
+  // KLAYTN / KAIA NETWORKS
+  // ============================================
+  klaytn_mainnet: {
+    chainId: 8217,
+    chainIdHex: '0x2019',
+    name: 'Kaia Mainnet',
+    symbol: 'KAIA',
+    decimals: 18,
+    rpcUrl: 'https://klaytn.blockpi.network/v1/rpc/public',
+    rpcUrls: ['https://klaytn.blockpi.network/v1/rpc/public'],
+    explorerUrl: 'https://scope.klaytn.com',
+    isTestnet: false,
+    category: 'klaytn',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png'
+  },
+  klaytn_baobab: {
+    chainId: 1001,
+    chainIdHex: '0x3e9',
+    name: 'Kaia Kairos Testnet',
+    symbol: 'KAIA',
+    decimals: 18,
+    rpcUrl: 'https://klaytn-baobab.blockpi.network/v1/rpc/public',
+    rpcUrls: ['https://klaytn-baobab.blockpi.network/v1/rpc/public'],
+    explorerUrl: 'https://baobab.scope.klaytn.com',
+    isTestnet: true,
+    category: 'klaytn',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png'
+  },
+
+  // ============================================
+  // AURORA NETWORKS
+  // ============================================
+  aurora_mainnet: {
+    chainId: 1313161554,
+    chainIdHex: '0x4e454152',
+    name: 'Aurora Mainnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://mainnet.aurora.dev',
+    rpcUrls: ['https://mainnet.aurora.dev', 'https://aurora.drpc.org'],
+    explorerUrl: 'https://aurorascan.dev',
+    isTestnet: false,
+    category: 'aurora',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png'
+  },
+  aurora_testnet: {
+    chainId: 1313161555,
+    chainIdHex: '0x4e454153',
+    name: 'Aurora Testnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://testnet.aurora.dev',
+    rpcUrls: ['https://testnet.aurora.dev'],
+    explorerUrl: 'https://testnet.aurorascan.dev',
+    isTestnet: true,
+    category: 'aurora',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png'
+  },
+
+  // ============================================
+  // IOTEX NETWORKS
+  // ============================================
+  iotex_mainnet: {
+    chainId: 4689,
+    chainIdHex: '0x1251',
+    name: 'IoTeX Mainnet',
+    symbol: 'IOTX',
+    decimals: 18,
+    rpcUrl: 'https://babel-api.mainnet.iotex.io',
+    rpcUrls: ['https://babel-api.mainnet.iotex.io'],
+    explorerUrl: 'https://iotexscan.io',
+    isTestnet: false,
+    category: 'iotex',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/iotex/info/logo.png'
+  },
+  iotex_testnet: {
+    chainId: 4690,
+    chainIdHex: '0x1252',
+    name: 'IoTeX Testnet',
+    symbol: 'IOTX',
+    decimals: 18,
+    rpcUrl: 'https://babel-api.testnet.iotex.io',
+    rpcUrls: ['https://babel-api.testnet.iotex.io'],
+    explorerUrl: 'https://testnet.iotexscan.io',
+    isTestnet: true,
+    category: 'iotex',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/iotex/info/logo.png'
+  },
+
+  // ============================================
+  // ROOTSTOCK (RSK) NETWORKS
+  // ============================================
+  rootstock_mainnet: {
+    chainId: 30,
+    chainIdHex: '0x1e',
+    name: 'Rootstock Mainnet',
+    symbol: 'RBTC',
+    decimals: 18,
+    rpcUrl: 'https://public-node.rsk.co',
+    rpcUrls: ['https://public-node.rsk.co'],
+    explorerUrl: 'https://explorer.rsk.co',
+    isTestnet: false,
+    category: 'rootstock',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/rootstock/info/logo.png'
+  },
+  rootstock_testnet: {
+    chainId: 31,
+    chainIdHex: '0x1f',
+    name: 'Rootstock Testnet',
+    symbol: 'tRBTC',
+    decimals: 18,
+    rpcUrl: 'https://public-node.testnet.rsk.co',
+    rpcUrls: ['https://public-node.testnet.rsk.co'],
+    explorerUrl: 'https://explorer.testnet.rsk.co',
+    isTestnet: true,
+    category: 'rootstock',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/rootstock/info/logo.png'
+  },
+
+  // ============================================
+  // OKX CHAIN
+  // ============================================
+  okx_mainnet: {
+    chainId: 66,
+    chainIdHex: '0x42',
+    name: 'OKXChain Mainnet',
+    symbol: 'OKT',
+    decimals: 18,
+    rpcUrl: 'https://exchainrpc.okex.org',
+    rpcUrls: ['https://exchainrpc.okex.org', 'https://oktc.drpc.org'],
+    explorerUrl: 'https://www.oklink.com/oktc',
+    isTestnet: false,
+    category: 'okx',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/okc/info/logo.png'
+  },
+
+  // ============================================
+  // PALM NETWORK
+  // ============================================
+  palm_mainnet: {
+    chainId: 11297108109,
+    chainIdHex: '0x2a15c308d',
+    name: 'Palm Mainnet',
+    symbol: 'PALM',
+    decimals: 18,
+    rpcUrl: 'https://palm-mainnet.public.blastapi.io',
+    rpcUrls: ['https://palm-mainnet.public.blastapi.io'],
+    explorerUrl: 'https://explorer.palm.io',
+    isTestnet: false,
+    category: 'palm',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/palm/info/logo.png'
+  },
+  palm_testnet: {
+    chainId: 11297108099,
+    chainIdHex: '0x2a15c3083',
+    name: 'Palm Testnet',
+    symbol: 'PALM',
+    decimals: 18,
+    rpcUrl: 'https://palm-testnet.public.blastapi.io',
+    rpcUrls: ['https://palm-testnet.public.blastapi.io'],
+    explorerUrl: 'https://explorer.palm-uat.xyz',
+    isTestnet: true,
+    category: 'palm',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/palm/info/logo.png'
+  },
+
+  // ============================================
+  // MILKOMEDA NETWORK
+  // ============================================
+  milkomeda_c1: {
+    chainId: 2001,
+    chainIdHex: '0x7d1',
+    name: 'Milkomeda Cardano',
+    symbol: 'milkADA',
+    decimals: 18,
+    rpcUrl: 'https://rpc-mainnet-cardano-evm.c1.milkomeda.com',
+    rpcUrls: ['https://rpc-mainnet-cardano-evm.c1.milkomeda.com'],
+    explorerUrl: 'https://explorer-mainnet-cardano-evm.c1.milkomeda.com',
+    isTestnet: false,
+    category: 'milkomeda',
+    icon: 'https://raw.githubusercontent.com/milkomeda-com/assets/main/milkomeda-logo.png'
+  },
+
+  // ============================================
+  // MINT NETWORK
+  // ============================================
+  mint_mainnet: {
+    chainId: 185,
+    chainIdHex: '0xb9',
+    name: 'Mint Mainnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://global.rpc.mintchain.io',
+    rpcUrls: ['https://global.rpc.mintchain.io', 'https://asia.rpc.mintchain.io'],
+    explorerUrl: 'https://explorer.mintchain.io',
+    isTestnet: false,
+    category: 'mint',
+    icon: 'https://mintchain.io/favicon.png'
+  },
+  mint_sepolia: {
+    chainId: 1687,
+    chainIdHex: '0x697',
+    name: 'Mint Sepolia Testnet',
+    symbol: 'ETH',
+    decimals: 18,
+    rpcUrl: 'https://sepolia-testnet-rpc.mintchain.io',
+    rpcUrls: ['https://sepolia-testnet-rpc.mintchain.io'],
+    explorerUrl: 'https://sepolia-testnet-explorer.mintchain.io',
+    isTestnet: true,
+    category: 'mint',
+    icon: 'https://mintchain.io/favicon.png'
   }
 };
+
+// Default enabled networks (only Ramestta by default)
+export const DEFAULT_ENABLED_NETWORKS = ['ramestta_mainnet', 'ramestta_testnet'];
+
+// Current active networks (starts with defaults, user can add more)
+export let NETWORKS = {};
+
+// Initialize NETWORKS with defaults
+Object.keys(ALL_NETWORKS).forEach(key => {
+  if (DEFAULT_ENABLED_NETWORKS.includes(key)) {
+    NETWORKS[key] = ALL_NETWORKS[key];
+  }
+});
+
+/**
+ * Enable a network from the pre-built list
+ * @param {string} networkKey - Key of the network to enable
+ */
+export function enableNetwork(networkKey) {
+  if (ALL_NETWORKS[networkKey]) {
+    NETWORKS[networkKey] = ALL_NETWORKS[networkKey];
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Disable a network (remove from active list)
+ * @param {string} networkKey - Key of the network to disable
+ */
+export function disableNetwork(networkKey) {
+  // Don't allow disabling Ramestta mainnet
+  if (networkKey === 'ramestta_mainnet') {
+    return false;
+  }
+  if (NETWORKS[networkKey] && !NETWORKS[networkKey].isCustom) {
+    delete NETWORKS[networkKey];
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Get all available networks (for settings/pre-built list)
+ */
+export function getAllAvailableNetworks() {
+  return ALL_NETWORKS;
+}
+
+/**
+ * Get enabled network keys
+ */
+export function getEnabledNetworkKeys() {
+  return Object.keys(NETWORKS).filter(key => !key.startsWith('custom_'));
+}
+
+/**
+ * Set enabled networks from array of keys
+ */
+export function setEnabledNetworks(networkKeys) {
+  // Always include Ramestta mainnet
+  if (!networkKeys.includes('ramestta_mainnet')) {
+    networkKeys.unshift('ramestta_mainnet');
+  }
+  
+  // Clear current built-in networks (keep custom)
+  const customNetworks = {};
+  Object.keys(NETWORKS).forEach(key => {
+    if (key.startsWith('custom_')) {
+      customNetworks[key] = NETWORKS[key];
+    }
+  });
+  
+  // Rebuild NETWORKS
+  NETWORKS = { ...customNetworks };
+  networkKeys.forEach(key => {
+    if (ALL_NETWORKS[key]) {
+      NETWORKS[key] = ALL_NETWORKS[key];
+    }
+  });
+}
 
 // BIP44 derivation path for Ethereum-compatible chains
 const DERIVATION_PATH = "m/44'/60'/0'/0";
@@ -198,11 +908,33 @@ export class WalletManager {
         publicKey: wallet.publicKey,
         derivationPath: `${DERIVATION_PATH}/${i}`,
         accountIndex: i,
-        name: `Account ${i + 1}`
+        name: `Account ${i + 1}`,
+        type: 'derived'
       });
     }
 
     return accounts;
+  }
+
+  /**
+   * Derive a single account at a specific index
+   * @param {string} mnemonic - Seed phrase
+   * @param {number} index - Account index to derive
+   * @returns {Object} Wallet data for the derived account
+   */
+  async deriveAccount(mnemonic, index) {
+    const hdNode = ethers.HDNodeWallet.fromPhrase(mnemonic.trim(), '', DERIVATION_PATH);
+    const wallet = hdNode.deriveChild(index);
+    
+    return {
+      address: wallet.address,
+      privateKey: wallet.privateKey,
+      publicKey: wallet.publicKey,
+      derivationPath: `${DERIVATION_PATH}/${index}`,
+      accountIndex: index,
+      name: `Account ${index + 1}`,
+      type: 'derived'
+    };
   }
 
   /**
@@ -304,11 +1036,17 @@ export class WalletManager {
       await this.initProvider();
     }
 
+    // Validate and sanitize amount
+    const sanitizedAmount = parseFloat(amount).toString();
+    if (isNaN(parseFloat(sanitizedAmount)) || parseFloat(sanitizedAmount) <= 0) {
+      throw new Error('Invalid amount');
+    }
+
     const wallet = new ethers.Wallet(privateKey, this.provider);
     
     const tx = await wallet.sendTransaction({
       to: to,
-      value: ethers.parseEther(amount)
+      value: ethers.parseEther(sanitizedAmount)
     });
 
     return await tx.wait();
@@ -418,21 +1156,88 @@ export class WalletManager {
   }
 
   /**
-   * Get transaction history (basic - from explorer API if available)
+   * Get transaction history from explorer API
+   * Supports Etherscan-compatible APIs (Ramascan, Etherscan, Polygonscan, etc.)
    * @param {string} address - Wallet address
    * @returns {Array} Transaction list
    */
   async getTransactionHistory(address) {
-    // This would typically use an indexer or explorer API
-    // For Ramestta, we'd use the ramascan API
-    const explorerApiUrl = `${this.currentNetwork.explorerUrl}/api`;
+    if (!address) return [];
+    
+    const explorerUrl = this.currentNetwork.explorerUrl;
+    if (!explorerUrl) return [];
+    
+    // Build the API URL - most explorers use /api endpoint
+    let apiUrl;
+    
+    // Handle different explorer API patterns
+    if (explorerUrl.includes('ramascan.com')) {
+      // Ramascan API
+      apiUrl = `https://ramascan.com/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else if (explorerUrl.includes('etherscan.io')) {
+      // Etherscan
+      apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else if (explorerUrl.includes('polygonscan.com')) {
+      // Polygonscan
+      apiUrl = `https://api.polygonscan.com/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else if (explorerUrl.includes('bscscan.com')) {
+      // BSCscan
+      apiUrl = `https://api.bscscan.com/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else if (explorerUrl.includes('arbiscan.io')) {
+      // Arbiscan
+      apiUrl = `https://api.arbiscan.io/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else if (explorerUrl.includes('optimistic.etherscan.io')) {
+      // Optimism
+      apiUrl = `https://api-optimistic.etherscan.io/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else if (explorerUrl.includes('basescan.org')) {
+      // Base
+      apiUrl = `https://api.basescan.org/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else if (explorerUrl.includes('snowtrace.io') || explorerUrl.includes('snowscan.xyz')) {
+      // Avalanche
+      apiUrl = `https://api.snowscan.xyz/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else if (explorerUrl.includes('ftmscan.com')) {
+      // Fantom
+      apiUrl = `https://api.ftmscan.com/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    } else {
+      // Try generic API endpoint (many explorers follow this pattern)
+      apiUrl = `${explorerUrl.replace(/\/$/, '')}/api?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    }
     
     try {
-      const response = await fetch(
-        `${explorerApiUrl}?module=account&action=txlist&address=${address}&sort=desc`
-      );
+      console.log('Fetching transactions from:', apiUrl);
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
-      return data.result || [];
+      
+      // Handle different response formats
+      if (data.status === '1' && Array.isArray(data.result)) {
+        return data.result.map(tx => ({
+          hash: tx.hash,
+          from: tx.from,
+          to: tx.to,
+          value: tx.value,
+          timeStamp: tx.timeStamp,
+          blockNumber: tx.blockNumber,
+          gasPrice: tx.gasPrice,
+          gasUsed: tx.gasUsed,
+          isError: tx.isError === '1',
+          txreceipt_status: tx.txreceipt_status,
+          input: tx.input,
+          methodId: tx.methodId,
+          functionName: tx.functionName
+        }));
+      } else if (Array.isArray(data.result)) {
+        return data.result;
+      } else if (data.message === 'No transactions found') {
+        return [];
+      }
+      
+      console.warn('Unexpected API response:', data);
+      return [];
     } catch (error) {
       console.warn('Transaction history fetch failed:', error);
       return [];

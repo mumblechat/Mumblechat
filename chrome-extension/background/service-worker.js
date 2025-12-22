@@ -3,7 +3,8 @@
  * Handles extension lifecycle, message passing, and Web3 provider coordination
  */
 
-import { WalletManager, StorageManager, NETWORKS, generateQRCode } from '../lib/wallet.js';
+import { ethers } from 'ethers';
+import { WalletManager, StorageManager, NETWORKS, generateQRCode, ALL_NETWORKS, DEFAULT_ENABLED_NETWORKS, enableNetwork, disableNetwork, setEnabledNetworks, getEnabledNetworkKeys } from '../lib/wallet.js';
 
 const walletManager = new WalletManager();
 const storageManager = new StorageManager();
@@ -13,6 +14,12 @@ let isUnlocked = false;
 let sessionPassword = null;
 let currentWalletData = null;
 let connectedSites = new Set();
+
+// Enabled networks list (persisted in wallet data)
+let enabledNetworks = [...DEFAULT_ENABLED_NETWORKS];
+
+// Pending dApp connection requests
+let pendingDappRequests = new Map();
 
 /**
  * Initialize the extension
@@ -65,8 +72,18 @@ async function handleMessage(request, sender) {
       return await handleGenerateQRCode(data);
     case 'getAccounts':
       return getAccounts();
+    case 'getNextAccountIndex':
+      return getNextAccountIndex();
     case 'addAccount':
       return await addAccount(data);
+    case 'createHDWallet':
+      return await createHDWallet(data);
+    case 'getMasterWallets':
+      return getMasterWallets();
+    case 'addAccountToMaster':
+      return await addAccountToMaster(data);
+    case 'bulkAddToMaster':
+      return await bulkAddToMaster(data);
     case 'switchAccount':
       return await switchAccount(data);
     case 'renameAccount':
@@ -75,6 +92,10 @@ async function handleMessage(request, sender) {
       return await removeAccount(data);
     case 'importPrivateKeyAccount':
       return await importPrivateKeyAccount(data);
+    case 'bulkAddAccounts':
+      return await bulkAddAccounts(data);
+    case 'importSeedPhraseAccounts':
+      return await importSeedPhraseAccounts(data);
 
     // Balance & Transactions
     case 'getBalance':
@@ -109,6 +130,14 @@ async function handleMessage(request, sender) {
       return await removeCustomNetwork(data);
     case 'getCustomNetworks':
       return await getCustomNetworks();
+    case 'getEnabledNetworks':
+      return getEnabledNetworks();
+    case 'enableBuiltinNetwork':
+      return await enableBuiltinNetwork(data);
+    case 'disableBuiltinNetwork':
+      return await disableBuiltinNetwork(data);
+    case 'getAllAvailableNetworks':
+      return { success: true, networks: ALL_NETWORKS };
 
     // Security
     case 'changePassword':
@@ -139,6 +168,14 @@ async function handleMessage(request, sender) {
       return await getCustomTokens(data);
     case 'getTokenInfo':
       return await getTokenInfo(data);
+    case 'scanTokenAllNetworks':
+      return await scanTokenAllNetworks(data);
+    case 'getPendingDappRequest':
+      return getPendingDappRequest();
+    case 'approveDappConnection':
+      return await approveDappConnection(data);
+    case 'rejectDappConnection':
+      return rejectDappConnection(data);
 
     // Price Data
     case 'getPrice':
@@ -283,6 +320,7 @@ function getWalletStatus() {
     success: true,
     hasWallet: currentWalletData !== null || isUnlocked,
     isUnlocked: isUnlocked,
+    hasMnemonic: isUnlocked && currentWalletData ? !!currentWalletData.mnemonic : false,
     address: isUnlocked && currentWalletData 
       ? currentWalletData.accounts[currentWalletData.activeAccountIndex].address 
       : null,
@@ -310,22 +348,72 @@ async function handleGenerateQRCode({ text }) {
 }
 
 /**
- * Get all accounts
+ * Get all accounts with hierarchical structure
  */
 function getAccounts() {
   if (!isUnlocked || !currentWalletData) {
     return { success: false, error: 'Wallet is locked' };
   }
-
-  const accounts = currentWalletData.accounts.map((acc, idx) => ({
-    address: acc.address,
-    name: acc.name,
-    type: acc.type || 'derived', // 'derived' for HD derived, 'imported' for private key import
-    isActive: idx === currentWalletData.activeAccountIndex,
-    accountIndex: acc.accountIndex
+  
+  // Initialize master wallets if needed
+  initializeMasterWallets();
+  
+  // Get master wallets info
+  const masterWallets = (currentWalletData.masterWallets || []).map(mw => ({
+    id: mw.id,
+    name: mw.name,
+    type: 'master'
   }));
+  
+  // Map accounts with master wallet info
+  const accounts = currentWalletData.accounts.map((acc, idx) => {
+    const masterWallet = acc.masterWalletId 
+      ? masterWallets.find(mw => mw.id === acc.masterWalletId)
+      : null;
+    
+    return {
+      address: acc.address,
+      name: acc.name,
+      type: acc.type || 'derived',
+      isActive: idx === currentWalletData.activeAccountIndex,
+      accountIndex: acc.accountIndex,
+      masterWalletId: acc.masterWalletId || null,
+      masterWalletName: masterWallet?.name || null,
+      index: idx
+    };
+  });
 
-  return { success: true, accounts };
+  return { 
+    success: true, 
+    accounts,
+    masterWallets,
+    hasMnemonic: !!currentWalletData.mnemonic || (currentWalletData.masterWallets?.length > 0)
+  };
+}
+
+/**
+ * Get the next available account index for derived accounts
+ */
+function getNextAccountIndex() {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  // Find the highest existing account index from derived accounts
+  let maxIndex = -1;
+  currentWalletData.accounts.forEach(acc => {
+    if (acc.type === 'derived' && acc.accountIndex !== null && acc.accountIndex !== undefined) {
+      maxIndex = Math.max(maxIndex, acc.accountIndex);
+    }
+  });
+  
+  const nextIndex = maxIndex + 1;
+  
+  return { 
+    success: true, 
+    nextIndex: nextIndex,
+    nextAccountNumber: nextIndex + 1 // Human-readable (1-based)
+  };
 }
 
 /**
@@ -341,15 +429,296 @@ async function addAccount({ name }) {
   }
 
   try {
-    const newIndex = currentWalletData.accounts.length;
-    const accounts = await walletManager.deriveAccounts(currentWalletData.mnemonic, newIndex + 1);
-    const newAccount = accounts[newIndex];
-    newAccount.name = name || `Account ${newIndex + 1}`;
+    // Find the highest existing account index from derived accounts
+    let maxIndex = -1;
+    currentWalletData.accounts.forEach(acc => {
+      if (acc.type === 'derived' && acc.accountIndex !== null && acc.accountIndex !== undefined) {
+        maxIndex = Math.max(maxIndex, acc.accountIndex);
+      }
+    });
+    
+    const newIndex = maxIndex + 1;
+    const walletData = await walletManager.deriveAccount(currentWalletData.mnemonic, newIndex);
+    
+    const newAccount = {
+      address: walletData.address,
+      privateKey: walletData.privateKey,
+      name: name || `Account ${newIndex + 1}`,
+      type: 'derived',
+      accountIndex: newIndex
+    };
 
     currentWalletData.accounts.push(newAccount);
     await storageManager.saveWallet(currentWalletData, sessionPassword);
 
     return { success: true, address: newAccount.address, accountIndex: newIndex };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Create a new Master HD Wallet
+ * Users can have multiple Master Wallets, each with their own seed phrase
+ */
+async function createHDWallet({ name }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  try {
+    // Initialize masterWallets array if not present
+    if (!currentWalletData.masterWallets) {
+      currentWalletData.masterWallets = [];
+      
+      // Migrate existing mnemonic to first master wallet if present
+      if (currentWalletData.mnemonic) {
+        const existingMasterWallet = {
+          id: generateWalletId(),
+          name: 'Master Wallet 1',
+          mnemonic: currentWalletData.mnemonic,
+          createdAt: Date.now(),
+          type: 'master'
+        };
+        currentWalletData.masterWallets.push(existingMasterWallet);
+        
+        // Update existing derived accounts to reference this master wallet
+        currentWalletData.accounts.forEach(acc => {
+          if (acc.type === 'derived' && !acc.masterWalletId) {
+            acc.masterWalletId = existingMasterWallet.id;
+          }
+        });
+      }
+    }
+
+    // Generate new mnemonic for new master wallet
+    const walletData = await walletManager.createWallet();
+    const masterWalletId = generateWalletId();
+    const masterWalletNumber = currentWalletData.masterWallets.length + 1;
+    
+    const newMasterWallet = {
+      id: masterWalletId,
+      name: name || `Master Wallet ${masterWalletNumber}`,
+      mnemonic: walletData.mnemonic,
+      createdAt: Date.now(),
+      type: 'master'
+    };
+    
+    currentWalletData.masterWallets.push(newMasterWallet);
+    
+    // Also set as primary mnemonic if this is the first one
+    if (!currentWalletData.mnemonic) {
+      currentWalletData.mnemonic = walletData.mnemonic;
+    }
+    
+    // Derive first account from this master wallet
+    const derivedAccount = await walletManager.deriveAccount(walletData.mnemonic, 0);
+    
+    // Check if this address already exists
+    const exists = currentWalletData.accounts.some(
+      acc => acc.address.toLowerCase() === derivedAccount.address.toLowerCase()
+    );
+    
+    if (!exists) {
+      const newAccount = {
+        address: derivedAccount.address,
+        privateKey: derivedAccount.privateKey,
+        name: 'Account 1',
+        type: 'derived',
+        accountIndex: 0,
+        masterWalletId: masterWalletId
+      };
+      
+      currentWalletData.accounts.push(newAccount);
+    }
+    
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+    
+    return { 
+      success: true, 
+      masterWalletId,
+      masterWalletName: newMasterWallet.name,
+      mnemonic: walletData.mnemonic,
+      hasMnemonic: true
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Generate unique wallet ID
+ */
+function generateWalletId() {
+  return 'mw_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+/**
+ * Get all master wallets
+ */
+function getMasterWallets() {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+  
+  // Initialize or migrate master wallets
+  initializeMasterWallets();
+  
+  const masterWallets = (currentWalletData.masterWallets || []).map(mw => ({
+    id: mw.id,
+    name: mw.name,
+    createdAt: mw.createdAt,
+    accountCount: currentWalletData.accounts.filter(a => a.masterWalletId === mw.id).length
+  }));
+  
+  return { success: true, masterWallets };
+}
+
+/**
+ * Initialize master wallets (migrate from legacy structure if needed)
+ */
+function initializeMasterWallets() {
+  if (!currentWalletData) return;
+  
+  if (!currentWalletData.masterWallets) {
+    currentWalletData.masterWallets = [];
+    
+    // Migrate existing mnemonic to first master wallet
+    if (currentWalletData.mnemonic) {
+      const masterId = generateWalletId();
+      currentWalletData.masterWallets.push({
+        id: masterId,
+        name: 'Master Wallet 1',
+        mnemonic: currentWalletData.mnemonic,
+        createdAt: Date.now(),
+        type: 'master'
+      });
+      
+      // Update existing derived accounts
+      currentWalletData.accounts.forEach(acc => {
+        if (acc.type === 'derived' && !acc.masterWalletId) {
+          acc.masterWalletId = masterId;
+        }
+      });
+    }
+  }
+}
+
+/**
+ * Add account to a specific master wallet
+ */
+async function addAccountToMaster({ masterWalletId, name }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+  
+  initializeMasterWallets();
+  
+  const masterWallet = currentWalletData.masterWallets.find(mw => mw.id === masterWalletId);
+  if (!masterWallet) {
+    return { success: false, error: 'Master wallet not found' };
+  }
+  
+  try {
+    // Find the highest account index for this master wallet
+    let maxIndex = -1;
+    currentWalletData.accounts.forEach(acc => {
+      if (acc.masterWalletId === masterWalletId && acc.accountIndex !== null && acc.accountIndex !== undefined) {
+        maxIndex = Math.max(maxIndex, acc.accountIndex);
+      }
+    });
+    
+    const newIndex = maxIndex + 1;
+    const derivedAccount = await walletManager.deriveAccount(masterWallet.mnemonic, newIndex);
+    
+    // Check if address already exists
+    const exists = currentWalletData.accounts.some(
+      acc => acc.address.toLowerCase() === derivedAccount.address.toLowerCase()
+    );
+    
+    if (exists) {
+      return { success: false, error: 'Account already exists' };
+    }
+    
+    const newAccount = {
+      address: derivedAccount.address,
+      privateKey: derivedAccount.privateKey,
+      name: name || `Account ${newIndex + 1}`,
+      type: 'derived',
+      accountIndex: newIndex,
+      masterWalletId: masterWalletId
+    };
+    
+    currentWalletData.accounts.push(newAccount);
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+    
+    return { 
+      success: true, 
+      address: newAccount.address,
+      name: newAccount.name,
+      accountIndex: newIndex
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Bulk add accounts to a specific master wallet
+ */
+async function bulkAddToMaster({ masterWalletId, count }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+  
+  initializeMasterWallets();
+  
+  const masterWallet = currentWalletData.masterWallets.find(mw => mw.id === masterWalletId);
+  if (!masterWallet) {
+    return { success: false, error: 'Master wallet not found' };
+  }
+  
+  try {
+    const addedAccounts = [];
+    
+    // Find highest index for this master wallet
+    let maxIndex = -1;
+    currentWalletData.accounts.forEach(acc => {
+      if (acc.masterWalletId === masterWalletId && acc.accountIndex !== null) {
+        maxIndex = Math.max(maxIndex, acc.accountIndex);
+      }
+    });
+    
+    for (let i = 0; i < count; i++) {
+      const newIndex = maxIndex + 1 + i;
+      const derivedAccount = await walletManager.deriveAccount(masterWallet.mnemonic, newIndex);
+      
+      const exists = currentWalletData.accounts.some(
+        acc => acc.address.toLowerCase() === derivedAccount.address.toLowerCase()
+      );
+      
+      if (!exists) {
+        const newAccount = {
+          address: derivedAccount.address,
+          privateKey: derivedAccount.privateKey,
+          name: `Account ${newIndex + 1}`,
+          type: 'derived',
+          accountIndex: newIndex,
+          masterWalletId: masterWalletId
+        };
+        
+        currentWalletData.accounts.push(newAccount);
+        addedAccounts.push(newAccount);
+      }
+    }
+    
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+    
+    return { 
+      success: true, 
+      addedCount: addedAccounts.length,
+      accounts: addedAccounts.map(a => ({ address: a.address, name: a.name }))
+    };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -465,6 +834,130 @@ async function importPrivateKeyAccount({ privateKey, name }) {
       success: true, 
       address: newAccount.address,
       accountIndex: currentWalletData.accounts.length - 1
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Bulk add multiple derived accounts at once
+ */
+async function bulkAddAccounts({ count, startIndex }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  if (!currentWalletData.mnemonic) {
+    return { success: false, error: 'No seed phrase available - only HD wallets can derive accounts' };
+  }
+
+  try {
+    const addedAccounts = [];
+    
+    // Find the highest existing account index from derived accounts
+    let maxIndex = -1;
+    currentWalletData.accounts.forEach(acc => {
+      if (acc.type === 'derived' && acc.accountIndex !== null && acc.accountIndex !== undefined) {
+        maxIndex = Math.max(maxIndex, acc.accountIndex);
+      }
+    });
+    
+    const actualStartIndex = startIndex !== undefined ? startIndex : maxIndex + 1;
+    
+    for (let i = 0; i < count; i++) {
+      const newIndex = actualStartIndex + i;
+      const walletData = await walletManager.deriveAccount(currentWalletData.mnemonic, newIndex);
+      
+      // Check if this address already exists
+      const exists = currentWalletData.accounts.some(
+        acc => acc.address.toLowerCase() === walletData.address.toLowerCase()
+      );
+      
+      if (!exists) {
+        const newAccount = {
+          address: walletData.address,
+          privateKey: walletData.privateKey,
+          name: `Account ${newIndex + 1}`,
+          type: 'derived',
+          accountIndex: newIndex
+        };
+        
+        currentWalletData.accounts.push(newAccount);
+        addedAccounts.push({
+          address: newAccount.address,
+          name: newAccount.name,
+          accountIndex: newIndex
+        });
+      }
+    }
+
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+
+    return { 
+      success: true, 
+      addedCount: addedAccounts.length,
+      accounts: addedAccounts
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Import accounts from an external seed phrase (different from main wallet)
+ */
+async function importSeedPhraseAccounts({ seedPhrase, count = 1, name }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  try {
+    // Validate mnemonic
+    const isValid = ethers.Mnemonic.isValidMnemonic(seedPhrase.trim());
+    if (!isValid) {
+      return { success: false, error: 'Invalid seed phrase' };
+    }
+
+    const addedAccounts = [];
+    
+    for (let i = 0; i < count; i++) {
+      const walletData = await walletManager.deriveAccount(seedPhrase.trim(), i);
+      
+      // Check if this address already exists
+      const exists = currentWalletData.accounts.some(
+        acc => acc.address.toLowerCase() === walletData.address.toLowerCase()
+      );
+      
+      if (!exists) {
+        const accountName = count === 1 
+          ? (name || 'Imported Seed Account')
+          : `${name || 'Imported Seed'} ${i + 1}`;
+          
+        const newAccount = {
+          address: walletData.address,
+          privateKey: walletData.privateKey,
+          name: accountName,
+          type: 'imported-seed',
+          accountIndex: i,
+          seedPhraseHash: ethers.keccak256(ethers.toUtf8Bytes(seedPhrase.trim())).slice(0, 18)
+        };
+        
+        currentWalletData.accounts.push(newAccount);
+        addedAccounts.push({
+          address: newAccount.address,
+          name: newAccount.name,
+          accountIndex: i
+        });
+      }
+    }
+
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+
+    return { 
+      success: true, 
+      addedCount: addedAccounts.length,
+      accounts: addedAccounts
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -630,11 +1123,13 @@ function switchNetwork({ networkKey }) {
     // networkKey can be either a network key (like 'ramestta_mainnet') or a chainId (like '0x55a')
     let network = null;
 
-    // First check if it's a chainId
+    // First check if it's a chainId (hex string)
     if (networkKey.startsWith('0x')) {
-      // Find network by chainId in built-in networks
+      const targetChainId = parseInt(networkKey, 16);
+      
+      // Find network by chainId in enabled NETWORKS
       for (const [key, net] of Object.entries(NETWORKS)) {
-        if (net.chainId === networkKey) {
+        if (net.chainId === targetChainId || net.chainIdHex === networkKey) {
           network = net;
           walletManager.currentNetwork = network;
           walletManager.provider = null;
@@ -642,19 +1137,29 @@ function switchNetwork({ networkKey }) {
         }
       }
       
-      // Check custom networks if not found in built-in
+      // Check ALL_NETWORKS if not found in enabled (for backwards compatibility)
       if (!network) {
-        const customKey = `custom_${networkKey}`;
-        if (NETWORKS[customKey]) {
-          network = NETWORKS[customKey];
-          walletManager.currentNetwork = network;
-          walletManager.provider = null;
+        for (const [key, net] of Object.entries(ALL_NETWORKS)) {
+          if (net.chainId === targetChainId || net.chainIdHex === networkKey) {
+            network = net;
+            walletManager.currentNetwork = network;
+            walletManager.provider = null;
+            break;
+          }
         }
       }
     } else {
       // It's a network key
-      walletManager.switchNetwork(networkKey);
-      network = walletManager.currentNetwork;
+      if (NETWORKS[networkKey]) {
+        walletManager.switchNetwork(networkKey);
+        network = walletManager.currentNetwork;
+      } else if (ALL_NETWORKS[networkKey]) {
+        // Enable the network first if it exists in ALL_NETWORKS
+        enableNetwork(networkKey);
+        walletManager.currentNetwork = ALL_NETWORKS[networkKey];
+        walletManager.provider = null;
+        network = walletManager.currentNetwork;
+      }
     }
 
     if (!network) {
@@ -674,7 +1179,125 @@ function switchNetwork({ networkKey }) {
 }
 
 /**
- * Connect dApp site
+ * Request dApp connection - opens popup for user approval
+ */
+async function requestDappConnection(origin, sender) {
+  return new Promise((resolve) => {
+    const requestId = Date.now().toString();
+    
+    // Store the pending request
+    pendingDappRequests.set(requestId, {
+      origin,
+      tabId: sender.tab?.id,
+      resolve,
+      timestamp: Date.now()
+    });
+
+    // Open popup for user approval
+    chrome.action.openPopup().catch(() => {
+      // If popup can't be opened (e.g., user gesture required), use a notification window
+      chrome.windows.create({
+        url: chrome.runtime.getURL(`popup/popup.html?dappRequest=${requestId}&origin=${encodeURIComponent(origin)}`),
+        type: 'popup',
+        width: 375,
+        height: 600,
+        focused: true
+      });
+    });
+
+    // Timeout after 2 minutes
+    setTimeout(() => {
+      if (pendingDappRequests.has(requestId)) {
+        pendingDappRequests.delete(requestId);
+        resolve({ success: false, error: 'User rejected the request' });
+      }
+    }, 120000);
+  });
+}
+
+/**
+ * Get pending dApp connection request
+ */
+function getPendingDappRequest() {
+  // Get the most recent pending request
+  const entries = Array.from(pendingDappRequests.entries());
+  if (entries.length === 0) {
+    return { success: true, request: null };
+  }
+  
+  const [requestId, request] = entries[entries.length - 1];
+  return {
+    success: true,
+    request: {
+      id: requestId,
+      origin: request.origin,
+      timestamp: request.timestamp
+    }
+  };
+}
+
+/**
+ * Approve dApp connection
+ */
+async function approveDappConnection({ requestId }) {
+  const pendingRequest = pendingDappRequests.get(requestId);
+  
+  if (!pendingRequest) {
+    return { success: false, error: 'Request not found or expired' };
+  }
+
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  // Add to connected sites
+  connectedSites.add(pendingRequest.origin);
+  
+  const activeAccount = currentWalletData.accounts[currentWalletData.activeAccountIndex];
+  const result = {
+    success: true,
+    result: [activeAccount.address],
+    accounts: [activeAccount.address],
+    chainId: walletManager.currentNetwork.chainIdHex
+  };
+
+  // Resolve the pending promise
+  pendingRequest.resolve(result);
+  pendingDappRequests.delete(requestId);
+
+  // Notify the content script about the connection
+  if (pendingRequest.tabId) {
+    chrome.tabs.sendMessage(pendingRequest.tabId, {
+      type: 'RAMAPAY_STATE_CHANGE',
+      data: {
+        accounts: [activeAccount.address],
+        chainId: walletManager.currentNetwork.chainIdHex,
+        connected: true
+      }
+    }).catch(() => {});
+  }
+
+  return result;
+}
+
+/**
+ * Reject dApp connection
+ */
+function rejectDappConnection({ requestId }) {
+  const pendingRequest = pendingDappRequests.get(requestId);
+  
+  if (!pendingRequest) {
+    return { success: false, error: 'Request not found or expired' };
+  }
+
+  pendingRequest.resolve({ success: false, error: 'User rejected the request' });
+  pendingDappRequests.delete(requestId);
+
+  return { success: true };
+}
+
+/**
+ * Connect dApp site (when already unlocked and approved)
  */
 async function connectSite({ origin }, sender) {
   if (!isUnlocked || !currentWalletData) {
@@ -688,6 +1311,7 @@ async function connectSite({ origin }, sender) {
   
   return { 
     success: true, 
+    result: [activeAccount.address],
     accounts: [activeAccount.address],
     chainId: walletManager.currentNetwork.chainIdHex
   };
@@ -709,8 +1333,9 @@ async function handleWeb3Request({ method, params }, sender) {
 
   switch (method) {
     case 'eth_requestAccounts':
-      if (!isUnlocked) {
-        return { success: false, error: 'Wallet is locked' };
+      // If wallet is locked or site not connected, open popup for user approval
+      if (!isUnlocked || !connectedSites.has(origin)) {
+        return await requestDappConnection(origin, sender);
       }
       return await connectSite({ origin }, sender);
 
@@ -889,6 +1514,109 @@ async function getTokenInfo({ tokenAddress }) {
   }
 }
 
+/**
+ * Scan token across all available networks
+ * Like the Android app, this checks all networks to find where the token exists
+ */
+async function scanTokenAllNetworks({ tokenAddress }) {
+  if (!tokenAddress || !tokenAddress.startsWith('0x') || tokenAddress.length !== 42) {
+    return { success: false, error: 'Invalid token address' };
+  }
+
+  const foundTokens = [];
+  const errors = [];
+
+  // Get all networks to scan
+  const networksToScan = Object.entries(ALL_NETWORKS);
+  
+  // Create ethers provider for each network and check token
+  const scanPromises = networksToScan.map(async ([networkKey, network]) => {
+    try {
+      const provider = new ethers.JsonRpcProvider(network.rpcUrl);
+      
+      // Set a timeout for slow networks
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 10000)
+      );
+      
+      const erc20Abi = [
+        'function decimals() view returns (uint8)',
+        'function symbol() view returns (string)',
+        'function name() view returns (string)',
+        'function totalSupply() view returns (uint256)'
+      ];
+
+      const contract = new ethers.Contract(tokenAddress, erc20Abi, provider);
+      
+      const result = await Promise.race([
+        Promise.all([
+          contract.decimals(),
+          contract.symbol(),
+          contract.name()
+        ]),
+        timeoutPromise
+      ]);
+
+      const [decimals, symbol, name] = result;
+      
+      // Valid ERC20 token found on this network
+      return {
+        found: true,
+        networkKey,
+        network: network.name,
+        chainId: network.chainId,
+        chainIdHex: network.chainIdHex,
+        symbol: network.symbol,
+        token: {
+          address: tokenAddress,
+          name: name || 'Unknown',
+          symbol: symbol || 'TOKEN',
+          decimals: Number(decimals) || 18,
+          network: network.name,
+          networkKey,
+          chainId: network.chainId,
+          chainIdHex: network.chainIdHex,
+          networkSymbol: network.symbol
+        }
+      };
+    } catch (error) {
+      // Token not found on this network or RPC error
+      return { found: false, networkKey, error: error.message };
+    }
+  });
+
+  // Wait for all scans to complete
+  const results = await Promise.allSettled(scanPromises);
+  
+  results.forEach((result) => {
+    if (result.status === 'fulfilled' && result.value.found) {
+      foundTokens.push(result.value);
+    }
+  });
+
+  if (foundTokens.length === 0) {
+    return { 
+      success: false, 
+      error: 'Token not found on any network',
+      scannedNetworks: networksToScan.length
+    };
+  }
+
+  // Sort with Ramestta networks first, then by network name
+  foundTokens.sort((a, b) => {
+    if (a.networkKey.startsWith('ramestta') && !b.networkKey.startsWith('ramestta')) return -1;
+    if (!a.networkKey.startsWith('ramestta') && b.networkKey.startsWith('ramestta')) return 1;
+    return a.network.localeCompare(b.network);
+  });
+
+  return { 
+    success: true, 
+    tokens: foundTokens.map(f => f.token),
+    scannedNetworks: networksToScan.length,
+    foundCount: foundTokens.length
+  };
+}
+
 // ============================================
 // PRICE DATA
 // ============================================
@@ -900,16 +1628,132 @@ const priceCache = {
   cacheDuration: 60000 // 1 minute cache
 };
 
-// Token ID mappings for price APIs
+// Token ID mappings for CoinGecko API
+// Updated from https://api.coingecko.com/api/v3/coins/list
 const COINGECKO_IDS = {
+  // Native tokens for each chain
   'RAMA': 'ramestta',
   'ETH': 'ethereum',
-  'USDT': 'tether',
-  'USDC': 'usd-coin',
-  'BTC': 'bitcoin',
   'BNB': 'binancecoin',
   'MATIC': 'matic-network',
-  'AVAX': 'avalanche-2'
+  'POL': 'matic-network',  // Polygon renamed to POL
+  'AVAX': 'avalanche-2',
+  'FTM': 'fantom',
+  'XDAI': 'xdai',
+  'ETC': 'ethereum-classic',
+  'KLAY': 'klay-token',
+  'IOTX': 'iotex',
+  'CRO': 'crypto-com-chain',
+  'OKB': 'okb',
+  'RBTC': 'rootstock',
+  'MNT': 'mantle',
+  'ADA': 'cardano',
+  'ARB': 'ethereum',  // Arbitrum uses ETH
+  'OP': 'ethereum',   // Optimism uses ETH
+  'LINEA': 'ethereum', // Linea uses ETH
+  'BASE': 'base',
+  
+  // Stablecoins
+  'USDT': 'tether',
+  'USDC': 'usd-coin',
+  'DAI': 'dai',
+  'BUSD': 'binance-usd',
+  'TUSD': 'true-usd',
+  'USDP': 'paxos-standard',
+  'FRAX': 'frax',
+  'LUSD': 'liquity-usd',
+  'USDD': 'usdd',
+  
+  // Major cryptocurrencies
+  'BTC': 'bitcoin',
+  'WBTC': 'wrapped-bitcoin',
+  'WETH': 'weth',
+  'stETH': 'staked-ether',
+  'rETH': 'rocket-pool-eth',
+  'cbETH': 'coinbase-wrapped-staked-eth',
+  
+  // Popular DeFi tokens
+  'UNI': 'uniswap',
+  'AAVE': 'aave',
+  'LINK': 'chainlink',
+  'CRV': 'curve-dao-token',
+  'MKR': 'maker',
+  'SNX': 'synthetix-network-token',
+  'COMP': 'compound-governance-token',
+  'SUSHI': 'sushi',
+  'YFI': 'yearn-finance',
+  '1INCH': '1inch',
+  'BAL': 'balancer',
+  'LDO': 'lido-dao',
+  'RPL': 'rocket-pool',
+  'GMX': 'gmx',
+  
+  // Other popular tokens
+  'SHIB': 'shiba-inu',
+  'DOGE': 'dogecoin',
+  'APE': 'apecoin',
+  'SAND': 'the-sandbox',
+  'MANA': 'decentraland',
+  'AXS': 'axie-infinity',
+  'GALA': 'gala',
+  'ENS': 'ethereum-name-service',
+  'LRC': 'loopring',
+  'IMX': 'immutable-x',
+  'PEPE': 'pepe',
+  'FLOKI': 'floki',
+  
+  // Wrapped versions
+  'WBNB': 'wbnb',
+  'WMATIC': 'wmatic',
+  'WAVAX': 'wrapped-avax',
+  'WFTM': 'wrapped-fantom',
+  
+  // Aurora ecosystem
+  'AURORA': 'aurora',
+  'NEAR': 'near'
+};
+
+// Chain ID to CoinGecko API name mapping (for token price lookups on specific chains)
+// Updated from https://api.coingecko.com/api/v3/asset_platforms
+const CHAIN_ID_TO_COINGECKO_PLATFORM = {
+  1: 'ethereum',
+  10: 'optimistic-ethereum',
+  56: 'binance-smart-chain',
+  61: 'ethereum-classic',
+  100: 'xdai',
+  137: 'polygon-pos',
+  250: 'fantom',
+  321: 'kucoin-community-chain',
+  1370: 'ramestta',  // Ramestta Mainnet
+  8453: 'base',
+  42161: 'arbitrum-one',
+  42220: 'celo',
+  43114: 'avalanche',
+  59144: 'linea',
+  5000: 'mantle',
+  25: 'cronos',
+  30: 'rootstock'
+};
+
+// Chain ID to native token CoinGecko ID mapping
+// Updated from https://api.coingecko.com/api/v3/coins/list
+const CHAIN_ID_TO_NATIVE_TOKEN = {
+  1: 'ethereum',
+  10: 'ethereum',  // Optimism uses ETH
+  56: 'binancecoin',
+  61: 'ethereum-classic',
+  100: 'xdai',
+  137: 'matic-network',
+  250: 'fantom',
+  1370: 'ramestta',  // Ramestta native token
+  8453: 'ethereum',  // Base uses ETH
+  42161: 'ethereum', // Arbitrum uses ETH
+  42220: 'celo',
+  43114: 'avalanche-2',
+  59144: 'ethereum', // Linea uses ETH
+  5000: 'mantle',
+  25: 'crypto-com-chain',
+  30: 'rootstock'
 };
 
 /**
@@ -932,12 +1776,66 @@ async function getTokenPrice({ symbol, currency = 'usd' }) {
 }
 
 /**
+ * Get native token price for the current network
+ */
+async function getNativeTokenPrice(chainId, currency = 'usd') {
+  const coinGeckoId = CHAIN_ID_TO_NATIVE_TOKEN[chainId];
+  if (!coinGeckoId) return 0;
+  
+  const cacheKey = `native_${chainId}_${currency}`;
+  const now = Date.now();
+  
+  // Check cache
+  if (priceCache.data[cacheKey] && now - priceCache.lastUpdated < priceCache.cacheDuration) {
+    return priceCache.data[cacheKey];
+  }
+  
+  try {
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=${currency}&include_24hr_change=true`
+    );
+    
+    if (!response.ok) return 0;
+    
+    const data = await response.json();
+    const price = data[coinGeckoId]?.[currency] || 0;
+    const change24h = data[coinGeckoId]?.[`${currency}_24h_change`] || 0;
+    
+    priceCache.data[cacheKey] = price;
+    priceCache.data[`${cacheKey}_change`] = change24h;
+    priceCache.lastUpdated = now;
+    
+    return price;
+  } catch (error) {
+    console.error('Error fetching native token price:', error);
+    return 0;
+  }
+}
+
+/**
  * Get prices for all tokens in wallet
  */
-async function getAllPrices({ symbols, currency = 'usd' }) {
+async function getAllPrices({ symbols, currency = 'usd', chainId }) {
   try {
-    // Default symbols if none provided
-    const tokenSymbols = symbols || ['RAMA', 'ETH'];
+    // Get chain ID from current network if not provided
+    const currentChainId = chainId || walletManager.currentNetwork?.chainId || 1370;
+    
+    // Default symbols if none provided - include current network's native token
+    const tokenSymbols = symbols ? [...symbols] : [];
+    
+    // Add the current network's native token symbol
+    const nativeSymbol = walletManager.currentNetwork?.symbol || 'RAMA';
+    if (!tokenSymbols.includes(nativeSymbol)) {
+      tokenSymbols.unshift(nativeSymbol);
+    }
+    
+    // Add common tokens
+    const commonTokens = ['ETH', 'BTC', 'USDT', 'USDC'];
+    commonTokens.forEach(t => {
+      if (!tokenSymbols.includes(t)) {
+        tokenSymbols.push(t);
+      }
+    });
     
     // Add custom token symbols
     if (currentWalletData?.customTokens) {
@@ -948,13 +1846,14 @@ async function getAllPrices({ symbols, currency = 'usd' }) {
       });
     }
 
-    const prices = await fetchPrices(tokenSymbols, currency);
+    const prices = await fetchPrices(tokenSymbols, currency, currentChainId);
     
     return { 
       success: true, 
       prices,
       currency: currency.toUpperCase(),
-      lastUpdated: priceCache.lastUpdated
+      lastUpdated: priceCache.lastUpdated,
+      nativeSymbol
     };
   } catch (error) {
     return { success: false, error: error.message, prices: {} };
@@ -964,7 +1863,7 @@ async function getAllPrices({ symbols, currency = 'usd' }) {
 /**
  * Fetch prices from CoinGecko API
  */
-async function fetchPrices(symbols, currency = 'usd') {
+async function fetchPrices(symbols, currency = 'usd', chainId = null) {
   const now = Date.now();
   
   // Check cache
@@ -989,10 +1888,12 @@ async function fetchPrices(symbols, currency = 'usd') {
   // Build CoinGecko API request
   const ids = symbols
     .map(s => COINGECKO_IDS[s.toUpperCase()])
-    .filter(Boolean)
-    .join(',');
+    .filter(Boolean);
+  
+  // Remove duplicates
+  const uniqueIds = [...new Set(ids)].join(',');
 
-  if (!ids) {
+  if (!uniqueIds) {
     // Return zeros for unknown tokens
     const result = {};
     symbols.forEach(s => result[s.toUpperCase()] = 0);
@@ -1001,7 +1902,7 @@ async function fetchPrices(symbols, currency = 'usd') {
 
   try {
     const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=${currency}`
+      `https://api.coingecko.com/api/v3/simple/price?ids=${uniqueIds}&vs_currencies=${currency}&include_24hr_change=true`
     );
     
     if (!response.ok) {
@@ -1018,8 +1919,10 @@ async function fetchPrices(symbols, currency = 'usd') {
       const id = COINGECKO_IDS[symbol.toUpperCase()];
       if (id && data[id]) {
         const price = data[id][currency] || 0;
+        const change24h = data[id][`${currency}_24h_change`] || 0;
         prices[symbol.toUpperCase()] = price;
         priceCache.data[`${symbol.toUpperCase()}_${currency}`] = price;
+        priceCache.data[`${symbol.toUpperCase()}_${currency}_change`] = change24h;
       } else {
         prices[symbol.toUpperCase()] = 0;
       }
@@ -1139,32 +2042,55 @@ async function addCustomNetwork({ name, rpcUrl, chainId, symbol, explorerUrl }) 
 /**
  * Remove a custom network
  */
-async function removeCustomNetwork({ networkKey }) {
+async function removeCustomNetwork({ networkKey, chainId }) {
   if (!isUnlocked || !currentWalletData) {
     return { success: false, error: 'Wallet is locked' };
   }
 
   try {
+    // Determine the network key to remove
+    let keyToRemove = networkKey;
+    
+    // If chainId is provided, find the network key
+    if (!keyToRemove && chainId) {
+      const targetChainId = typeof chainId === 'string' && chainId.startsWith('0x') 
+        ? parseInt(chainId, 16) 
+        : chainId;
+      
+      for (const [key, net] of Object.entries(NETWORKS)) {
+        if (net.isCustom && (net.chainId === targetChainId || net.chainIdHex === chainId)) {
+          keyToRemove = key;
+          break;
+        }
+      }
+    }
+    
+    if (!keyToRemove) {
+      return { success: false, error: 'Network not found' };
+    }
+    
     // Can only remove custom networks
-    if (!networkKey.startsWith('custom_')) {
+    if (!keyToRemove.startsWith('custom_') && !NETWORKS[keyToRemove]?.isCustom) {
       return { success: false, error: 'Cannot remove built-in networks' };
     }
 
-    if (!NETWORKS[networkKey]) {
+    if (!NETWORKS[keyToRemove]) {
       return { success: false, error: 'Network not found' };
     }
 
+    const removedNetwork = NETWORKS[keyToRemove];
+    
     // Remove from NETWORKS
-    delete NETWORKS[networkKey];
+    delete NETWORKS[keyToRemove];
 
     // Remove from wallet data
     if (currentWalletData.customNetworks) {
-      delete currentWalletData.customNetworks[networkKey];
+      delete currentWalletData.customNetworks[keyToRemove];
       await storageManager.saveWallet(currentWalletData, sessionPassword);
     }
 
     // Switch to default if currently on removed network
-    if (walletManager.currentNetwork.chainId === parseInt(networkKey.replace('custom_', ''))) {
+    if (walletManager.currentNetwork.chainId === removedNetwork.chainId) {
       walletManager.switchNetwork('ramestta_mainnet');
     }
 
@@ -1178,10 +2104,10 @@ async function removeCustomNetwork({ networkKey }) {
  * Get all custom networks
  */
 async function getCustomNetworks() {
-  const customNetworks = {};
-  Object.keys(NETWORKS).forEach(key => {
-    if (NETWORKS[key].isCustom) {
-      customNetworks[key] = NETWORKS[key];
+  const customNetworks = [];
+  Object.entries(NETWORKS).forEach(([key, network]) => {
+    if (network.isCustom) {
+      customNetworks.push({ key, ...network });
     }
   });
   return { success: true, networks: customNetworks };
@@ -1195,6 +2121,101 @@ function loadCustomNetworksFromWallet() {
     Object.keys(currentWalletData.customNetworks).forEach(key => {
       NETWORKS[key] = currentWalletData.customNetworks[key];
     });
+  }
+  // Load enabled networks
+  if (currentWalletData?.enabledNetworks) {
+    enabledNetworks = currentWalletData.enabledNetworks;
+    setEnabledNetworks(enabledNetworks);
+  } else {
+    enabledNetworks = [...DEFAULT_ENABLED_NETWORKS];
+    setEnabledNetworks(enabledNetworks);
+  }
+}
+
+// ============================================
+// ENABLED NETWORK MANAGEMENT
+// ============================================
+
+/**
+ * Get list of enabled network keys
+ */
+function getEnabledNetworks() {
+  return { success: true, enabledNetworks };
+}
+
+/**
+ * Enable a built-in network
+ */
+async function enableBuiltinNetwork({ networkKey }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  try {
+    // Check if network exists in ALL_NETWORKS
+    if (!ALL_NETWORKS[networkKey]) {
+      return { success: false, error: 'Network not found' };
+    }
+
+    // Check if already enabled
+    if (enabledNetworks.includes(networkKey)) {
+      return { success: true, enabledNetworks };
+    }
+
+    // Add to enabled list
+    enabledNetworks.push(networkKey);
+    
+    // Update NETWORKS object
+    enableNetwork(networkKey);
+
+    // Save to wallet data
+    currentWalletData.enabledNetworks = enabledNetworks;
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+
+    return { success: true, enabledNetworks };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Disable a built-in network
+ */
+async function disableBuiltinNetwork({ networkKey }) {
+  if (!isUnlocked || !currentWalletData) {
+    return { success: false, error: 'Wallet is locked' };
+  }
+
+  try {
+    // Don't allow disabling Ramestta mainnet
+    if (networkKey === 'ramestta_mainnet') {
+      return { success: false, error: 'Cannot disable primary network' };
+    }
+
+    // Check if network is enabled
+    const index = enabledNetworks.indexOf(networkKey);
+    if (index === -1) {
+      return { success: true, enabledNetworks };
+    }
+
+    // Remove from enabled list
+    enabledNetworks.splice(index, 1);
+    
+    // Update NETWORKS object
+    disableNetwork(networkKey);
+
+    // If currently on this network, switch to Ramestta mainnet
+    if (walletManager.currentNetwork.chainId === ALL_NETWORKS[networkKey]?.chainId) {
+      walletManager.switchNetwork('ramestta_mainnet');
+    }
+
+    // Save to wallet data
+    currentWalletData.enabledNetworks = enabledNetworks;
+    await storageManager.saveWallet(currentWalletData, sessionPassword);
+
+    return { success: true, enabledNetworks };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 }
 
