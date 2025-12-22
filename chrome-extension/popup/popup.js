@@ -597,11 +597,17 @@ function setupSeedVerification() {
   if (!currentMnemonic) return;
   
   const words = currentMnemonic.split(' ');
-  verifyCurrentStep = 0;
   
-  // Pick 4 random positions (1-indexed for display)
-  const allPositions = Array.from({length: 12}, (_, i) => i);
+  // ALWAYS reset state at the start
+  verifyCurrentStep = 0;
+  verifyPositions = [];
+  
+  // Pick 4 random positions (0-indexed internally, 1-indexed for display)
+  const allPositions = Array.from({length: words.length}, (_, i) => i);
   verifyPositions = allPositions.sort(() => Math.random() - 0.5).slice(0, 4).sort((a, b) => a - b);
+  
+  console.log('setupSeedVerification - positions to verify:', verifyPositions);
+  console.log('setupSeedVerification - verifyCurrentStep:', verifyCurrentStep);
   
   showVerifyStep();
 }
@@ -610,15 +616,27 @@ function setupSeedVerification() {
  * Show current verification step
  */
 function showVerifyStep() {
+  console.log('showVerifyStep - current step:', verifyCurrentStep, 'of 4');
+  console.log('showVerifyStep - positions:', verifyPositions);
+  
   if (verifyCurrentStep >= 4) {
     // All verified!
+    console.log('showVerifyStep - all 4 steps complete, calling handleVerifyComplete');
     handleVerifyComplete();
+    return;
+  }
+  
+  // Safety check - ensure verifyPositions has enough items
+  if (!verifyPositions || verifyPositions.length < 4) {
+    console.error('showVerifyStep - invalid verifyPositions:', verifyPositions);
     return;
   }
   
   const words = currentMnemonic.split(' ');
   const targetPosition = verifyPositions[verifyCurrentStep];
   const correctWord = words[targetPosition];
+  
+  console.log('showVerifyStep - asking for word at position:', targetPosition + 1);
   
   // Update prompt
   document.getElementById('verify-word-num').textContent = targetPosition + 1;
@@ -656,14 +674,17 @@ function handleWordSelect(selectedWord, correctWord, btn) {
   const allBtns = document.querySelectorAll('.verify-options-grid .word-option');
   
   if (selectedWord === correctWord) {
+    console.log('handleWordSelect - correct! Step', verifyCurrentStep, '-> Step', verifyCurrentStep + 1);
     btn.classList.add('correct');
     allBtns.forEach(b => b.style.pointerEvents = 'none');
     
     setTimeout(() => {
       verifyCurrentStep++;
+      console.log('handleWordSelect - advancing to step:', verifyCurrentStep);
       showVerifyStep();
     }, 500);
   } else {
+    console.log('handleWordSelect - wrong word selected');
     btn.classList.add('wrong');
     
     setTimeout(() => {
