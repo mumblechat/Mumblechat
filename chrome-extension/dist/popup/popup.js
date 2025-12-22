@@ -994,12 +994,22 @@ async function generateQRCode() {
 
   if (currentWalletAddress) {
     try {
-      // Generate QR code using pure JS implementation
-      const qrData = generateQRMatrix(currentWalletAddress);
+      // Use qrcode-generator library (loaded from qr.bundle.js)
+      if (typeof qrcode === 'undefined') {
+        console.error('QR library not loaded');
+        container.innerHTML = `<div class="qr-fallback">${currentWalletAddress}</div>`;
+        return;
+      }
       
+      // Create QR code - type 0 means auto-detect version, 'M' is medium error correction
+      const qr = qrcode(0, 'M');
+      qr.addData(currentWalletAddress);
+      qr.make();
+      
+      const moduleCount = qr.getModuleCount();
       const cellSize = 5;
       const margin = 16;
-      const size = qrData.length * cellSize + margin * 2;
+      const size = moduleCount * cellSize + margin * 2;
       
       const canvas = document.createElement('canvas');
       canvas.width = size;
@@ -1011,10 +1021,9 @@ async function generateQRCode() {
       ctx.fillRect(0, 0, size, size);
       
       // Draw QR modules with black-blue gradient
-      const moduleCount = qrData.length;
       for (let row = 0; row < moduleCount; row++) {
         for (let col = 0; col < moduleCount; col++) {
-          if (qrData[row][col]) {
+          if (qr.isDark(row, col)) {
             // Gradient from black (#000) to blue (#1a56db)
             const progress = (row + col) / (moduleCount * 2);
             const r = Math.round(0 + progress * 26);
@@ -1872,145 +1881,3 @@ window.deleteAccount = async function(accountIndex) {
     showToast('Error removing account', 'error');
   }
 };
-
-/**
- * Pure JavaScript QR Code Generator
- * Generates QR Code matrix for alphanumeric data
- */
-function generateQRMatrix(data) {
-  // QR Code constants
-  const MODE_ALPHA = 0b0010;
-  const EC_LEVEL_M = 0; // Medium error correction
-  
-  // Alphanumeric character set
-  const ALPHANUM = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
-  
-  // Convert to uppercase for alphanumeric mode
-  const text = data.toUpperCase();
-  
-  // Determine version (size) based on data length
-  // Version 4 can hold 78 alphanumeric chars with M error correction
-  const version = 4;
-  const size = 17 + version * 4; // 33x33 for version 4
-  
-  // Create matrix
-  const matrix = Array(size).fill(null).map(() => Array(size).fill(null));
-  const reserved = Array(size).fill(null).map(() => Array(size).fill(false));
-  
-  // Add finder patterns (the three big squares)
-  function addFinderPattern(row, col) {
-    for (let r = -1; r <= 7; r++) {
-      for (let c = -1; c <= 7; c++) {
-        const newRow = row + r;
-        const newCol = col + c;
-        if (newRow < 0 || newRow >= size || newCol < 0 || newCol >= size) continue;
-        
-        if ((r >= 0 && r <= 6 && (c === 0 || c === 6)) ||
-            (c >= 0 && c <= 6 && (r === 0 || r === 6)) ||
-            (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
-          matrix[newRow][newCol] = true;
-        } else {
-          matrix[newRow][newCol] = false;
-        }
-        reserved[newRow][newCol] = true;
-      }
-    }
-  }
-  
-  addFinderPattern(0, 0);
-  addFinderPattern(0, size - 7);
-  addFinderPattern(size - 7, 0);
-  
-  // Add alignment pattern for version 4
-  const alignPos = 26;
-  for (let r = -2; r <= 2; r++) {
-    for (let c = -2; c <= 2; c++) {
-      const newRow = alignPos + r;
-      const newCol = alignPos + c;
-      if (reserved[newRow][newCol]) continue;
-      matrix[newRow][newCol] = (r === -2 || r === 2 || c === -2 || c === 2 || (r === 0 && c === 0));
-      reserved[newRow][newCol] = true;
-    }
-  }
-  
-  // Add timing patterns
-  for (let i = 8; i < size - 8; i++) {
-    matrix[6][i] = i % 2 === 0;
-    matrix[i][6] = i % 2 === 0;
-    reserved[6][i] = true;
-    reserved[i][6] = true;
-  }
-  
-  // Add dark module
-  matrix[size - 8][8] = true;
-  reserved[size - 8][8] = true;
-  
-  // Reserve format info areas
-  for (let i = 0; i < 9; i++) {
-    reserved[8][i] = true;
-    reserved[i][8] = true;
-    if (i < 8) {
-      reserved[8][size - 1 - i] = true;
-      reserved[size - 1 - i][8] = true;
-    }
-  }
-  
-  // Encode data (simplified - just create a pattern based on data hash)
-  let dataHash = 0;
-  for (let i = 0; i < text.length; i++) {
-    dataHash = ((dataHash << 5) - dataHash + text.charCodeAt(i)) | 0;
-  }
-  
-  // Fill remaining cells with data pattern
-  let bitIndex = 0;
-  for (let col = size - 1; col >= 1; col -= 2) {
-    if (col === 6) col = 5; // Skip timing pattern
-    for (let row = 0; row < size; row++) {
-      for (let c = 0; c < 2; c++) {
-        const currentCol = col - c;
-        if (!reserved[row][currentCol] && matrix[row][currentCol] === null) {
-          // Use hash and position to determine bit
-          const bit = ((dataHash >> (bitIndex % 31)) ^ (row * 13 + currentCol * 7)) & 1;
-          matrix[row][currentCol] = bit === 1;
-          bitIndex++;
-        }
-      }
-    }
-  }
-  
-  // Apply mask pattern 0 (checkerboard)
-  for (let row = 0; row < size; row++) {
-    for (let col = 0; col < size; col++) {
-      if (!reserved[row][col] && matrix[row][col] !== null) {
-        if ((row + col) % 2 === 0) {
-          matrix[row][col] = !matrix[row][col];
-        }
-      }
-    }
-  }
-  
-  // Add format info (simplified - just use pattern for mask 0, EC level M)
-  const formatBits = 0b101010000010010;
-  for (let i = 0; i < 15; i++) {
-    const bit = (formatBits >> (14 - i)) & 1;
-    if (i < 6) {
-      matrix[8][i] = bit === 1;
-      matrix[size - 1 - i][8] = bit === 1;
-    } else if (i < 8) {
-      matrix[8][i + 1] = bit === 1;
-      matrix[size - 1 - i][8] = bit === 1;
-    } else {
-      matrix[8][size - 15 + i] = bit === 1;
-      matrix[14 - i][8] = bit === 1;
-    }
-  }
-  
-  // Convert nulls to false
-  for (let row = 0; row < size; row++) {
-    for (let col = 0; col < size; col++) {
-      if (matrix[row][col] === null) matrix[row][col] = false;
-    }
-  }
-  
-  return matrix;
-}

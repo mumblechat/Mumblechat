@@ -37,6 +37,19 @@ async function build() {
     });
     console.log('✅ Bundled wallet library');
 
+    // Bundle QR code library for popup
+    await esbuild.build({
+      entryPoints: ['lib/qr-bundle.js'],
+      bundle: true,
+      outfile: 'dist/lib/qr.bundle.js',
+      format: 'iife',
+      platform: 'browser',
+      target: 'chrome100',
+      minify: !isWatch,
+      sourcemap: isWatch
+    });
+    console.log('✅ Bundled QR library');
+
     // Bundle the service worker
     await esbuild.build({
       entryPoints: ['background/service-worker.js'],
