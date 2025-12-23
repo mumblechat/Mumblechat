@@ -1296,45 +1296,78 @@ async function loadTransactionHistory() {
     
     if (result.success && result.history && result.history.length > 0) {
       activityList.innerHTML = '';
-      const symbol = currentNetwork?.symbol || 'RAMA';
+      const nativeSymbol = currentNetwork?.symbol || 'RAMA';
 
-      result.history.slice(0, 20).forEach(tx => {
+      result.history.slice(0, 30).forEach(tx => {
         const isReceive = tx.to?.toLowerCase() === currentWalletAddress?.toLowerCase();
         const isContract = tx.input && tx.input !== '0x' && tx.input.length > 10;
         const isFailed = tx.isError || tx.txreceipt_status === '0';
+        const isTokenTransfer = tx.txType === 'erc20';
+        const isNft = tx.txType === 'nft';
         
         let txType = isReceive ? 'Received' : 'Sent';
         let txIcon = isReceive ? '↙️' : '↗️';
+        let tokenBadge = '';
+        let displaySymbol = nativeSymbol;
+        let displayValue = tx.value;
         
-        if (isContract && !isReceive) {
+        // Handle token transfers
+        if (isTokenTransfer) {
+          txType = isReceive ? 'Received Token' : 'Sent Token';
+          txIcon = isReceive ? '🪙' : '🔄';
+          displaySymbol = tx.tokenSymbol || 'TOKEN';
+          tokenBadge = `<span class="token-badge">${displaySymbol}</span>`;
+          
+          // Format token value with decimals
+          const decimals = parseInt(tx.tokenDecimal) || 18;
+          displayValue = formatTokenValue(tx.value, decimals);
+        }
+        
+        // Handle NFT transfers
+        if (isNft) {
+          txType = isReceive ? 'Received NFT' : 'Sent NFT';
+          txIcon = isReceive ? '🎨' : '🖼️';
+          displaySymbol = tx.tokenSymbol || 'NFT';
+          displayValue = `#${tx.tokenID || '?'}`;
+          tokenBadge = `<span class="token-badge nft">${displaySymbol}</span>`;
+        }
+        
+        // Handle contract calls (native transactions with input data)
+        if (tx.txType === 'native' && isContract && !isReceive) {
           txType = tx.functionName ? tx.functionName.split('(')[0] : 'Contract Call';
           txIcon = '📄';
         }
         
+        // Handle failed transactions
         if (isFailed) {
           txType = 'Failed';
           txIcon = '❌';
         }
         
         const timeAgo = formatTimeAgo(tx.timeStamp);
-        const amount = formatWeiToEther(tx.value);
+        const amount = tx.txType === 'native' ? formatWeiToEther(tx.value) : displayValue;
         const explorerUrl = currentNetwork?.explorerUrl;
         
+        // Determine activity item class
+        let activityClass = isFailed ? 'failed' : '';
+        if (isTokenTransfer) activityClass += ' token-transfer';
+        if (isNft) activityClass += ' nft-transfer';
+        
         activityList.innerHTML += `
-          <div class="activity-item ${isFailed ? 'failed' : ''}" data-tx-hash="${tx.hash}">
+          <div class="activity-item ${activityClass.trim()}" data-tx-hash="${tx.hash}">
             <div class="activity-left">
-              <div class="activity-icon ${isReceive ? 'receive' : 'send'} ${isFailed ? 'failed' : ''}">
+              <div class="activity-icon ${isReceive ? 'receive' : 'send'} ${isFailed ? 'failed' : ''} ${isTokenTransfer ? 'token' : ''} ${isNft ? 'nft' : ''}">
                 ${txIcon}
               </div>
               <div class="activity-details">
-                <div class="activity-type">${txType}</div>
+                <div class="activity-type">${txType} ${tokenBadge}</div>
                 <div class="activity-address">${formatAddress(isReceive ? tx.from : tx.to)}</div>
                 <div class="activity-time">${timeAgo}</div>
               </div>
             </div>
             <div class="activity-right">
               <div class="activity-amount ${isReceive ? 'receive' : 'send'}">
-                ${isReceive ? '+' : '-'}${amount} ${symbol}
+                ${isReceive ? '+' : '-'}${amount} ${displaySymbol}
               </div>
               ${explorerUrl ? `<a href="${explorerUrl}/tx/${tx.hash}" target="_blank" class="activity-link">View ↗</a>` : ''}
             </div>
@@ -1347,6 +1380,41 @@ async function loadTransactionHistory() {
   } catch (error) {
     console.error('Error loading history:', error);
     activityList.innerHTML = '<div class="empty-activity">Failed to load activity</div>';
+  }
+}
+
+/**
+ * Format token value with decimals
+ * @param {string} value - Raw token value
+ * @param {number} decimals - Token decimals
+ * @returns {string} Formatted value
+ */
+function formatTokenValue(value, decimals) {
+  if (!value || value === '0') return '0';
+  
+  try {
+    const bigValue = BigInt(value);
+    const divisor = BigInt(10 ** decimals);
+    const intPart = bigValue / divisor;
+    const fracPart = bigValue % divisor;
+    
+    if (fracPart === BigInt(0)) {
+      return intPart.toString();
+    }
+    
+    // Format fractional part with proper padding
+    let fracStr = fracPart.toString().padStart(decimals, '0');
+    // Remove trailing zeros and limit to 6 decimal places
+    fracStr = fracStr.slice(0, 6).replace(/0+$/, '');
+    
+    if (fracStr === '') {
+      return intPart.toString();
+    }
+    
+    return `${intPart}.${fracStr}`;
+  } catch (e) {
+    // Fallback for very large numbers
+    return parseFloat(value / (10 ** decimals)).toFixed(4);
   }
 }
 
