@@ -19,6 +19,7 @@ const elements = {};
  */
 document.addEventListener('DOMContentLoaded', async () => {
   cacheElements();
+  initializeIcons();
   setupEventListeners();
   
   // Check for dApp connection request from URL params
@@ -32,6 +33,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   await checkWalletStatus();
 });
+
+/**
+ * Initialize icons with proper extension URLs
+ * This converts data-icon attributes to proper chrome-extension:// URLs
+ */
+function initializeIcons() {
+  const ramaIcon = chrome.runtime.getURL('icons/rama.png');
+  
+  // Set icon src for elements with data-icon="rama"
+  document.querySelectorAll('[data-icon="rama"]').forEach(img => {
+    img.src = ramaIcon;
+  });
+  
+  // Add error handlers for all network icons
+  document.querySelectorAll('.network-option-icon, .network-btn-icon').forEach(img => {
+    img.addEventListener('error', function() {
+      // Use fallback from data attribute or rama icon
+      this.src = this.dataset.fallback || ramaIcon;
+    });
+  });
+}
 
 /**
  * Cache DOM elements for performance
@@ -1119,7 +1141,7 @@ async function loadNetworkDropdown() {
           const optionHtml = `
             <div class="network-option" data-chain-id="${network.chainId}" data-network-key="${key}">
               <span class="network-checkmark"></span>
-              <img src="${iconUrl}" alt="" class="network-option-icon" onerror="this.src='${fallbackIcon}'">
+              <img src="${iconUrl}" alt="" class="network-option-icon" data-fallback="${fallbackIcon}">
               <span class="network-name">${network.name}</span>
             </div>
           `;
@@ -1130,8 +1152,15 @@ async function loadNetworkDropdown() {
     
     networkSelect.appendChild(builtinOptgroup);
     
-    // Add click listeners to new network options
+    // Add click listeners and error handlers to new network options
     if (otherNetworksList) {
+      // Add error handlers for icons
+      otherNetworksList.querySelectorAll('.network-option-icon').forEach(img => {
+        img.addEventListener('error', function() {
+          this.src = this.dataset.fallback || chrome.runtime.getURL('icons/rama.png');
+        });
+      });
+      
       otherNetworksList.querySelectorAll('.network-option').forEach(option => {
         option.addEventListener('click', async () => {
           const chainId = option.dataset.chainId;
@@ -3014,10 +3043,15 @@ async function loadNetworksList() {
         
         const categoryClass = catInfo.isPrimary ? 'ramestta-category' : '';
         const emoji = getCategoryEmoji(catInfo.key);
+        // Convert local icons to extension URL
+        let catIcon = catInfo.icon;
+        if (catIcon && catIcon.startsWith('icons/')) {
+          catIcon = chrome.runtime.getURL(catIcon);
+        }
         
         html += `<div class="network-category ${categoryClass}">
           <h4>
-            <img src="${catInfo.icon}" alt="${catInfo.name}" class="category-icon" data-fallback-emoji="${emoji}">
+            <img src="${catIcon}" alt="${catInfo.name}" class="category-icon" data-fallback-emoji="${emoji}">
             <span class="category-emoji" style="display:none;">${emoji}</span>
             ${catInfo.name}
           </h4>

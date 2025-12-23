@@ -175,7 +175,7 @@ export const ALL_NETWORKS = {
     chainId: 137,
     chainIdHex: '0x89',
     name: 'Polygon Mainnet',
-    symbol: 'MATIC',
+    symbol: 'POL',
     decimals: 18,
     rpcUrl: 'https://polygon.llamarpc.com',
     rpcUrls: [
@@ -192,7 +192,7 @@ export const ALL_NETWORKS = {
     chainId: 80002,
     chainIdHex: '0x13882',
     name: 'Polygon Amoy Testnet',
-    symbol: 'MATIC',
+    symbol: 'POL',
     decimals: 18,
     rpcUrl: 'https://rpc-amoy.polygon.technology',
     rpcUrls: ['https://rpc-amoy.polygon.technology', 'https://polygon-amoy.drpc.org'],
@@ -1164,7 +1164,7 @@ export class WalletManager {
    */
   async getTransactionHistory(address) {
     console.log('getTransactionHistory called with address:', address);
-    console.log('Current network:', this.currentNetwork?.name, 'explorerUrl:', this.currentNetwork?.explorerUrl);
+    console.log('Current network:', this.currentNetwork?.name, 'chainId:', this.currentNetwork?.chainId);
     
     if (!address) {
       console.log('No address provided, returning empty');
@@ -1177,11 +1177,34 @@ export class WalletManager {
       return [];
     }
     
-    // Fetch all transaction types in parallel
+    // Check if this network has a free transaction history API
+    if (!this.hasTransactionHistoryApi()) {
+      console.log('No free transaction history API for this network');
+      // Return empty - the UI will show "No recent activity"
+      // User can still view transactions on the explorer
+      return [];
+    }
+    
+    // Helper function to add timeout to fetch operations
+    const withTimeout = (promise, timeoutMs = 10000, fallback = []) => {
+      return Promise.race([
+        promise,
+        new Promise(resolve => setTimeout(() => {
+          console.log('Fetch timed out after', timeoutMs, 'ms');
+          resolve(fallback);
+        }, timeoutMs))
+      ]).catch(error => {
+        console.warn('Fetch error:', error);
+        return fallback;
+      });
+    };
+    
+    // Fetch all transaction types in parallel with timeout
+    // Native transactions are most important, token/NFT are optional
     const [nativeTxs, tokenTxs, nftTxs] = await Promise.all([
-      this.fetchNativeTransactions(address),
-      this.fetchTokenTransfers(address),
-      this.fetchNftTransfers(address)
+      withTimeout(this.fetchNativeTransactions(address), 15000, []),
+      withTimeout(this.fetchTokenTransfers(address), 10000, []),
+      withTimeout(this.fetchNftTransfers(address), 10000, [])
     ]);
     
     // Combine all transactions
@@ -1328,25 +1351,12 @@ export class WalletManager {
     const chainId = this.currentNetwork?.chainId;
     
     // Routescan supported chains (that don't have Blockscout)
+    // Note: BSC (56, 97) is NOT supported by Routescan - returns "Unknown chainId"
+    // Note: These chains have limited/no free API access for transaction history
     const routescanChains = {
-      // BNB Smart Chain
-      56: { network: 'mainnet', chainId: 56 },
-      97: { network: 'testnet', chainId: 97 },
-      
-      // Avalanche
+      // Avalanche - works with Routescan
       43114: { network: 'mainnet', chainId: 43114 },
       43113: { network: 'testnet', chainId: 43113 },
-      
-      // Fantom
-      250: { network: 'mainnet', chainId: 250 },
-      4002: { network: 'testnet', chainId: 4002 },
-      
-      // Cronos
-      25: { network: 'mainnet', chainId: 25 },
-      338: { network: 'testnet', chainId: 338 },
-      
-      // Aurora
-      1313161554: { network: 'mainnet', chainId: 1313161554 },
     };
     
     if (chainId && routescanChains[chainId]) {
@@ -1355,6 +1365,31 @@ export class WalletManager {
     }
     
     return null;
+  }
+
+  /**
+   * Check if transaction history is available for the current network
+   * Some networks don't have free public APIs for transaction history
+   * @returns {boolean} Whether transaction history is available
+   */
+  hasTransactionHistoryApi() {
+    // Networks with working free APIs:
+    // - Ramestta (Ramascan v2)
+    // - Blockscout v2 networks (ETH, Polygon, Arbitrum, Optimism, Base, etc.)
+    // - Routescan networks (Avalanche)
+    
+    // Networks WITHOUT free transaction history APIs:
+    const noFreeApiChains = [
+      56,   // BSC - requires paid Etherscan API
+      97,   // BSC Testnet
+      250,  // Fantom - deprecated v1 API
+      4002, // Fantom Testnet
+      25,   // Cronos - no free API
+      338,  // Cronos Testnet
+    ];
+    
+    const chainId = this.currentNetwork?.chainId;
+    return !noFreeApiChains.includes(chainId);
   }
 
   /**
