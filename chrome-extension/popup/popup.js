@@ -417,11 +417,11 @@ function setupEventListeners() {
 /**
  * Send message to background script
  */
-async function sendMessage(action, data = {}) {
+async function sendMessage(action, data = {}, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error('Message timeout'));
-    }, 5000);
+    }, timeoutMs);
     
     chrome.runtime.sendMessage({ action, data }, (response) => {
       clearTimeout(timeout);
@@ -1329,7 +1329,8 @@ async function loadTransactionHistory(silent = false) {
   
   try {
     console.log('Fetching transaction history for:', currentWalletAddress);
-    const result = await sendMessage('getTransactionHistory', { address: currentWalletAddress });
+    // Use longer timeout (30s) for transaction history as it involves multiple API calls
+    const result = await sendMessage('getTransactionHistory', { address: currentWalletAddress }, 30000);
     console.log('Transaction history result:', result);
     
     if (result.success && result.history && result.history.length > 0) {
