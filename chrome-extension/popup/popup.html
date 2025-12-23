@@ -264,12 +264,47 @@
     <div id="main-screen" class="screen">
       <div class="main-header">
         <div class="network-selector">
-          <select id="network-select">
+          <button id="network-dropdown-btn" class="network-dropdown-btn">
+            <img id="network-btn-icon" src="icons/rama.png" alt="" class="network-btn-icon">
+            <span id="current-network-name">Ramestta Mainnet</span>
+            <span id="rpc-status-dot" class="rpc-status-dot online" title="RPC Online">●</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+          <div id="network-dropdown-menu" class="network-dropdown-menu">
+            <div class="network-dropdown-header">🏠 Ramestta Networks</div>
+            <div class="network-option" data-chain-id="0x55a" data-network-key="ramestta_mainnet">
+              <span class="network-checkmark" id="check-mainnet">✓</span>
+              <img src="icons/rama.png" alt="" class="network-option-icon">
+              <span class="network-name">Ramestta Mainnet</span>
+              <span class="rpc-status" id="rpc-status-mainnet-1" title="blockchain.ramestta.com">●</span>
+            </div>
+            <div class="network-option" data-chain-id="0x55a-rpc2" data-network-key="ramestta_mainnet_rpc2">
+              <span class="network-checkmark" id="check-mainnet-rpc2"></span>
+              <img src="icons/rama.png" alt="" class="network-option-icon">
+              <span class="network-name">Ramestta Mainnet (RPC 2)</span>
+              <span class="rpc-status" id="rpc-status-mainnet-2" title="blockchain2.ramestta.com">●</span>
+            </div>
+            <div class="network-option disabled" data-chain-id="0x559" data-network-key="ramestta_testnet">
+              <span class="network-checkmark" id="check-testnet"></span>
+              <img src="icons/rama.png" alt="" class="network-option-icon">
+              <span class="network-name">Ramestta Testnet</span>
+              <span class="coming-soon-badge">Coming Soon</span>
+            </div>
+            <div class="network-dropdown-divider"></div>
+            <div id="other-networks-section">
+              <div class="network-dropdown-header">🌐 Other Networks</div>
+              <div id="other-networks-list"></div>
+            </div>
+            <div id="custom-networks-section" style="display: none;">
+              <div class="network-dropdown-header">⚙️ Custom Networks</div>
+              <div id="custom-networks-list"></div>
+            </div>
+          </div>
+          <!-- Hidden select for compatibility -->
+          <select id="network-select" style="display: none;">
             <optgroup label="🏠 Ramestta">
               <option value="0x55a">Ramestta Mainnet</option>
-              <option value="0x559">Ramestta Testnet</option>
             </optgroup>
-            <!-- Other enabled networks will be added dynamically -->
           </select>
         </div>
         <button id="btn-settings" class="icon-btn">⚙️</button>
@@ -534,6 +569,12 @@
       <div class="header">
         <button class="btn-back" data-back="main">←</button>
         <h2>My Accounts</h2>
+      </div>
+      
+      <!-- Search Wallet by Address -->
+      <div class="search-wallet-container">
+        <input type="text" id="search-wallet-input" class="search-wallet-input" placeholder="🔍 Search by address...">
+        <button id="clear-search-btn" class="clear-search-btn" style="display: none;">✕</button>
       </div>
       
       <div class="accounts-content">

@@ -1740,7 +1740,7 @@ async function signTypedData({ domain, types, value }) {
 /**
  * Switch network
  */
-function switchNetwork({ networkKey }) {
+function switchNetwork({ networkKey, customRpcUrl }) {
   try {
     // networkKey can be either a network key (like 'ramestta_mainnet') or a chainId (like '0x55a')
     let network = null;
@@ -1752,9 +1752,7 @@ function switchNetwork({ networkKey }) {
       // Find network by chainId in enabled NETWORKS
       for (const [key, net] of Object.entries(NETWORKS)) {
         if (net.chainId === targetChainId || net.chainIdHex === networkKey) {
-          network = net;
-          walletManager.currentNetwork = network;
-          walletManager.provider = null;
+          network = { ...net };
           break;
         }
       }
@@ -1763,12 +1761,20 @@ function switchNetwork({ networkKey }) {
       if (!network) {
         for (const [key, net] of Object.entries(ALL_NETWORKS)) {
           if (net.chainId === targetChainId || net.chainIdHex === networkKey) {
-            network = net;
-            walletManager.currentNetwork = network;
-            walletManager.provider = null;
+            network = { ...net };
             break;
           }
         }
+      }
+      
+      // Apply custom RPC URL if provided
+      if (network && customRpcUrl) {
+        network.rpcUrl = customRpcUrl;
+      }
+      
+      if (network) {
+        walletManager.currentNetwork = network;
+        walletManager.provider = null;
       }
     } else {
       // It's a network key
@@ -1791,6 +1797,11 @@ function switchNetwork({ networkKey }) {
     // Save preference
     storageManager.loadPreferences().then(prefs => {
       prefs.network = networkKey;
+      if (customRpcUrl) {
+        prefs.customRpcUrl = customRpcUrl;
+      } else {
+        delete prefs.customRpcUrl;
+      }
       storageManager.savePreferences(prefs);
     });
 

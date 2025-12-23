@@ -114,6 +114,50 @@ function setupEventListeners() {
 
   // Main screen
   document.getElementById('network-select')?.addEventListener('change', handleNetworkChange);
+  
+  // Custom network dropdown
+  const networkDropdownBtn = document.getElementById('network-dropdown-btn');
+  const networkDropdownMenu = document.getElementById('network-dropdown-menu');
+  
+  if (networkDropdownBtn && networkDropdownMenu) {
+    networkDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      networkDropdownBtn.classList.toggle('open');
+      networkDropdownMenu.classList.toggle('show');
+      
+      // Check RPC status when dropdown opens
+      if (networkDropdownMenu.classList.contains('show')) {
+        checkRpcStatus();
+      }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.network-selector')) {
+        networkDropdownBtn.classList.remove('open');
+        networkDropdownMenu.classList.remove('show');
+      }
+    });
+    
+    // Handle network option clicks
+    networkDropdownMenu.querySelectorAll('.network-option:not(.disabled)').forEach(option => {
+      option.addEventListener('click', async () => {
+        const networkKey = option.dataset.networkKey;
+        const chainId = option.dataset.chainId;
+        
+        // Handle RPC2 selection
+        if (networkKey === 'ramestta_mainnet_rpc2') {
+          await switchToRpc2();
+        } else {
+          await handleNetworkOptionClick(chainId, networkKey);
+        }
+        
+        networkDropdownBtn.classList.remove('open');
+        networkDropdownMenu.classList.remove('show');
+      });
+    });
+  }
+  
   document.getElementById('btn-copy-address')?.addEventListener('click', handleCopyAddress);
   document.getElementById('btn-send')?.addEventListener('click', () => showScreen('send'));
   document.getElementById('btn-receive')?.addEventListener('click', async () => {
@@ -245,6 +289,24 @@ function setupEventListeners() {
   document.getElementById('btn-add-watch-wallet')?.addEventListener('click', () => {
     document.getElementById('watch-wallet-modal').classList.add('show');
   });
+  
+  // Search wallet by address functionality
+  const searchWalletInput = document.getElementById('search-wallet-input');
+  const clearSearchBtn = document.getElementById('clear-search-btn');
+  
+  if (searchWalletInput) {
+    searchWalletInput.addEventListener('input', (e) => {
+      filterWalletsByAddress(e.target.value);
+    });
+  }
+  
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', () => {
+      searchWalletInput.value = '';
+      filterWalletsByAddress('');
+      clearSearchBtn.style.display = 'none';
+    });
+  }
   
   // Legacy watch wallet button (for backwards compatibility)
   document.getElementById('opt-watch-wallet')?.addEventListener('click', () => {
@@ -924,6 +986,34 @@ async function loadMainScreen() {
       // Update network icon
       updateNetworkIcon(currentNetwork);
       
+      // Update network dropdown button text and icon
+      const networkNameEl = document.getElementById('current-network-name');
+      const networkBtnIcon = document.getElementById('network-btn-icon');
+      
+      // Update button icon
+      if (networkBtnIcon) {
+        let iconUrl = currentNetwork.icon || getNetworkIconUrl(currentNetwork.category || 'ramestta');
+        if (iconUrl && iconUrl.startsWith('icons/')) iconUrl = chrome.runtime.getURL(iconUrl);
+        networkBtnIcon.src = iconUrl;
+        networkBtnIcon.onerror = function() { this.src = chrome.runtime.getURL('icons/rama.png'); };
+      }
+      
+      if (networkNameEl) {
+        // Check if using RPC2
+        if (currentNetwork.rpcUrl === 'https://blockchain2.ramestta.com') {
+          networkNameEl.textContent = 'Ramestta Mainnet (RPC 2)';
+          currentRpcIndex = 2;
+          updateNetworkDropdownSelection('ramestta_mainnet_rpc2');
+        } else {
+          networkNameEl.textContent = currentNetwork.name;
+          currentRpcIndex = 1;
+          updateNetworkDropdownSelection('ramestta_mainnet');
+        }
+      }
+      
+      // Check RPC status
+      checkCurrentRpcStatus();
+      
       // Update native token display
       const nativeTokenName = document.getElementById('native-token-name');
       const nativeTokenNetwork = document.getElementById('native-token-network');
@@ -1000,37 +1090,120 @@ async function loadNetworkDropdown() {
   
   networkSelect.appendChild(ramestttaOptgroup);
 
-  // Add other enabled built-in networks
+  // Add other enabled built-in networks to both select and custom dropdown
   const otherEnabled = enabledNetworks.filter(key => !key.startsWith('ramestta_') && ALL_BUILTIN_NETWORKS[key]);
+  const otherNetworksSection = document.getElementById('other-networks-section');
+  const otherNetworksList = document.getElementById('other-networks-list');
+  
   if (otherEnabled.length > 0) {
     const builtinOptgroup = document.createElement('optgroup');
     builtinOptgroup.label = '🌐 Other Networks';
+    
+    // Clear and populate the custom dropdown list
+    if (otherNetworksList) {
+      otherNetworksList.innerHTML = '';
+    }
+    if (otherNetworksSection) {
+      otherNetworksSection.style.display = 'block';
+    }
     
     otherEnabled.forEach(key => {
       const network = ALL_BUILTIN_NETWORKS[key];
       if (network) {
         builtinOptgroup.appendChild(createOption(network.chainId, network.name));
+        
+        // Add to custom dropdown
+        if (otherNetworksList) {
+          const iconUrl = getNetworkIconUrl(network.category || key);
+          const optionHtml = `
+            <div class="network-option" data-chain-id="${network.chainId}" data-network-key="${key}">
+              <span class="network-checkmark"></span>
+              <img src="${iconUrl}" alt="" class="network-option-icon" onerror="this.src='icons/rama.png'">
+              <span class="network-name">${network.name}</span>
+            </div>
+          `;
+          otherNetworksList.insertAdjacentHTML('beforeend', optionHtml);
+        }
       }
     });
     
     networkSelect.appendChild(builtinOptgroup);
+    
+    // Add click listeners to new network options
+    if (otherNetworksList) {
+      otherNetworksList.querySelectorAll('.network-option').forEach(option => {
+        option.addEventListener('click', async () => {
+          const chainId = option.dataset.chainId;
+          const networkKey = option.dataset.networkKey;
+          await handleNetworkOptionClick(chainId, networkKey);
+          document.getElementById('network-dropdown-btn')?.classList.remove('open');
+          document.getElementById('network-dropdown-menu')?.classList.remove('show');
+        });
+      });
+    }
+  } else {
+    if (otherNetworksSection) {
+      otherNetworksSection.style.display = 'none';
+    }
   }
 
   // Add custom networks
+  const customNetworksSection = document.getElementById('custom-networks-section');
+  const customNetworksList = document.getElementById('custom-networks-list');
+  
   try {
     const result = await sendMessage('getCustomNetworks');
     if (result.success && result.networks.length > 0) {
       const customOptgroup = document.createElement('optgroup');
       customOptgroup.label = 'Custom Networks';
       
+      // Clear and populate the custom dropdown list
+      if (customNetworksList) {
+        customNetworksList.innerHTML = '';
+      }
+      if (customNetworksSection) {
+        customNetworksSection.style.display = 'block';
+      }
+      
       result.networks.forEach(network => {
         customOptgroup.appendChild(createOption(network.chainId, network.name));
+        
+        // Add to custom dropdown
+        if (customNetworksList) {
+          const optionHtml = `
+            <div class="network-option" data-chain-id="${network.chainId}" data-network-key="custom_${network.chainId}">
+              <span class="network-checkmark"></span>
+              <img src="icons/rama.png" alt="" class="network-option-icon">
+              <span class="network-name">${network.name}</span>
+            </div>
+          `;
+          customNetworksList.insertAdjacentHTML('beforeend', optionHtml);
+        }
       });
       
       networkSelect.appendChild(customOptgroup);
+      
+      // Add click listeners to custom network options
+      if (customNetworksList) {
+        customNetworksList.querySelectorAll('.network-option').forEach(option => {
+          option.addEventListener('click', async () => {
+            const chainId = option.dataset.chainId;
+            await handleNetworkOptionClick(chainId, chainId);
+            document.getElementById('network-dropdown-btn')?.classList.remove('open');
+            document.getElementById('network-dropdown-menu')?.classList.remove('show');
+          });
+        });
+      }
+    } else {
+      if (customNetworksSection) {
+        customNetworksSection.style.display = 'none';
+      }
     }
   } catch (error) {
     console.error('Error loading custom networks for dropdown:', error);
+    if (customNetworksSection) {
+      customNetworksSection.style.display = 'none';
+    }
   }
 }
 
@@ -1177,6 +1350,274 @@ async function loadTransactionHistory() {
   }
 }
 
+// Store current RPC selection (1 = blockchain.ramestta.com, 2 = blockchain2.ramestta.com)
+let currentRpcIndex = 1;
+
+/**
+ * Check RPC status for Ramestta Mainnet endpoints and update the main button status
+ */
+async function checkRpcStatus() {
+  const rpcEndpoints = [
+    { id: 'rpc-status-mainnet-1', url: 'https://blockchain.ramestta.com', index: 1 },
+    { id: 'rpc-status-mainnet-2', url: 'https://blockchain2.ramestta.com', index: 2 }
+  ];
+  
+  const mainStatusDot = document.getElementById('rpc-status-dot');
+  let activeRpcOnline = false;
+  
+  for (const endpoint of rpcEndpoints) {
+    const statusEl = document.getElementById(endpoint.id);
+    if (!statusEl) continue;
+    
+    // Set to checking state
+    statusEl.classList.remove('online', 'offline');
+    statusEl.classList.add('checking');
+    statusEl.title = `${endpoint.url} - Checking...`;
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(endpoint.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_blockNumber',
+          params: [],
+          id: 1
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.result) {
+          statusEl.classList.remove('checking', 'offline');
+          statusEl.classList.add('online');
+          statusEl.title = `${endpoint.url} - Online`;
+          
+          // Update main button status if this is the active RPC
+          if (endpoint.index === currentRpcIndex && mainStatusDot) {
+            mainStatusDot.classList.remove('checking', 'offline');
+            mainStatusDot.classList.add('online');
+            mainStatusDot.title = 'RPC Online';
+            activeRpcOnline = true;
+          }
+        } else {
+          throw new Error('Invalid response');
+        }
+      } else {
+        throw new Error('HTTP error');
+      }
+    } catch (error) {
+      statusEl.classList.remove('checking', 'online');
+      statusEl.classList.add('offline');
+      statusEl.title = `${endpoint.url} - Offline`;
+      
+      // Update main button status if this is the active RPC
+      if (endpoint.index === currentRpcIndex && mainStatusDot) {
+        mainStatusDot.classList.remove('checking', 'online');
+        mainStatusDot.classList.add('offline');
+        mainStatusDot.title = 'RPC Offline';
+      }
+    }
+  }
+}
+
+/**
+ * Check current RPC status on page load (without opening dropdown)
+ */
+async function checkCurrentRpcStatus() {
+  const mainStatusDot = document.getElementById('rpc-status-dot');
+  if (!mainStatusDot) return;
+  
+  const rpcUrl = currentRpcIndex === 2 
+    ? 'https://blockchain2.ramestta.com' 
+    : 'https://blockchain.ramestta.com';
+  
+  mainStatusDot.classList.remove('online', 'offline');
+  mainStatusDot.classList.add('checking');
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_blockNumber',
+        params: [],
+        id: 1
+      }),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.result) {
+        mainStatusDot.classList.remove('checking', 'offline');
+        mainStatusDot.classList.add('online');
+        mainStatusDot.title = 'RPC Online';
+      } else {
+        throw new Error('Invalid response');
+      }
+    } else {
+      throw new Error('HTTP error');
+    }
+  } catch (error) {
+    mainStatusDot.classList.remove('checking', 'online');
+    mainStatusDot.classList.add('offline');
+    mainStatusDot.title = 'RPC Offline';
+  }
+}
+
+/**
+ * Handle network option click from custom dropdown
+ */
+async function handleNetworkOptionClick(chainId, networkKey) {
+  try {
+    // Reset RPC to default when switching networks
+    currentRpcIndex = 1;
+    
+    const result = await sendMessage('switchNetwork', { networkKey: chainId });
+    
+    if (result.success) {
+      currentNetwork = result.network;
+      updateNetworkDropdownSelection(networkKey);
+      updateNetworkDisplay();
+      await refreshBalance();
+      checkCurrentRpcStatus();
+      showToast(`Switched to ${currentNetwork.name}`, 'success');
+    }
+  } catch (error) {
+    showToast('Failed to switch network', 'error');
+  }
+}
+
+/**
+ * Switch to RPC 2 for Ramestta Mainnet
+ */
+async function switchToRpc2() {
+  try {
+    currentRpcIndex = 2;
+    
+    // Update the RPC URL for Ramestta Mainnet
+    const result = await sendMessage('switchNetwork', { 
+      networkKey: '0x55a',
+      customRpcUrl: 'https://blockchain2.ramestta.com'
+    });
+    
+    if (result.success) {
+      currentNetwork = result.network;
+      updateNetworkDropdownSelection('ramestta_mainnet_rpc2');
+      document.getElementById('current-network-name').textContent = 'Ramestta Mainnet (RPC 2)';
+      await refreshBalance();
+      checkCurrentRpcStatus();
+      showToast('Switched to Ramestta Mainnet (RPC 2)', 'success');
+    }
+  } catch (error) {
+    showToast('Failed to switch RPC', 'error');
+  }
+}
+
+/**
+ * Update network dropdown selection checkmarks
+ */
+function updateNetworkDropdownSelection(activeKey) {
+  // Clear all checkmarks
+  document.querySelectorAll('.network-option .network-checkmark').forEach(el => {
+    el.textContent = '';
+  });
+  
+  // Set checkmark for active network
+  if (activeKey === 'ramestta_mainnet' || activeKey === '0x55a') {
+    if (currentRpcIndex === 1) {
+      const el = document.getElementById('check-mainnet');
+      if (el) el.textContent = '✓';
+    }
+  } else if (activeKey === 'ramestta_mainnet_rpc2') {
+    const el = document.getElementById('check-mainnet-rpc2');
+    if (el) el.textContent = '✓';
+  } else if (activeKey === 'ramestta_testnet') {
+    const el = document.getElementById('check-testnet');
+    if (el) el.textContent = '✓';
+  } else {
+    // For other networks, find by data-network-key
+    const option = document.querySelector(`.network-option[data-network-key="${activeKey}"]`);
+    if (option) {
+      const checkmark = option.querySelector('.network-checkmark');
+      if (checkmark) checkmark.textContent = '✓';
+    }
+  }
+  
+  // Update dropdown button text and icon
+  const nameEl = document.getElementById('current-network-name');
+  const iconEl = document.getElementById('network-btn-icon');
+  
+  if (nameEl) {
+    if (activeKey === 'ramestta_mainnet_rpc2') {
+      nameEl.textContent = 'Ramestta Mainnet (RPC 2)';
+    } else if (currentNetwork) {
+      nameEl.textContent = currentNetwork.name;
+    }
+  }
+  
+  // Update button icon
+  if (iconEl && currentNetwork) {
+    let iconUrl = currentNetwork.icon || getNetworkIconUrl(currentNetwork.category || 'ramestta');
+    if (iconUrl && iconUrl.startsWith('icons/')) iconUrl = chrome.runtime.getURL(iconUrl);
+    iconEl.src = iconUrl;
+    iconEl.onerror = function() { this.src = chrome.runtime.getURL('icons/rama.png'); };
+  }
+}
+
+/**
+ * Update the network display after switching
+ */
+function updateNetworkDisplay() {
+  if (!currentNetwork) return;
+  
+  elements.balanceSymbol.textContent = currentNetwork.symbol;
+  
+  // Update network icon
+  updateNetworkIcon(currentNetwork);
+  
+  // Update native token display
+  const nativeTokenName = document.getElementById('native-token-name');
+  const nativeTokenNetwork = document.getElementById('native-token-network');
+  const nativeTokenIcon = document.getElementById('native-token-icon');
+  if (nativeTokenName) nativeTokenName.textContent = currentNetwork.symbol;
+  if (nativeTokenNetwork) nativeTokenNetwork.textContent = currentNetwork.name;
+  if (nativeTokenIcon) {
+    let iconUrl = currentNetwork.icon || getNetworkIconUrl(currentNetwork.category || 'ramestta');
+    if (iconUrl && iconUrl.startsWith('icons/')) iconUrl = chrome.runtime.getURL(iconUrl);
+    nativeTokenIcon.src = iconUrl;
+    nativeTokenIcon.onerror = function() { this.src = chrome.runtime.getURL('icons/rama.png'); };
+  }
+  
+  // Update dropdown button
+  const networkNameEl = document.getElementById('current-network-name');
+  const networkBtnIcon = document.getElementById('network-btn-icon');
+  
+  if (networkNameEl) {
+    networkNameEl.textContent = currentRpcIndex === 2 ? 'Ramestta Mainnet (RPC 2)' : currentNetwork.name;
+  }
+  
+  if (networkBtnIcon) {
+    let iconUrl = currentNetwork.icon || getNetworkIconUrl(currentNetwork.category || 'ramestta');
+    if (iconUrl && iconUrl.startsWith('icons/')) iconUrl = chrome.runtime.getURL(iconUrl);
+    networkBtnIcon.src = iconUrl;
+    networkBtnIcon.onerror = function() { this.src = chrome.runtime.getURL('icons/rama.png'); };
+  }
+}
+
 /**
  * Handle network change
  */
@@ -1188,10 +1629,16 @@ async function handleNetworkChange(e) {
     
     if (result.success) {
       currentNetwork = result.network;
+      currentRpcIndex = 1; // Reset to default RPC
       elements.balanceSymbol.textContent = currentNetwork.symbol;
       
       // Update network icon
       updateNetworkIcon(currentNetwork);
+      
+      // Update dropdown button text
+      const networkNameEl = document.getElementById('current-network-name');
+      if (networkNameEl) networkNameEl.textContent = currentNetwork.name;
+      updateNetworkDropdownSelection(networkKey);
       
       // Update native token display
       const nativeTokenName = document.getElementById('native-token-name');
@@ -3177,9 +3624,160 @@ async function loadAccountsList() {
       });
     });
     
+    // Reset search when accounts list is reloaded
+    const searchInput = document.getElementById('search-wallet-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    if (clearBtn) {
+      clearBtn.style.display = 'none';
+    }
+    
   } catch (error) {
     console.error('Error loading accounts:', error);
     showToast('Error loading accounts', 'error');
+  }
+}
+
+/**
+ * Filter wallets by address in the accounts list
+ * @param {string} searchTerm - The address or part of address to search for
+ */
+function filterWalletsByAddress(searchTerm) {
+  const container = document.getElementById('accounts-list');
+  const clearBtn = document.getElementById('clear-search-btn');
+  
+  if (!container) return;
+  
+  // Show/hide clear button
+  if (clearBtn) {
+    clearBtn.style.display = searchTerm.trim() ? 'flex' : 'none';
+  }
+  
+  // Normalize search term (lowercase)
+  const normalizedSearch = searchTerm.toLowerCase().trim();
+  
+  // Remove existing search results section
+  const existingResults = container.querySelector('.search-results-section');
+  if (existingResults) existingResults.remove();
+  
+  // If empty search, show all and restore original state
+  if (!normalizedSearch) {
+    // Show all accounts
+    container.querySelectorAll('.account-item').forEach(item => {
+      item.classList.remove('search-hidden', 'search-match');
+    });
+    // Show all master wallet groups and sections
+    container.querySelectorAll('.master-wallet-group, .imported-accounts-section, .watch-accounts-section').forEach(section => {
+      section.classList.remove('search-hidden');
+    });
+    // Remove no results message if exists
+    const noResultsEl = container.querySelector('.no-search-results');
+    if (noResultsEl) noResultsEl.remove();
+    return;
+  }
+  
+  // Collect all matching accounts
+  const matchingAccounts = [];
+  
+  container.querySelectorAll('.account-item').forEach(item => {
+    const address = (item.dataset.address || '').toLowerCase();
+    const name = (item.dataset.name || '').toLowerCase();
+    
+    // Match if address or name contains search term
+    const isMatch = address.includes(normalizedSearch) || name.includes(normalizedSearch);
+    
+    if (isMatch) {
+      matchingAccounts.push({
+        element: item,
+        address: item.dataset.address,
+        name: item.dataset.name,
+        index: item.dataset.index,
+        type: item.dataset.type,
+        masterId: item.dataset.masterId,
+        isActive: item.classList.contains('active')
+      });
+    }
+  });
+  
+  // Hide all original sections when searching
+  container.querySelectorAll('.master-wallet-group, .imported-accounts-section, .watch-accounts-section').forEach(section => {
+    section.classList.add('search-hidden');
+  });
+  
+  // Remove no results message if exists
+  let noResultsEl = container.querySelector('.no-search-results');
+  
+  if (matchingAccounts.length === 0) {
+    // Show no results message
+    if (!noResultsEl) {
+      noResultsEl = document.createElement('div');
+      noResultsEl.className = 'no-search-results';
+      noResultsEl.innerHTML = `
+        <div class="icon">🔍</div>
+        <div class="message">No wallets found matching "${searchTerm}"</div>
+      `;
+      container.appendChild(noResultsEl);
+    } else {
+      noResultsEl.querySelector('.message').textContent = `No wallets found matching "${searchTerm}"`;
+    }
+  } else {
+    if (noResultsEl) noResultsEl.remove();
+    
+    // Create search results section at the top
+    const searchResultsSection = document.createElement('div');
+    searchResultsSection.className = 'search-results-section';
+    searchResultsSection.innerHTML = `
+      <div class="search-results-header">
+        <span class="section-icon">🔍</span>
+        <span class="section-title">Search Results (${matchingAccounts.length})</span>
+      </div>
+      <div class="search-results-list"></div>
+    `;
+    
+    const resultsList = searchResultsSection.querySelector('.search-results-list');
+    
+    // Add matching accounts to search results
+    matchingAccounts.forEach(acc => {
+      const avatarColor = acc.type === 'watch' 
+        ? 'linear-gradient(135deg, #a78bfa, #8b5cf6)' 
+        : acc.type === 'imported' || acc.type === 'imported-seed'
+        ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+        : 'linear-gradient(135deg, #4ade80, #22c55e)';
+      
+      const watchBadge = acc.type === 'watch' ? '<span class="watch-badge">👁</span>' : '';
+      const typeLabel = acc.type === 'watch' ? 'Watch' : acc.type === 'imported' || acc.type === 'imported-seed' ? 'Imported' : 'HD';
+      
+      const accountHtml = `
+        <div class="account-item search-match ${acc.isActive ? 'active' : ''}" 
+             data-index="${acc.index}" 
+             data-address="${acc.address}" 
+             data-name="${acc.name}" 
+             data-type="${acc.type}"
+             ${acc.masterId ? `data-master-id="${acc.masterId}"` : ''}>
+          <div class="account-avatar" style="background: ${avatarColor};">${acc.name.charAt(0).toUpperCase()}</div>
+          <div class="account-info-main">
+            <div class="account-name-text">${acc.name} ${watchBadge}</div>
+            <div class="account-address-text">${acc.address}</div>
+          </div>
+          <span class="search-type-badge">${typeLabel}</span>
+          ${acc.isActive ? '<span class="account-checkmark">✓</span>' : ''}
+        </div>
+      `;
+      resultsList.insertAdjacentHTML('beforeend', accountHtml);
+    });
+    
+    // Insert at the beginning of the container
+    container.insertBefore(searchResultsSection, container.firstChild);
+    
+    // Add click event listeners to search result items
+    resultsList.querySelectorAll('.account-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const index = parseInt(item.dataset.index);
+        await switchToAccount(index);
+      });
+    });
   }
 }
 
