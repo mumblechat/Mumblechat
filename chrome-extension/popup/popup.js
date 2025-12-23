@@ -1115,10 +1115,11 @@ async function loadNetworkDropdown() {
         // Add to custom dropdown
         if (otherNetworksList) {
           const iconUrl = getNetworkIconUrl(network.category || key);
+          const fallbackIcon = chrome.runtime.getURL('icons/rama.png');
           const optionHtml = `
             <div class="network-option" data-chain-id="${network.chainId}" data-network-key="${key}">
               <span class="network-checkmark"></span>
-              <img src="${iconUrl}" alt="" class="network-option-icon" onerror="this.src='icons/rama.png'">
+              <img src="${iconUrl}" alt="" class="network-option-icon" onerror="this.src='${fallbackIcon}'">
               <span class="network-name">${network.name}</span>
             </div>
           `;
@@ -1165,6 +1166,7 @@ async function loadNetworkDropdown() {
         customNetworksSection.style.display = 'block';
       }
       
+      const ramaIcon = chrome.runtime.getURL('icons/rama.png');
       result.networks.forEach(network => {
         customOptgroup.appendChild(createOption(network.chainId, network.name));
         
@@ -1173,7 +1175,7 @@ async function loadNetworkDropdown() {
           const optionHtml = `
             <div class="network-option" data-chain-id="${network.chainId}" data-network-key="custom_${network.chainId}">
               <span class="network-checkmark"></span>
-              <img src="icons/rama.png" alt="" class="network-option-icon">
+              <img src="${ramaIcon}" alt="" class="network-option-icon">
               <span class="network-name">${network.name}</span>
             </div>
           `;
@@ -1281,18 +1283,54 @@ function formatTimeAgo(timestamp) {
   return date.toLocaleDateString();
 }
 
+// Activity auto-refresh interval
+let activityRefreshInterval = null;
+
+/**
+ * Start auto-refresh for activity tab
+ */
+function startActivityAutoRefresh() {
+  // Clear existing interval
+  if (activityRefreshInterval) {
+    clearInterval(activityRefreshInterval);
+  }
+  
+  // Refresh every 15 seconds when activity tab is active
+  activityRefreshInterval = setInterval(() => {
+    const activityTab = document.querySelector('#main-screen .tabs .tab[data-tab="activity"]');
+    if (activityTab && activityTab.classList.contains('active')) {
+      loadTransactionHistory(true); // Silent refresh
+    }
+  }, 15000);
+}
+
+/**
+ * Stop auto-refresh for activity tab
+ */
+function stopActivityAutoRefresh() {
+  if (activityRefreshInterval) {
+    clearInterval(activityRefreshInterval);
+    activityRefreshInterval = null;
+  }
+}
+
 /**
  * Load transaction history
+ * @param {boolean} silent - If true, don't show loading spinner
  */
-async function loadTransactionHistory() {
+async function loadTransactionHistory(silent = false) {
   const activityList = document.getElementById('activity-list');
   if (!activityList) return;
   
-  // Show loading state
-  activityList.innerHTML = '<div class="loading-activity"><div class="spinner-small"></div> Loading transactions...</div>';
+  // Show loading state (only if not silent refresh)
+  if (!silent) {
+    activityList.innerHTML = '<div class="loading-activity"><div class="spinner-small"></div> Loading transactions...</div>';
+  }
   
   try {
+    console.log('Fetching transaction history for:', currentWalletAddress);
     const result = await sendMessage('getTransactionHistory', { address: currentWalletAddress });
+    console.log('Transaction history result:', result);
     
     if (result.success && result.history && result.history.length > 0) {
       activityList.innerHTML = '';
@@ -1374,12 +1412,18 @@ async function loadTransactionHistory() {
           </div>
         `;
       });
+      
+      // Start auto-refresh when transactions are loaded
+      startActivityAutoRefresh();
     } else {
+      console.log('No transactions found or error:', result.error || 'empty history');
       activityList.innerHTML = '<div class="empty-activity">No recent activity</div>';
+      // Still start auto-refresh to catch new transactions
+      startActivityAutoRefresh();
     }
   } catch (error) {
     console.error('Error loading history:', error);
-    activityList.innerHTML = '<div class="empty-activity">Failed to load activity</div>';
+    activityList.innerHTML = `<div class="empty-activity">Failed to load activity<br><small style="color: #888;">${error.message || 'Unknown error'}</small></div>`;
   }
 }
 

@@ -1683,9 +1683,15 @@ async function getTransactionHistory({ address }) {
     const targetAddress = address || 
       (currentWalletData?.accounts[currentWalletData.activeAccountIndex]?.address);
     
+    console.log('getTransactionHistory called for address:', targetAddress);
+    console.log('Current network:', walletManager.currentNetwork?.name, 'chainId:', walletManager.currentNetwork?.chainId);
+    
     const history = await walletManager.getTransactionHistory(targetAddress);
+    console.log('Transaction history fetched, count:', history?.length || 0);
+    
     return { success: true, history };
   } catch (error) {
+    console.error('getTransactionHistory error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -2696,11 +2702,19 @@ async function fetchPrices(symbols, currency = 'usd', chainId = null) {
 
   try {
     const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${uniqueIds}&vs_currencies=${currency}&include_24hr_change=true`
+      `https://api.coingecko.com/api/v3/simple/price?ids=${uniqueIds}&vs_currencies=${currency}&include_24hr_change=true`,
+      { signal: AbortSignal.timeout(10000) } // 10 second timeout
     );
     
     if (!response.ok) {
-      throw new Error('Price API request failed');
+      // Don't throw error, just log and return cached/zero values
+      console.warn('Price API returned non-ok status:', response.status);
+      const result = {};
+      symbols.forEach(s => {
+        const key = `${s.toUpperCase()}_${currency}`;
+        result[s.toUpperCase()] = priceCache.data[key] || 0;
+      });
+      return result;
     }
 
     const data = await response.json();

@@ -1163,10 +1163,19 @@ export class WalletManager {
    * @returns {Array} Combined and sorted transaction list
    */
   async getTransactionHistory(address) {
-    if (!address) return [];
+    console.log('getTransactionHistory called with address:', address);
+    console.log('Current network:', this.currentNetwork?.name, 'explorerUrl:', this.currentNetwork?.explorerUrl);
     
-    const explorerUrl = this.currentNetwork.explorerUrl;
-    if (!explorerUrl) return [];
+    if (!address) {
+      console.log('No address provided, returning empty');
+      return [];
+    }
+    
+    const explorerUrl = this.currentNetwork?.explorerUrl;
+    if (!explorerUrl) {
+      console.log('No explorerUrl found, returning empty');
+      return [];
+    }
     
     // Fetch all transaction types in parallel
     const [nativeTxs, tokenTxs, nftTxs] = await Promise.all([
@@ -1237,21 +1246,249 @@ export class WalletManager {
   }
 
   /**
+   * Get the Blockscout v2 API base URL for the current network
+   * Blockscout v2 API provides better data quality and is available for many chains
+   * @returns {string|null} Blockscout v2 API base URL or null if not available
+   */
+  getBlockscoutV2BaseUrl() {
+    const explorerUrl = this.currentNetwork?.explorerUrl || '';
+    const chainId = this.currentNetwork?.chainId;
+    
+    // Ramascan uses its own backend API
+    if (explorerUrl.includes('ramascan.com')) {
+      const isTestnet = explorerUrl.includes('testnet');
+      return isTestnet 
+        ? 'https://testnet-backendapi.ramascan.com'
+        : 'https://latest-backendapi.ramascan.com';
+    }
+    
+    // Blockscout v2 API mapping for major chains
+    // These are verified working public Blockscout instances
+    const blockscoutV2Urls = {
+      // Ethereum
+      1: 'https://eth.blockscout.com',           // Ethereum Mainnet ✓
+      11155111: 'https://eth-sepolia.blockscout.com', // Sepolia Testnet ✓
+      17000: 'https://eth-holesky.blockscout.com',    // Holesky Testnet ✓
+      61: 'https://etc.blockscout.com',          // Ethereum Classic ✓
+      
+      // Polygon
+      137: 'https://polygon.blockscout.com',     // Polygon Mainnet ✓
+      80002: 'https://polygon-amoy.blockscout.com', // Polygon Amoy ✓
+      
+      // Arbitrum
+      42161: 'https://arbitrum.blockscout.com',  // Arbitrum One ✓
+      
+      // Optimism
+      10: 'https://optimism.blockscout.com',     // Optimism Mainnet ✓
+      
+      // Base
+      8453: 'https://base.blockscout.com',       // Base Mainnet ✓
+      84532: 'https://base-sepolia.blockscout.com',  // Base Sepolia ✓
+      
+      // zkSync Era
+      324: 'https://zksync.blockscout.com',      // zkSync Era Mainnet ✓
+      
+      // Gnosis
+      100: 'https://gnosis.blockscout.com',      // Gnosis Chain ✓
+      
+      // Scroll
+      534352: 'https://scroll.blockscout.com',   // Scroll Mainnet ✓
+      
+      // Linea (has Blockscout)
+      59144: 'https://linea.blockscout.com',     // Linea Mainnet
+      
+      // Mantle
+      5000: 'https://explorer.mantle.xyz',       // Mantle uses Blockscout
+      
+      // Celo
+      42220: 'https://celo.blockscout.com',      // Celo Mainnet
+    };
+    
+    // Return the Blockscout v2 URL if available
+    if (chainId && blockscoutV2Urls[chainId]) {
+      return blockscoutV2Urls[chainId];
+    }
+    
+    // Check for Blockscout URLs in explorer
+    if (explorerUrl.includes('blockscout.com')) {
+      // Already a blockscout URL, extract base
+      const match = explorerUrl.match(/https?:\/\/[^\/]+/);
+      return match ? match[0] : null;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Get the Routescan API URL for chains not covered by Blockscout
+   * Routescan provides free API access for many EVM chains
+   * @returns {string|null} Routescan API URL or null if not available
+   */
+  getRoutescanApiUrl() {
+    const chainId = this.currentNetwork?.chainId;
+    
+    // Routescan supported chains (that don't have Blockscout)
+    const routescanChains = {
+      // BNB Smart Chain
+      56: { network: 'mainnet', chainId: 56 },
+      97: { network: 'testnet', chainId: 97 },
+      
+      // Avalanche
+      43114: { network: 'mainnet', chainId: 43114 },
+      43113: { network: 'testnet', chainId: 43113 },
+      
+      // Fantom
+      250: { network: 'mainnet', chainId: 250 },
+      4002: { network: 'testnet', chainId: 4002 },
+      
+      // Cronos
+      25: { network: 'mainnet', chainId: 25 },
+      338: { network: 'testnet', chainId: 338 },
+      
+      // Aurora
+      1313161554: { network: 'mainnet', chainId: 1313161554 },
+    };
+    
+    if (chainId && routescanChains[chainId]) {
+      const config = routescanChains[chainId];
+      return `https://api.routescan.io/v2/network/${config.network}/evm/${config.chainId}`;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Check if the current network should use Blockscout v2 API
+   * @returns {boolean} Whether to use Blockscout v2 API
+   */
+  usesBlockscoutV2() {
+    // Use Blockscout v2 for all networks that have it available
+    // This provides better reliability than deprecated Etherscan v1 APIs
+    return this.getBlockscoutV2BaseUrl() !== null;
+  }
+  
+  /**
+   * Check if the current network should use Routescan API
+   * @returns {boolean} Whether to use Routescan API
+   */
+  usesRoutescan() {
+    return this.getRoutescanApiUrl() !== null;
+  }
+
+  /**
    * Fetch native RAMA/ETH transactions (txlist)
+   * Uses v2 API for Ramascan (more reliable) with v1 fallback
    * @param {string} address - Wallet address
    * @returns {Array} Native transactions
    */
   async fetchNativeTransactions(address) {
-    const baseUrl = this.getApiBaseUrl();
-    const explorerUrl = this.currentNetwork.explorerUrl;
+    const explorerUrl = this.currentNetwork.explorerUrl || '';
+    console.log('fetchNativeTransactions - explorerUrl:', explorerUrl, 'address:', address);
     
-    let apiUrl;
-    if (explorerUrl.includes('ramascan.com')) {
-      // Ramascan uses v1 API format
-      apiUrl = `${baseUrl}?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
-    } else {
-      apiUrl = `${baseUrl}?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+    // For Ramascan (mainnet or testnet), use v2 API first (more reliable, v1 often times out)
+    const isRamascan = explorerUrl.includes('ramascan.com');
+    
+    if (isRamascan) {
+      // Determine the correct API base URL
+      const isTestnet = explorerUrl.includes('testnet');
+      const apiBaseUrl = isTestnet 
+        ? 'https://testnet-backendapi.ramascan.com' 
+        : 'https://latest-backendapi.ramascan.com';
+      
+      try {
+        const v2Url = `${apiBaseUrl}/api/v2/addresses/${address}/transactions`;
+        console.log('Fetching native transactions from v2 API:', v2Url);
+        
+        const response = await fetch(v2Url, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'RamaPay-Extension/1.0'
+          }
+        });
+        
+        console.log('V2 API response status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('V2 API data items count:', data.items?.length || 0);
+          if (data.items && Array.isArray(data.items)) {
+            const parsed = this.parseV2Transactions(data.items, address);
+            console.log('Parsed V2 transactions:', parsed.length);
+            return parsed;
+          }
+        } else {
+          console.warn('V2 API returned non-ok status:', response.status);
+        }
+      } catch (error) {
+        console.warn('V2 transactions fetch failed, trying v1:', error);
+      }
+      
+      // Fallback to v1 API
+      try {
+        const v1Url = `${apiBaseUrl}/api/v1/?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
+        console.log('Trying v1 API:', v1Url);
+        
+        const response = await fetch(v1Url);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.status === '1' && Array.isArray(data.result)) {
+            return this.parseV1Transactions(data.result);
+          }
+        }
+      } catch (error) {
+        console.warn('V1 transactions fetch also failed:', error);
+      }
+      
+      return [];
     }
+    
+    // For other networks, check if Blockscout v2 is available first
+    const blockscoutV2Url = this.getBlockscoutV2BaseUrl();
+    if (blockscoutV2Url && this.usesBlockscoutV2()) {
+      try {
+        const v2Url = `${blockscoutV2Url}/api/v2/addresses/${address}/transactions`;
+        console.log('Fetching from Blockscout v2 API:', v2Url);
+        
+        const response = await fetch(v2Url, {
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.items && Array.isArray(data.items)) {
+            return this.parseV2Transactions(data.items, address);
+          }
+        }
+      } catch (error) {
+        console.warn('Blockscout v2 fetch failed, trying alternatives:', error);
+      }
+    }
+    
+    // Try Routescan API for chains that support it (BSC, Avalanche, Fantom, etc.)
+    const routescanUrl = this.getRoutescanApiUrl();
+    if (routescanUrl) {
+      try {
+        const rsUrl = `${routescanUrl}/address/${address}/transactions`;
+        console.log('Fetching from Routescan API:', rsUrl);
+        
+        const response = await fetch(rsUrl, {
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.items && Array.isArray(data.items)) {
+            return this.parseRoutescanTransactions(data.items, address);
+          }
+        }
+      } catch (error) {
+        console.warn('Routescan fetch failed:', error);
+      }
+    }
+    
+    // Use standard Etherscan-compatible API (v1) as last fallback
+    const baseUrl = this.getApiBaseUrl();
+    const apiUrl = `${baseUrl}?module=account&action=txlist&address=${address}&sort=desc&page=1&offset=50`;
     
     try {
       console.log('Fetching native transactions from:', apiUrl);
@@ -1263,24 +1500,15 @@ export class WalletManager {
       
       const data = await response.json();
       
-      if (data.status === '1' && Array.isArray(data.result)) {
-        return data.result.map(tx => ({
-          hash: tx.hash,
-          from: tx.from,
-          to: tx.to,
-          value: tx.value,
-          timeStamp: tx.timeStamp,
-          blockNumber: tx.blockNumber,
-          gasPrice: tx.gasPrice,
-          gasUsed: tx.gasUsed,
-          isError: tx.isError === '1',
-          txreceipt_status: tx.txreceipt_status,
-          input: tx.input,
-          methodId: tx.methodId,
-          functionName: tx.functionName,
-          txType: 'native',
-          tokenSymbol: this.currentNetwork.symbol || 'RAMA'
-        }));
+      // Accept data if result is an array (even with status '0' some APIs return data)
+      if (Array.isArray(data.result) && data.result.length > 0) {
+        console.log(`Fetched ${data.result.length} transactions (status: ${data.status})`);
+        return this.parseV1Transactions(data.result);
+      }
+      
+      // Log the message if no results
+      if (data.message) {
+        console.log('API response:', data.message);
       }
       
       return [];
@@ -1291,30 +1519,185 @@ export class WalletManager {
   }
 
   /**
+   * Parse Routescan API transactions
+   * @param {Array} items - Raw Routescan API transaction items
+   * @param {string} walletAddress - Current wallet address
+   * @returns {Array} Parsed transactions
+   */
+  parseRoutescanTransactions(items, walletAddress) {
+    return items.map(item => {
+      // Parse timestamp (ISO 8601 format)
+      let timeStamp;
+      if (item.timestamp) {
+        try {
+          const date = new Date(item.timestamp);
+          timeStamp = Math.floor(date.getTime() / 1000).toString();
+        } catch (e) {
+          timeStamp = Math.floor(Date.now() / 1000).toString();
+        }
+      } else {
+        timeStamp = Math.floor(Date.now() / 1000).toString();
+      }
+      
+      return {
+        hash: item.id || item.hash || '',
+        from: item.from || '',
+        to: item.to || '',
+        value: item.value || '0',
+        timeStamp,
+        blockNumber: String(item.blockNumber || ''),
+        gasPrice: item.gasPrice || '0',
+        gasUsed: String(item.gasUsed || '0'),
+        isError: !item.status,
+        txreceipt_status: item.status ? '1' : '0',
+        input: '0x',
+        methodId: '',
+        functionName: '',
+        txType: 'native',
+        tokenSymbol: this.currentNetwork.symbol || 'ETH'
+      };
+    });
+  }
+
+  /**
+   * Parse v1 API transactions (Etherscan-compatible format)
+   * @param {Array} transactions - Raw v1 API transactions
+   * @returns {Array} Parsed transactions
+   */
+  parseV1Transactions(transactions) {
+    return transactions.map(tx => ({
+      hash: tx.hash,
+      from: tx.from,
+      to: tx.to,
+      value: tx.value,
+      timeStamp: tx.timeStamp,
+      blockNumber: tx.blockNumber,
+      gasPrice: tx.gasPrice,
+      gasUsed: tx.gasUsed,
+      isError: tx.isError === '1',
+      txreceipt_status: tx.txreceipt_status,
+      input: tx.input,
+      methodId: tx.methodId,
+      functionName: tx.functionName,
+      txType: 'native',
+      tokenSymbol: this.currentNetwork.symbol || 'RAMA'
+    }));
+  }
+
+  /**
+   * Parse v2 API transactions (Blockscout format used by Ramascan)
+   * @param {Array} items - Raw v2 API transaction items
+   * @param {string} walletAddress - Current wallet address
+   * @returns {Array} Parsed transactions
+   */
+  parseV2Transactions(items, walletAddress) {
+    return items.map(item => {
+      // Parse from/to addresses (v2 uses nested objects)
+      const from = item.from?.hash || item.from || '';
+      const to = item.to?.hash || item.to || '';
+      
+      // Parse timestamp (ISO 8601 format)
+      let timeStamp;
+      if (item.timestamp) {
+        try {
+          const cleanTimestamp = item.timestamp.split('.')[0] + 'Z';
+          const date = new Date(cleanTimestamp);
+          timeStamp = Math.floor(date.getTime() / 1000).toString();
+        } catch (e) {
+          timeStamp = Math.floor(Date.now() / 1000).toString();
+        }
+      } else {
+        timeStamp = Math.floor(Date.now() / 1000).toString();
+      }
+      
+      // Determine if this is a token transfer based on transaction_types
+      const txTypes = item.transaction_types || [];
+      const isTokenTransfer = txTypes.includes('token_transfer');
+      
+      // Parse method name from decoded_input if available
+      let functionName = item.method || '';
+      if (item.decoded_input?.method_call) {
+        functionName = item.decoded_input.method_call.split('(')[0];
+      }
+      
+      // Determine if transaction failed
+      const isError = item.status !== 'ok' || item.result !== 'success';
+      
+      return {
+        hash: item.hash || '',
+        from,
+        to,
+        value: item.value || '0',
+        timeStamp,
+        blockNumber: String(item.block_number || item.block || ''),
+        gasPrice: item.gas_price || '0',
+        gasUsed: String(item.gas_used || '0'),
+        isError,
+        txreceipt_status: item.status === 'ok' ? '1' : '0',
+        input: item.raw_input || '0x',
+        methodId: item.raw_input?.slice(0, 10) || '',
+        functionName,
+        txType: 'native',
+        tokenSymbol: this.currentNetwork.symbol || 'RAMA',
+        // Extra v2 fields for enhanced display
+        fee: item.fee?.value || '0',
+        nonce: item.nonce,
+        contractName: item.to?.name || null,
+        isContractCall: item.to?.is_contract || false
+      };
+    });
+  }
+
+  /**
    * Fetch ERC-20/RAMA-20 token transfers (tokentx)
    * @param {string} address - Wallet address
    * @returns {Array} Token transfers
    */
   async fetchTokenTransfers(address) {
     const baseUrl = this.getApiBaseUrl();
-    const explorerUrl = this.currentNetwork.explorerUrl;
+    const explorerUrl = this.currentNetwork.explorerUrl || '';
     
-    // For Ramascan, also try the v2 API for better token transfer data
-    if (explorerUrl.includes('ramascan.com')) {
+    // Check if this network uses Blockscout v2 API
+    const blockscoutV2Url = this.getBlockscoutV2BaseUrl();
+    
+    if (blockscoutV2Url) {
       try {
         // Try v2 API first (better data quality)
-        const v2Url = `https://latest-backendapi.ramascan.com/api/v2/addresses/${address}/token-transfers?type=ERC-20`;
+        const v2Url = `${blockscoutV2Url}/api/v2/addresses/${address}/token-transfers?type=ERC-20`;
         console.log('Fetching token transfers from v2 API:', v2Url);
         
         const response = await fetch(v2Url);
         if (response.ok) {
           const data = await response.json();
+          console.log('Token transfers v2 API items:', data.items?.length || 0);
           if (data.items && Array.isArray(data.items)) {
             return this.parseV2TokenTransfers(data.items, address);
           }
         }
       } catch (error) {
-        console.warn('V2 token transfers fetch failed, falling back to v1:', error);
+        console.warn('V2 token transfers fetch failed, falling back:', error);
+      }
+    }
+    
+    // Try Routescan for token transfers
+    const routescanUrl = this.getRoutescanApiUrl();
+    if (routescanUrl) {
+      try {
+        const rsUrl = `${routescanUrl}/address/${address}/erc20-transfers`;
+        console.log('Fetching token transfers from Routescan:', rsUrl);
+        
+        const response = await fetch(rsUrl, {
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.items && Array.isArray(data.items)) {
+            return this.parseRoutescanTokenTransfers(data.items, address);
+          }
+        }
+      } catch (error) {
+        console.warn('Routescan token transfers fetch failed:', error);
       }
     }
     
@@ -1331,7 +1714,9 @@ export class WalletManager {
       
       const data = await response.json();
       
-      if (data.status === '1' && Array.isArray(data.result)) {
+      // Accept data if result is an array (even with status '0' some APIs return data)
+      if (Array.isArray(data.result) && data.result.length > 0) {
+        console.log(`Fetched ${data.result.length} token transfers (status: ${data.status})`);
         return data.result.map(tx => ({
           hash: tx.hash,
           from: tx.from,
@@ -1415,52 +1800,95 @@ export class WalletManager {
   }
 
   /**
+   * Parse Routescan API token transfers
+   * @param {Array} items - Raw Routescan token transfer items
+   * @param {string} walletAddress - Current wallet address
+   * @returns {Array} Parsed token transfers
+   */
+  parseRoutescanTokenTransfers(items, walletAddress) {
+    return items.filter(item => {
+      // Filter out burn events
+      const toAddress = item.to || '';
+      if (toAddress.toLowerCase() === '0x0000000000000000000000000000000000000000') return false;
+      return true;
+    }).map(item => {
+      // Parse timestamp
+      let timeStamp;
+      if (item.timestamp) {
+        try {
+          const date = new Date(item.timestamp);
+          timeStamp = Math.floor(date.getTime() / 1000).toString();
+        } catch (e) {
+          timeStamp = Math.floor(Date.now() / 1000).toString();
+        }
+      } else {
+        timeStamp = Math.floor(Date.now() / 1000).toString();
+      }
+      
+      return {
+        hash: item.id || item.transactionHash || '',
+        from: item.from || '',
+        to: item.to || '',
+        value: item.value || '0',
+        timeStamp,
+        blockNumber: String(item.blockNumber || ''),
+        contractAddress: item.tokenAddress || '',
+        tokenName: item.tokenName || 'Unknown Token',
+        tokenSymbol: item.tokenSymbol || 'TOKEN',
+        tokenDecimal: item.tokenDecimals || '18',
+        txType: 'erc20'
+      };
+    });
+  }
+
+  /**
    * Fetch NFT transfers (tokennfttx for ERC-721, token1155tx for ERC-1155)
    * @param {string} address - Wallet address
    * @returns {Array} NFT transfers
    */
   async fetchNftTransfers(address) {
     const baseUrl = this.getApiBaseUrl();
-    const explorerUrl = this.currentNetwork.explorerUrl;
+    const explorerUrl = this.currentNetwork.explorerUrl || '';
     
-    // For Ramascan, NFT API may not be available yet
-    if (explorerUrl.includes('ramascan.com')) {
-      // Try the v1 API for NFT transfers
+    // Check if this network uses Blockscout v2 API
+    const blockscoutV2Url = this.getBlockscoutV2BaseUrl();
+    
+    if (blockscoutV2Url) {
       try {
-        const nftUrl = `${baseUrl}?module=account&action=tokennfttx&address=${address}&sort=desc&page=1&offset=50`;
-        console.log('Fetching NFT transfers from:', nftUrl);
+        // Try v2 API for NFT transfers (ERC-721 and ERC-1155)
+        const v2Url = `${blockscoutV2Url}/api/v2/addresses/${address}/token-transfers?type=ERC-721,ERC-1155`;
+        console.log('Fetching NFT transfers from v2 API:', v2Url);
         
-        const response = await fetch(nftUrl);
+        const response = await fetch(v2Url, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'RamaPay-Extension/1.0'
+          }
+        });
+        
         if (response.ok) {
           const data = await response.json();
-          if (data.status === '1' && Array.isArray(data.result)) {
-            return data.result.map(tx => ({
-              hash: tx.hash,
-              from: tx.from,
-              to: tx.to,
-              tokenID: tx.tokenID,
-              timeStamp: tx.timeStamp,
-              blockNumber: tx.blockNumber,
-              contractAddress: tx.contractAddress,
-              tokenName: tx.tokenName,
-              tokenSymbol: tx.tokenSymbol,
-              txType: 'nft'
-            }));
+          console.log('NFT transfers v2 API items:', data.items?.length || 0);
+          if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+            return this.parseV2NftTransfers(data.items, address);
           }
         }
       } catch (error) {
-        console.warn('NFT transfers fetch failed:', error);
+        console.warn('V2 NFT transfers fetch failed, trying v1:', error);
       }
     }
-    
-    // For other networks, try standard ERC-721 API
-    try {
-      const apiUrl = `${baseUrl}?module=account&action=tokennfttx&address=${address}&sort=desc&page=1&offset=20`;
-      const response = await fetch(apiUrl);
       
+    // Use v1 API for NFT transfers (Etherscan-compatible)
+    try {
+      const nftUrl = `${baseUrl}?module=account&action=tokennfttx&address=${address}&sort=desc&page=1&offset=50`;
+      console.log('Fetching NFT transfers from v1 API:', nftUrl);
+      
+      const response = await fetch(nftUrl);
       if (response.ok) {
         const data = await response.json();
-        if (data.status === '1' && Array.isArray(data.result)) {
+        // Accept data if result is an array (even with status '0')
+        if (Array.isArray(data.result) && data.result.length > 0) {
+          console.log(`Fetched ${data.result.length} NFT transfers (status: ${data.status})`);
           return data.result.map(tx => ({
             hash: tx.hash,
             from: tx.from,
@@ -1480,6 +1908,63 @@ export class WalletManager {
     }
     
     return [];
+  }
+
+  /**
+   * Parse V2 API NFT transfer format
+   * @param {Array} items - NFT transfer items from v2 API
+   * @param {string} address - Wallet address
+   * @returns {Array} Parsed NFT transfers
+   */
+  parseV2NftTransfers(items, address) {
+    return items.filter(item => {
+      // Filter out burn events
+      if (item.type === 'token_burning') return false;
+      const toAddress = item.to?.hash || item.to;
+      if (toAddress && toAddress.toLowerCase() === '0x0000000000000000000000000000000000000000') return false;
+      return true;
+    }).map(item => {
+      // Parse from/to addresses (v2 uses nested objects)
+      const from = item.from?.hash || item.from || '';
+      const to = item.to?.hash || item.to || '';
+      
+      // Parse token info
+      const token = item.token || {};
+      const contractAddress = token.address || '';
+      const tokenName = token.name || 'Unknown NFT';
+      const tokenSymbol = token.symbol || 'NFT';
+      
+      // Parse token ID
+      const total = item.total || {};
+      const tokenID = total.token_id || item.token_id || '';
+      
+      // Parse timestamp
+      let timeStamp;
+      if (item.timestamp) {
+        try {
+          const cleanTimestamp = item.timestamp.split('.')[0] + 'Z';
+          const date = new Date(cleanTimestamp);
+          timeStamp = Math.floor(date.getTime() / 1000).toString();
+        } catch (e) {
+          timeStamp = Math.floor(Date.now() / 1000).toString();
+        }
+      } else {
+        timeStamp = Math.floor(Date.now() / 1000).toString();
+      }
+      
+      return {
+        hash: item.transaction_hash || item.tx_hash || '',
+        from,
+        to,
+        tokenID,
+        timeStamp,
+        blockNumber: String(item.block_number || item.block || ''),
+        contractAddress,
+        tokenName,
+        tokenSymbol,
+        txType: 'nft'
+      };
+    });
   }
 }
 
