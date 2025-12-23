@@ -1926,8 +1926,12 @@ function rejectDappConnection({ requestId }) {
  * Connect dApp site (when already unlocked and approved)
  */
 async function connectSite({ origin }, sender) {
+  // Auto-restore session if needed
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   const siteOrigin = origin || new URL(sender.tab?.url || '').origin;
@@ -2109,8 +2113,12 @@ async function removeCustomToken({ tokenAddress, chainId }) {
  * Get all custom tokens for current network
  */
 async function getCustomTokens({ chainId }) {
+  // Auto-restore session if needed
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked', tokens: [] };
+    }
   }
 
   const targetChainId = chainId || walletManager.currentNetwork.chainId;
@@ -2256,8 +2264,12 @@ async function scanTokenAllNetworks({ tokenAddress }) {
  * Scans common token addresses to find tokens with non-zero balance
  */
 async function autoFetchTokens({ address }) {
+  // Auto-restore session if needed
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked' };
+    }
   }
 
   const walletAddress = address || currentWalletData.accounts[currentWalletData.activeAccountIndex].address;
@@ -2738,8 +2750,12 @@ async function fetchPriceFromRamascan(symbol) {
  * Add a custom network
  */
 async function addCustomNetwork({ name, rpcUrl, chainId, symbol, explorerUrl }) {
+  // Auto-restore session if needed
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -2814,8 +2830,12 @@ async function addCustomNetwork({ name, rpcUrl, chainId, symbol, explorerUrl }) 
  * Remove a custom network
  */
 async function removeCustomNetwork({ networkKey, chainId }) {
+  // Auto-restore session if needed
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked. Please unlock your wallet first.' };
+    }
   }
 
   try {
@@ -2918,8 +2938,12 @@ function getEnabledNetworks() {
  * Enable a built-in network
  */
 async function enableBuiltinNetwork({ networkKey }) {
+  // Auto-restore session if needed
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked' };
+    }
   }
 
   try {
@@ -2953,8 +2977,12 @@ async function enableBuiltinNetwork({ networkKey }) {
  * Disable a built-in network
  */
 async function disableBuiltinNetwork({ networkKey }) {
+  // Auto-restore session if needed
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked' };
+    }
   }
 
   try {
@@ -2998,8 +3026,12 @@ async function disableBuiltinNetwork({ networkKey }) {
  * Change wallet password
  */
 async function changePassword({ currentPassword, newPassword }) {
+  // Auto-restore session if needed
   if (!currentWalletData) {
-    return { success: false, error: 'No wallet data' };
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked' };
+    }
   }
 
   try {
@@ -3027,8 +3059,12 @@ async function changePassword({ currentPassword, newPassword }) {
  * Verify password (for security operations)
  */
 async function verifyPassword({ password }) {
-  if (!isUnlocked) {
-    return { success: false, error: 'No wallet data' };
+  // Auto-restore session if needed
+  if (!isUnlocked || !currentWalletData) {
+    const restored = await ensureWalletLoaded();
+    if (!restored) {
+      return { success: false, error: 'Wallet not unlocked' };
+    }
   }
 
   return { 
