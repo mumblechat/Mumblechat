@@ -41,26 +41,7 @@
     "alarms"
   ],
   "host_permissions": [
-    "https://blockchain.ramestta.com/*",
-    "https://blockchain2.ramestta.com/*",
-    "https://testnet.ramestta.com/*",
-    "https://blockchain.rfrm.io/*",
-    "https://testnet.rfrm.io/*",
-    "https://*.ramascan.com/*",
-    "https://*.blockscout.com/*",
-    "https://explorer.mantle.xyz/*",
-    "https://api.routescan.io/*",
-    "https://*.etherscan.io/*",
-    "https://*.bscscan.com/*",
-    "https://*.polygonscan.com/*",
-    "https://*.arbiscan.io/*",
-    "https://*.basescan.org/*",
-    "https://*.scrollscan.com/*",
-    "https://*.lineascan.build/*",
-    "https://*.ftmscan.com/*",
-    "https://*.snowtrace.io/*",
-    "https://*.celoscan.io/*",
-    "https://*.gnosisscan.io/*"
+    "https://*/"
   ],
   "web_accessible_resources": [
     {

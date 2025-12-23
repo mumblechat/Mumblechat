@@ -177,10 +177,10 @@ export const ALL_NETWORKS = {
     name: 'Polygon Mainnet',
     symbol: 'POL',
     decimals: 18,
-    rpcUrl: 'https://polygon.llamarpc.com',
+    rpcUrl: 'https://polygon-rpc.com',
     rpcUrls: [
-      'https://polygon.llamarpc.com',
       'https://polygon-rpc.com',
+      'https://polygon.llamarpc.com',
       'https://polygon.lava.build'
     ],
     explorerUrl: 'https://polygonscan.com',
@@ -804,10 +804,13 @@ export class WalletManager {
    */
   async initProvider() {
     const rpcUrl = this.currentNetwork.rpcUrl;
+    console.log('Initializing provider for', this.currentNetwork.name, 'with RPC:', rpcUrl);
+    
     this.provider = new ethers.JsonRpcProvider(rpcUrl, {
       chainId: this.currentNetwork.chainId,
       name: this.currentNetwork.name
     });
+    
     return this.provider;
   }
 
@@ -943,14 +946,19 @@ export class WalletManager {
    * @returns {Object} Balance info
    */
   async getBalance(address) {
-    if (!this.provider) {
-      await this.initProvider();
-    }
+    // Always reinitialize provider to ensure correct network
+    await this.initProvider();
 
+    console.log('getBalance using RPC:', this.currentNetwork.rpcUrl, 'for', this.currentNetwork.name);
+    
     const balance = await this.provider.getBalance(address);
+    const ether = ethers.formatEther(balance);
+    
+    console.log('Balance result:', ether, this.currentNetwork.symbol);
+    
     return {
       wei: balance.toString(),
-      ether: ethers.formatEther(balance),
+      ether: ether,
       symbol: this.currentNetwork.symbol
     };
   }

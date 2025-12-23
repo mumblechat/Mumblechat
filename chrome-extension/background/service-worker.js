@@ -1578,9 +1578,12 @@ async function getBalance({ address }) {
       return { success: false, error: 'No address provided' };
     }
 
+    console.log('getBalance called for:', targetAddress, 'on network:', walletManager.currentNetwork?.name);
     const balance = await walletManager.getBalance(targetAddress);
+    console.log('Balance result:', balance);
     return { success: true, balance };
   } catch (error) {
+    console.error('getBalance error:', error);
     return { success: false, error: error.message };
   }
 }

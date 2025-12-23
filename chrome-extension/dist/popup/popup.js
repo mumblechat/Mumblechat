@@ -161,22 +161,29 @@ function setupEventListeners() {
       }
     });
     
-    // Handle network option clicks
-    networkDropdownMenu.querySelectorAll('.network-option:not(.disabled)').forEach(option => {
-      option.addEventListener('click', async () => {
-        const networkKey = option.dataset.networkKey;
-        const chainId = option.dataset.chainId;
-        
-        // Handle RPC2 selection
-        if (networkKey === 'ramestta_mainnet_rpc2') {
-          await switchToRpc2();
-        } else {
-          await handleNetworkOptionClick(chainId, networkKey);
-        }
-        
-        networkDropdownBtn.classList.remove('open');
-        networkDropdownMenu.classList.remove('show');
-      });
+    // Handle network option clicks using event delegation
+    // This works for both static and dynamically added network options
+    networkDropdownMenu.addEventListener('click', async (e) => {
+      const option = e.target.closest('.network-option:not(.disabled)');
+      if (!option) return;
+      
+      e.stopPropagation();
+      
+      const networkKey = option.dataset.networkKey;
+      const chainId = option.dataset.chainId;
+      
+      console.log('Network option clicked:', { networkKey, chainId });
+      
+      // Close dropdown immediately for better UX
+      networkDropdownBtn.classList.remove('open');
+      networkDropdownMenu.classList.remove('show');
+      
+      // Handle RPC2 selection
+      if (networkKey === 'ramestta_mainnet_rpc2') {
+        await switchToRpc2();
+      } else if (chainId || networkKey) {
+        await handleNetworkOptionClick(chainId, networkKey);
+      }
     });
   }
   
@@ -1132,14 +1139,16 @@ async function loadNetworkDropdown() {
     otherEnabled.forEach(key => {
       const network = ALL_BUILTIN_NETWORKS[key];
       if (network) {
-        builtinOptgroup.appendChild(createOption(network.chainId, network.name));
+        // Use chainIdHex for network selection
+        const chainIdHex = network.chainIdHex || ('0x' + network.chainId.toString(16));
+        builtinOptgroup.appendChild(createOption(chainIdHex, network.name));
         
         // Add to custom dropdown
         if (otherNetworksList) {
           const iconUrl = getNetworkIconUrl(network.category || key);
           const fallbackIcon = chrome.runtime.getURL('icons/rama.png');
           const optionHtml = `
-            <div class="network-option" data-chain-id="${network.chainId}" data-network-key="${key}">
+            <div class="network-option" data-chain-id="${chainIdHex}" data-network-key="${key}">
               <span class="network-checkmark"></span>
               <img src="${iconUrl}" alt="" class="network-option-icon" data-fallback="${fallbackIcon}">
               <span class="network-name">${network.name}</span>
@@ -1152,23 +1161,12 @@ async function loadNetworkDropdown() {
     
     networkSelect.appendChild(builtinOptgroup);
     
-    // Add click listeners and error handlers to new network options
+    // Add error handlers for icons (safe to re-add)
     if (otherNetworksList) {
-      // Add error handlers for icons
       otherNetworksList.querySelectorAll('.network-option-icon').forEach(img => {
-        img.addEventListener('error', function() {
+        img.onerror = function() {
           this.src = this.dataset.fallback || chrome.runtime.getURL('icons/rama.png');
-        });
-      });
-      
-      otherNetworksList.querySelectorAll('.network-option').forEach(option => {
-        option.addEventListener('click', async () => {
-          const chainId = option.dataset.chainId;
-          const networkKey = option.dataset.networkKey;
-          await handleNetworkOptionClick(chainId, networkKey);
-          document.getElementById('network-dropdown-btn')?.classList.remove('open');
-          document.getElementById('network-dropdown-menu')?.classList.remove('show');
-        });
+        };
       });
     }
   } else {
@@ -1253,10 +1251,27 @@ function createOption(value, text) {
  */
 async function refreshBalance() {
   try {
+    console.log('refreshBalance called for network:', currentNetwork?.name, 'address:', currentWalletAddress);
+    
     const result = await sendMessage('getBalance', { address: currentWalletAddress });
+    console.log('getBalance result:', result);
     
     if (result.success) {
-      const balance = parseFloat(result.balance.ether).toFixed(4);
+      // Format balance nicely
+      const rawBalance = parseFloat(result.balance.ether);
+      let balance;
+      if (rawBalance >= 1000000) {
+        balance = rawBalance.toFixed(2);
+      } else if (rawBalance >= 1000) {
+        balance = rawBalance.toFixed(4);
+      } else if (rawBalance >= 1) {
+        balance = rawBalance.toFixed(4);
+      } else {
+        balance = rawBalance.toFixed(6);
+      }
+      
+      console.log('Balance:', balance, result.balance.symbol);
+      
       elements.balanceValue.textContent = balance;
       document.getElementById('send-balance').textContent = `Balance: ${balance} ${currentNetwork?.symbol || 'RAMA'}`;
       
@@ -1266,11 +1281,12 @@ async function refreshBalance() {
         nativeTokenAmount.textContent = balance;
       }
       
-      // Update USD values
+      // Update USD values after balance is set
       updatePriceDisplay();
     }
   } catch (error) {
     console.error('Error fetching balance:', error);
+    elements.balanceValue.textContent = '0.0000';
   }
 }
 
@@ -1623,22 +1639,44 @@ async function checkCurrentRpcStatus() {
 /**
  * Handle network option click from custom dropdown
  */
-async function handleNetworkOptionClick(chainId, networkKey) {
+async function handleNetworkOptionClick(chainIdHex, networkKey) {
   try {
+    console.log('handleNetworkOptionClick:', { chainIdHex, networkKey });
+    
     // Reset RPC to default when switching networks
     currentRpcIndex = 1;
     
-    const result = await sendMessage('switchNetwork', { networkKey: chainId });
+    // Show loading state
+    elements.balanceValue.textContent = '...';
+    
+    // Use networkKey if available, otherwise use chainIdHex
+    const switchKey = networkKey || chainIdHex;
+    console.log('Switching to network:', switchKey);
+    
+    const result = await sendMessage('switchNetwork', { networkKey: switchKey });
+    console.log('switchNetwork result:', result);
     
     if (result.success) {
       currentNetwork = result.network;
+      console.log('New currentNetwork:', currentNetwork?.name, currentNetwork?.symbol);
+      
       updateNetworkDropdownSelection(networkKey);
       updateNetworkDisplay();
+      
+      // Force balance refresh with new network
       await refreshBalance();
+      
+      // Also reload transaction history for new network
+      await loadTransactionHistory();
+      
       checkCurrentRpcStatus();
       showToast(`Switched to ${currentNetwork.name}`, 'success');
+    } else {
+      console.error('Failed to switch network:', result.error);
+      showToast(result.error || 'Failed to switch network', 'error');
     }
   } catch (error) {
+    console.error('handleNetworkOptionClick error:', error);
     showToast('Failed to switch network', 'error');
   }
 }
@@ -1772,6 +1810,9 @@ async function handleNetworkChange(e) {
     if (result.success) {
       currentNetwork = result.network;
       currentRpcIndex = 1; // Reset to default RPC
+      
+      // Show loading state for balance
+      elements.balanceValue.textContent = '...';
       elements.balanceSymbol.textContent = currentNetwork.symbol;
       
       // Update network icon
@@ -1795,7 +1836,10 @@ async function handleNetworkChange(e) {
         nativeTokenIcon.onerror = function() { this.src = chrome.runtime.getURL('icons/rama.png'); };
       }
       
+      // Refresh balance and transaction history
       await refreshBalance();
+      await loadTransactionHistory();
+      
       showToast(`Switched to ${currentNetwork.name}`, 'success');
     }
   } catch (error) {
@@ -2838,19 +2882,37 @@ function updatePriceDisplay() {
   const symbol = currentNetwork?.symbol || 'RAMA';
   const price = tokenPrices[symbol] || 0;
   const balanceStr = elements.balanceValue?.textContent || '0';
+  
+  // Skip if balance is still loading
+  if (balanceStr === '...' || balanceStr === '') {
+    return;
+  }
+  
   const balance = parseFloat(balanceStr) || 0;
-  const usdValue = (balance * price).toFixed(5);
+  const usdValue = balance * price;
+  
+  // Format USD value nicely
+  let formattedUsd;
+  if (usdValue >= 1000000) {
+    formattedUsd = (usdValue / 1000000).toFixed(2) + 'M';
+  } else if (usdValue >= 1000) {
+    formattedUsd = usdValue.toFixed(2);
+  } else if (usdValue >= 1) {
+    formattedUsd = usdValue.toFixed(2);
+  } else {
+    formattedUsd = usdValue.toFixed(5);
+  }
 
   // Update main balance USD value
   const balanceUsd = document.getElementById('balance-usd');
   if (balanceUsd) {
-    balanceUsd.textContent = `≈ $${usdValue} USD`;
+    balanceUsd.textContent = `≈ $${formattedUsd} USD`;
   }
 
   // Update native token value
   const nativeTokenValue = document.getElementById('native-token-value');
   if (nativeTokenValue) {
-    nativeTokenValue.textContent = `$${usdValue}`;
+    nativeTokenValue.textContent = `$${formattedUsd}`;
   }
 }
 
