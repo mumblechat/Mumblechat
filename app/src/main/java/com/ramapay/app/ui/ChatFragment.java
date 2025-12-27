@@ -138,6 +138,19 @@ public class ChatFragment extends BaseFragment implements
                 }
             });
         }
+        
+        // Fix: Only enable pull-to-refresh when WebView is scrolled to the top
+        // This prevents accidental page refresh when scrolling down within the page
+        if (web3 != null)
+        {
+            web3.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+                if (swipeRefreshLayout != null)
+                {
+                    // Only enable swipe refresh when at the top of the page
+                    swipeRefreshLayout.setEnabled(scrollY == 0);
+                }
+            });
+        }
     }
 
     private void initViewModel()
