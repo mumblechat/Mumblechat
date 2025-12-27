@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "RamaPay Wallet",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Secure cryptocurrency wallet for Ramestta blockchain - Send, receive RAMA tokens and connect to dApps",
   "author": "RamaPay Team",
   "homepage_url": "https://github.com/obidua/RamaPay-android",

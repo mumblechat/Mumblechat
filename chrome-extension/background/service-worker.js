@@ -1614,7 +1614,22 @@ async function sendTransaction({ to, amount }) {
 
   try {
     const activeAccount = currentWalletData.accounts[currentWalletData.activeAccountIndex];
-    const receipt = await walletManager.sendTransaction(activeAccount.privateKey, to, amount);
+    
+    if (!activeAccount) {
+      return { success: false, error: 'No active account found' };
+    }
+    
+    if (!activeAccount.privateKey) {
+      return { success: false, error: 'Private key not available for this account' };
+    }
+    
+    // Ensure private key has 0x prefix
+    let privateKey = activeAccount.privateKey;
+    if (!privateKey.startsWith('0x')) {
+      privateKey = '0x' + privateKey;
+    }
+    
+    const receipt = await walletManager.sendTransaction(privateKey, to, amount);
     
     return { 
       success: true, 
@@ -1622,6 +1637,7 @@ async function sendTransaction({ to, amount }) {
       receipt 
     };
   } catch (error) {
+    console.error('sendTransaction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -1640,8 +1656,23 @@ async function sendToken({ tokenAddress, to, amount }) {
 
   try {
     const activeAccount = currentWalletData.accounts[currentWalletData.activeAccountIndex];
+    
+    if (!activeAccount) {
+      return { success: false, error: 'No active account found' };
+    }
+    
+    if (!activeAccount.privateKey) {
+      return { success: false, error: 'Private key not available for this account' };
+    }
+    
+    // Ensure private key has 0x prefix
+    let privateKey = activeAccount.privateKey;
+    if (!privateKey.startsWith('0x')) {
+      privateKey = '0x' + privateKey;
+    }
+    
     const receipt = await walletManager.sendToken(
-      activeAccount.privateKey, 
+      privateKey, 
       tokenAddress, 
       to, 
       amount
@@ -1653,6 +1684,7 @@ async function sendToken({ tokenAddress, to, amount }) {
       receipt 
     };
   } catch (error) {
+    console.error('sendToken error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -1713,9 +1745,25 @@ async function signMessage({ message }) {
 
   try {
     const activeAccount = currentWalletData.accounts[currentWalletData.activeAccountIndex];
-    const signature = await walletManager.signMessage(activeAccount.privateKey, message);
+    
+    if (!activeAccount) {
+      return { success: false, error: 'No active account found' };
+    }
+    
+    if (!activeAccount.privateKey) {
+      return { success: false, error: 'Private key not available for this account' };
+    }
+    
+    // Ensure private key has 0x prefix
+    let privateKey = activeAccount.privateKey;
+    if (!privateKey.startsWith('0x')) {
+      privateKey = '0x' + privateKey;
+    }
+    
+    const signature = await walletManager.signMessage(privateKey, message);
     return { success: true, signature };
   } catch (error) {
+    console.error('signMessage error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -1734,14 +1782,30 @@ async function signTypedData({ domain, types, value }) {
 
   try {
     const activeAccount = currentWalletData.accounts[currentWalletData.activeAccountIndex];
+    
+    if (!activeAccount) {
+      return { success: false, error: 'No active account found' };
+    }
+    
+    if (!activeAccount.privateKey) {
+      return { success: false, error: 'Private key not available for this account' };
+    }
+    
+    // Ensure private key has 0x prefix
+    let privateKey = activeAccount.privateKey;
+    if (!privateKey.startsWith('0x')) {
+      privateKey = '0x' + privateKey;
+    }
+    
     const signature = await walletManager.signTypedData(
-      activeAccount.privateKey, 
+      privateKey, 
       domain, 
       types, 
       value
     );
     return { success: true, signature };
   } catch (error) {
+    console.error('signTypedData error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -2015,14 +2079,22 @@ async function handleWeb3Request({ method, params }, sender) {
       if (!connectedSites.has(origin)) {
         return { success: false, error: 'Site not connected' };
       }
-      return await signMessage({ message: params[0] });
+      const signResult = await signMessage({ message: params[0] });
+      if (signResult.success) {
+        return { success: true, result: signResult.signature };
+      }
+      return signResult;
 
     case 'eth_signTypedData_v4':
       if (!connectedSites.has(origin)) {
         return { success: false, error: 'Site not connected' };
       }
       const typedData = JSON.parse(params[1]);
-      return await signTypedData(typedData);
+      const typedSignResult = await signTypedData(typedData);
+      if (typedSignResult.success) {
+        return { success: true, result: typedSignResult.signature };
+      }
+      return typedSignResult;
 
     case 'eth_sendTransaction':
       if (!connectedSites.has(origin)) {
