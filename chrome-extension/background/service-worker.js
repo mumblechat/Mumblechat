@@ -1760,7 +1760,22 @@ async function signMessage({ message }) {
       privateKey = '0x' + privateKey;
     }
     
-    const signature = await walletManager.signMessage(privateKey, message);
+    console.log('signMessage: Signing for address:', activeAccount.address);
+    console.log('signMessage: Message type:', typeof message);
+    console.log('signMessage: Message preview:', typeof message === 'string' ? message.substring(0, 100) : message);
+    
+    const wallet = new ethers.Wallet(privateKey);
+    const signature = await wallet.signMessage(message);
+    
+    console.log('signMessage: Signature generated:', signature.substring(0, 20) + '...');
+    console.log('signMessage: Signature length:', signature.length);
+    
+    // Verify the signature recovers to the correct address
+    const recoveredAddress = ethers.verifyMessage(message, signature);
+    console.log('signMessage: Recovered address:', recoveredAddress);
+    console.log('signMessage: Expected address:', activeAccount.address);
+    console.log('signMessage: Address match:', recoveredAddress.toLowerCase() === activeAccount.address.toLowerCase());
+    
     return { success: true, signature };
   } catch (error) {
     console.error('signMessage error:', error);
@@ -2079,10 +2094,25 @@ async function handleWeb3Request({ method, params }, sender) {
       if (!connectedSites.has(origin)) {
         return { success: false, error: 'Site not connected' };
       }
-      const signResult = await signMessage({ message: params[0] });
+      // personal_sign params: [message, address] - message can be hex or string
+      let messageToSign = params[0];
+      // If message is hex-encoded (starts with 0x), convert to string
+      if (typeof messageToSign === 'string' && messageToSign.startsWith('0x')) {
+        try {
+          // Convert hex to UTF-8 string
+          messageToSign = ethers.toUtf8String(messageToSign);
+        } catch (e) {
+          // If conversion fails, use as-is (might be raw bytes)
+          console.log('personal_sign: Using hex message as-is');
+        }
+      }
+      console.log('personal_sign: Signing message:', messageToSign?.substring(0, 100) + '...');
+      const signResult = await signMessage({ message: messageToSign });
       if (signResult.success) {
+        console.log('personal_sign: Signature generated:', signResult.signature?.substring(0, 20) + '...');
         return { success: true, result: signResult.signature };
       }
+      console.error('personal_sign: Error:', signResult.error);
       return signResult;
 
     case 'eth_signTypedData_v4':
