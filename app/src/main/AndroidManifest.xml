@@ -74,7 +74,7 @@
                 android:launchMode="singleTask"
                 android:hardwareAccelerated="true"
                 android:theme="@style/AppTheme.NoActionBar"
-                android:windowSoftInputMode="adjustPan">
+                android:windowSoftInputMode="adjustResize">
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
