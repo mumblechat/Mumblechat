@@ -52,8 +52,8 @@ android {
         applicationId "io.ramestta.wallet"
         minSdk 24
         targetSdk 35
-        versionCode 276
-        versionName "3.91"
+        versionCode 277
+        versionName "3.92"
 
         android.buildFeatures.buildConfig true
 
