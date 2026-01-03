@@ -2630,6 +2630,555 @@
           ]
         }
       }
+    },
+    "55ac19294067b550c1dad2b9aaefade2f7aaf45a0554f17c4ef32c9d7c541f98": {
+      "address": "0xE12fc7F1085b0ee61Ad0F85BE8a8D5cf69896858",
+      "txHash": "0xb8256d66741733217de083c2a8beee2867a23a5c8909db35e692da7c0bf84a37",
+      "layout": {
+        "solcVersion": "0.8.22",
+        "storage": [
+          {
+            "label": "identities",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_struct(Identity)1593_storage)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:82"
+          },
+          {
+            "label": "relayNodes",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_address,t_struct(RelayNode)1621_storage)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:85"
+          },
+          {
+            "label": "registeredAddresses",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:88"
+          },
+          {
+            "label": "activeRelayNodes",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:92"
+          },
+          {
+            "label": "minRelayStake",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:97"
+          },
+          {
+            "label": "totalUsers",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_uint256",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:99"
+          },
+          {
+            "label": "totalRelayNodes",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_uint256",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:100"
+          },
+          {
+            "label": "mctToken",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_address",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:101"
+          },
+          {
+            "label": "relayProofClaimed",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_mapping(t_bytes32,t_bool)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:550"
+          },
+          {
+            "label": "relayProofNonce",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:553"
+          },
+          {
+            "label": "lastRelayProofTime",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:556"
+          },
+          {
+            "label": "relayRewardPerMessage",
+            "offset": 0,
+            "slot": "11",
+            "type": "t_uint256",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:560"
+          },
+          {
+            "label": "currentDayPool",
+            "offset": 0,
+            "slot": "12",
+            "type": "t_struct(DailyPool)3460_storage",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:826"
+          },
+          {
+            "label": "dailyPools",
+            "offset": 0,
+            "slot": "17",
+            "type": "t_mapping(t_uint256,t_struct(DailyPool)3460_storage)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:829"
+          },
+          {
+            "label": "nodeDailyStats",
+            "offset": 0,
+            "slot": "18",
+            "type": "t_mapping(t_address,t_mapping(t_uint256,t_struct(NodeDailyStats)3467_storage))",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:832"
+          },
+          {
+            "label": "todayContributors",
+            "offset": 0,
+            "slot": "19",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:836"
+          },
+          {
+            "label": "isContributorToday",
+            "offset": 0,
+            "slot": "20",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:836"
+          },
+          {
+            "label": "dailyPoolAmount",
+            "offset": 0,
+            "slot": "21",
+            "type": "t_uint256",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:837"
+          },
+          {
+            "label": "reputationScore",
+            "offset": 0,
+            "slot": "22",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:1148"
+          },
+          {
+            "label": "violationCount",
+            "offset": 0,
+            "slot": "23",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:1151"
+          },
+          {
+            "label": "isBlacklisted",
+            "offset": 0,
+            "slot": "24",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:1152"
+          },
+          {
+            "label": "lastMessageTime",
+            "offset": 0,
+            "slot": "25",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:1154"
+          },
+          {
+            "label": "blockedUsers",
+            "offset": 0,
+            "slot": "26",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:1309"
+          },
+          {
+            "label": "blockedUsersList",
+            "offset": 0,
+            "slot": "27",
+            "type": "t_mapping(t_address,t_array(t_address)dyn_storage)",
+            "contract": "MumbleChatRegistry",
+            "src": "src/MumbleChatRegistry.sol:1310"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)73_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)13_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)226_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_enum(NodeTier)1580": {
+            "label": "enum MumbleChatRegistry.NodeTier",
+            "members": [
+              "Bronze",
+              "Silver",
+              "Gold",
+              "Platinum"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_array(t_address)dyn_storage)": {
+            "label": "mapping(address => address[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_bool))": {
+            "label": "mapping(address => mapping(address => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_uint256,t_struct(NodeDailyStats)3467_storage))": {
+            "label": "mapping(address => mapping(uint256 => struct MumbleChatRegistry.NodeDailyStats))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(Identity)1593_storage)": {
+            "label": "mapping(address => struct MumbleChatRegistry.Identity)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(RelayNode)1621_storage)": {
+            "label": "mapping(address => struct MumbleChatRegistry.RelayNode)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_bool)": {
+            "label": "mapping(bytes32 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(DailyPool)3460_storage)": {
+            "label": "mapping(uint256 => struct MumbleChatRegistry.DailyPool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(NodeDailyStats)3467_storage)": {
+            "label": "mapping(uint256 => struct MumbleChatRegistry.NodeDailyStats)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(DailyPool)3460_storage": {
+            "label": "struct MumbleChatRegistry.DailyPool",
+            "members": [
+              {
+                "label": "dayId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "totalRelays",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "totalWeightedRelays",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "poolAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "distributed",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(Identity)1593_storage": {
+            "label": "struct MumbleChatRegistry.Identity",
+            "members": [
+              {
+                "label": "publicKeyX",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "publicKeyY",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "registeredAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "lastUpdated",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "isActive",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "displayName",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "5"
+              }
+            ],
+            "numberOfBytes": "192"
+          },
+          "t_struct(NodeDailyStats)3467_storage": {
+            "label": "struct MumbleChatRegistry.NodeDailyStats",
+            "members": [
+              {
+                "label": "relayCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "weightedRelayCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "claimed",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(RelayNode)1621_storage": {
+            "label": "struct MumbleChatRegistry.RelayNode",
+            "members": [
+              {
+                "label": "endpoint",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "stakedAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "registeredAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "messagesRelayed",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "rewardsEarned",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "isActive",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "totalUptimeSeconds",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "lastHeartbeat",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "currentSessionStart",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "storageMB",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "dailyUptimeSeconds",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "10"
+              },
+              {
+                "label": "lastDayReset",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "11"
+              },
+              {
+                "label": "tier",
+                "type": "t_enum(NodeTier)1580",
+                "offset": 0,
+                "slot": "12"
+              }
+            ],
+            "numberOfBytes": "416"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:43",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
     }
   }
 }

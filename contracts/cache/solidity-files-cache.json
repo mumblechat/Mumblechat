@@ -684,8 +684,8 @@
       ]
     },
     "/Users/dev/Downloads/Blockchain/Mumblechat Ramestta Protocol/contracts/src/MumbleChatRegistry.sol": {
-      "lastModificationDate": 1767467015165,
-      "contentHash": "8a5810f363f49cec932d6f2b3efbb550",
+      "lastModificationDate": 1767469988886,
+      "contentHash": "1ab121cd1ecfb410a980773715455b55",
       "sourceName": "src/MumbleChatRegistry.sol",
       "solcConfig": {
         "version": "0.8.22",

@@ -20,18 +20,25 @@
     },
     "MumbleChatRegistry": {
       "proxy": "0x4f8D4955F370881B05b68D2344345E749d8632e3",
-      "implementation": "0x1E2bA804ce95a2300C99784A341B3cc4e3b2D70c",
-      "version": "3.0.0",
-      "lastUpgraded": "2026-01-03T17:02:20.915Z",
+      "implementation": "0xe73f98b22528E34eDE1Ee4AD6facF704ED5dF8C3",
+      "version": "3.2.0",
+      "lastUpgraded": "2026-01-04T12:00:00.000Z",
       "verified": true,
       "features": [
         "Identity Management",
         "Relay Node System",
-        "Tier System",
+        "GB-Scale Tier System (1GB/2GB/4GB/8GB+)",
+        "Fair Daily Pool with Anti-Inflation",
         "Reputation & Slashing",
         "Blacklist Protection",
         "User Block/Unblock"
-      ]
+      ],
+      "tierThresholds": {
+        "bronze": { "storage": "1 GB", "uptime": "4+ hours", "poolShare": "10%", "multiplier": "1.0x" },
+        "silver": { "storage": "2 GB", "uptime": "8+ hours", "poolShare": "20%", "multiplier": "1.5x" },
+        "gold": { "storage": "4 GB", "uptime": "12+ hours", "poolShare": "30%", "multiplier": "2.0x" },
+        "platinum": { "storage": "8+ GB", "uptime": "16+ hours", "poolShare": "40%", "multiplier": "3.0x" }
+      }
     }
   },
   "verification": {
