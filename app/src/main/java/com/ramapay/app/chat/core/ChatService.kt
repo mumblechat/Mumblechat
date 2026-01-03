@@ -65,33 +65,59 @@ class ChatService @Inject constructor(
             ?: return Result.failure(Exception("No wallet available"))
 
         return try {
+            Timber.d("ChatService: Initializing for wallet $walletAddress")
+            
             // 1. Derive chat keys from wallet
             chatKeys = chatKeyManager.deriveChatKeys()
             
             if (chatKeys == null) {
+                Timber.e("ChatService: Failed to derive chat keys")
                 return Result.failure(Exception("Failed to derive chat keys"))
             }
+            Timber.d("ChatService: Chat keys derived successfully")
 
             // 2. Check registration status
             val isRegistered = registrationManager.isRegistered(walletAddress)
+            Timber.d("ChatService: Registration status for $walletAddress: $isRegistered")
 
             if (!isRegistered) {
                 _registrationRequired.value = true
                 // Can continue but will need to register before chatting
+                Timber.d("ChatService: User not registered, waiting for registration")
                 return Result.success(Unit)
             }
 
-            // 3. Connect to P2P network
-            p2pManager.initialize(chatKeys!!, walletAddress)
-            p2pManager.connect()
+            // User is registered - mark as initialized immediately
+            // P2P connection happens in background
+            _registrationRequired.value = false
+            _isInitialized.value = true
+            Timber.d("ChatService: User is registered, marked as initialized")
+
+            // 3. Connect to P2P network (in background, non-blocking)
+            try {
+                p2pManager.initialize(chatKeys!!, walletAddress)
+                p2pManager.connect()
+                Timber.d("ChatService: P2P connection initiated")
+            } catch (e: Exception) {
+                // P2P failure shouldn't block chat functionality
+                // Messages will be sent via relay
+                Timber.w(e, "ChatService: P2P connection failed, will use relay")
+            }
 
             // 4. Start listening for incoming messages
-            startMessageListener()
+            try {
+                startMessageListener()
+            } catch (e: Exception) {
+                Timber.w(e, "ChatService: Message listener failed to start")
+            }
 
             // 5. Sync pending messages from relays
-            syncPendingMessages()
+            try {
+                syncPendingMessages()
+            } catch (e: Exception) {
+                Timber.w(e, "ChatService: Pending message sync failed")
+            }
 
-            _isInitialized.value = true
             Result.success(Unit)
 
         } catch (e: Exception) {

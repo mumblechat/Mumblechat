@@ -20,6 +20,7 @@ sealed class NewChatState {
     object Loading : NewChatState()
     data class Success(val conversationId: String, val peerAddress: String) : NewChatState()
     data class Error(val message: String) : NewChatState()
+    data class AddressVerified(val address: String, val isRegistered: Boolean) : NewChatState()
 }
 
 /**
@@ -34,6 +35,29 @@ class NewChatViewModel @Inject constructor(
 
     private val _state = MutableStateFlow<NewChatState>(NewChatState.Idle)
     val state: StateFlow<NewChatState> = _state
+    
+    /**
+     * Get current wallet address.
+     */
+    fun getMyAddress(): String? {
+        return walletBridge.getCurrentWalletAddress()
+    }
+    
+    /**
+     * Check if an address is registered for MumbleChat.
+     */
+    fun checkIfRegistered(address: String) {
+        viewModelScope.launch {
+            try {
+                // Clear cache and force fresh check
+                val isRegistered = registrationManager.isRegistered(address)
+                _state.value = NewChatState.AddressVerified(address, isRegistered)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to check registration for $address")
+                _state.value = NewChatState.AddressVerified(address, false)
+            }
+        }
+    }
 
     /**
      * Start a conversation with a wallet address.

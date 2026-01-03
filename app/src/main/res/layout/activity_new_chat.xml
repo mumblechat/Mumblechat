@@ -32,35 +32,130 @@
             android:textAppearance="@style/TextAppearance.AppCompat.Body1"
             android:alpha="0.7" />
 
-        <!-- Address Input -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/inputLayout"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        <!-- Address Input with Paste Button -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:hint="@string/wallet_address">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editAddress"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/inputLayout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/wallet_address"
+                app:boxStrokeColor="@color/mumblechat_accent"
+                app:hintTextColor="@color/mumblechat_accent">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editAddress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionDone"
+                    android:inputType="textNoSuggestions"
+                    android:maxLines="1" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Paste Button -->
+            <ImageButton
+                android:id="@+id/buttonPaste"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/paste"
+                android:src="@drawable/ic_paste"
+                app:tint="@color/mumblechat_accent" />
+
+        </LinearLayout>
+
+        <!-- Registration Status Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/registrationStatusCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:imeOptions="actionDone"
-                android:inputType="textNoSuggestions"
-                android:maxLines="1" />
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:gravity="center_vertical">
 
-        </com.google.android.material.textfield.TextInputLayout>
+                <ImageView
+                    android:id="@+id/statusIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="@color/success" />
 
-        <!-- QR Scan Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonScanQr"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                <TextView
+                    android:id="@+id/statusText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Body2" />
+
+                <ProgressBar
+                    android:id="@+id/statusProgress"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Action Buttons -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="@string/scan_qr_code"
-            app:icon="@drawable/ic_qr_scan"
-            app:iconGravity="start" />
+            android:orientation="horizontal">
+
+            <!-- Scan QR Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonScanQr"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="@string/scan_qr"
+                app:icon="@drawable/ic_qr_scan"
+                app:iconGravity="start"
+                app:strokeColor="@color/mumblechat_accent"
+                android:textColor="@color/mumblechat_accent"
+                app:iconTint="@color/mumblechat_accent" />
+
+            <!-- Show My QR Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonShowMyQr"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="@string/my_qr"
+                app:icon="@drawable/ic_qr_code"
+                app:iconGravity="start"
+                app:strokeColor="@color/mumblechat_accent"
+                android:textColor="@color/mumblechat_accent"
+                app:iconTint="@color/mumblechat_accent" />
+
+        </LinearLayout>
 
         <View
             android:layout_width="match_parent"

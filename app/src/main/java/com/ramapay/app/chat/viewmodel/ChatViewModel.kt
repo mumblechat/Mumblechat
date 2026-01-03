@@ -162,12 +162,28 @@ class ChatViewModel @Inject constructor(
         return chatService.forceCheckRegistration(address)
     }
 
+    /**
+     * Connection state based on chat service initialization and P2P status.
+     * Shows CONNECTED when user is registered and ready to chat.
+     * Shows DISCONNECTED when not registered or not initialized.
+     */
     val connectionState: StateFlow<ConnectionState> = chatService.isInitialized
         .flatMapLatest { initialized ->
             if (initialized) {
+                // If initialized, we're "connected" (ready to chat)
+                // Note: P2P might still be connecting in background, but user can chat
                 flowOf(ConnectionState.CONNECTED)
             } else {
-                flowOf(ConnectionState.DISCONNECTED)
+                // If not initialized, check if it's because we need registration
+                chatService.registrationRequired.flatMapLatest { needsRegistration ->
+                    if (needsRegistration) {
+                        // Not connected because user needs to register first
+                        flowOf(ConnectionState.DISCONNECTED)
+                    } else {
+                        // Still initializing
+                        flowOf(ConnectionState.CONNECTING)
+                    }
+                }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ConnectionState.DISCONNECTED)

@@ -2,6 +2,7 @@ package com.ramapay.app.chat.ui.conversation
 
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
@@ -144,6 +145,16 @@ class ConversationActivity : AppCompatActivity() {
                             is SendingState.Sending -> {
                                 binding.buttonSend.isEnabled = false
                                 binding.progressSending.isVisible = true
+                            }
+                            is SendingState.Error -> {
+                                binding.buttonSend.isEnabled = true
+                                binding.progressSending.isVisible = false
+                                // Show error to user
+                                Toast.makeText(
+                                    this@ConversationActivity,
+                                    "Failed to send: ${state.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                             else -> {
                                 binding.buttonSend.isEnabled = true

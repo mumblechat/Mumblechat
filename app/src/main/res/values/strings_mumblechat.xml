@@ -33,7 +33,17 @@
     <string name="enter_wallet_address">Please enter a wallet address</string>
     <string name="invalid_wallet_address">Invalid wallet address format</string>
     <string name="scan_qr_code">Scan QR Code</string>
+    <string name="my_qr">My QR</string>
     <string name="start_chat">Start Chat</string>
+    <string name="share_address">Share Address</string>
+    <string name="show_qr_code">Show QR Code</string>
+    <string name="your_mumblechat_qr">Your MumbleChat QR Code</string>
+    <string name="scan_to_chat">Scan this to start a chat with me</string>
+    <string name="address_copied">Address copied to clipboard</string>
+    <string name="verifying_address">Verifying address…</string>
+    <string name="user_registered">User is registered ✓</string>
+    <string name="user_not_registered">This address is not registered for MumbleChat</string>
+    <string name="cannot_chat_unregistered">You cannot chat with unregistered users</string>
     
     <!-- Conversation -->
     <string name="type_a_message">Type a message…</string>
