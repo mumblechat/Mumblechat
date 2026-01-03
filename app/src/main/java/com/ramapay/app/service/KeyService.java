@@ -454,8 +454,11 @@ public class KeyService implements AuthenticationCallback, PinAuthenticationCall
                 try
                 {
                     String mnemonic = unpackMnemonic();
-                    HDWallet newWallet = new HDWallet(mnemonic, "");
-                    PrivateKey pk = newWallet.getKeyForCoin(CoinType.ETHEREUM);
+                    HDWallet hdWallet = new HDWallet(mnemonic, "");
+                    // Use the correct derivation path based on wallet's hdKeyIndex
+                    String derivationPath = "m/44'/60'/0'/0/" + currentWallet.hdKeyIndex;
+                    PrivateKey pk = hdWallet.getKey(CoinType.ETHEREUM, derivationPath);
+                    Timber.d("KeyService: Signing for HD wallet at index %d, derivation: %s", currentWallet.hdKeyIndex, derivationPath);
                     byte[] digest = Hash.keccak256(TBSdata);
                     returnSig.signature = pk.sign(digest, Curve.SECP256K1);
                     returnSig.sigType = SignatureReturnType.SIGNATURE_GENERATED;

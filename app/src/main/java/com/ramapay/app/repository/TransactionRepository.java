@@ -28,6 +28,7 @@ import java.util.List;
 
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
+import timber.log.Timber;
 import io.realm.Realm;
 
 public class TransactionRepository implements TransactionRepositoryType
@@ -68,7 +69,9 @@ public class TransactionRepository implements TransactionRepositoryType
     @Override
     public Single<Pair<SignatureFromKey, RawTransaction>> signTransaction(Wallet from, Web3Transaction w3Tx, long chainId)
     {
+        Timber.d("TransactionRepository: signTransaction for wallet %s, supplied nonce: %d, chainId: %d", from.address, w3Tx.nonce, chainId);
         return getNonceForTransaction(getWeb3jService(chainId), from.address, w3Tx.nonce) //Note here if the supplied nonce is zero or greater then simply pass that on
+                .doOnSuccess(txNonce -> Timber.d("TransactionRepository: Using nonce %d for wallet %s", txNonce.longValue(), from.address))
                 .map(txNonce -> formatRawTransaction(w3Tx, txNonce.longValue(), chainId))
                 .map(rtx -> new Pair<>(accountKeystoreService.signTransaction(from, chainId, rtx).blockingGet(),
                         rtx))
@@ -241,11 +244,14 @@ public class TransactionRepository implements TransactionRepositoryType
     {
         if (nonce != -1) //use supplied nonce
         {
+            Timber.d("TransactionRepository: Using supplied nonce %d for wallet %s", nonce, wallet);
             return Single.fromCallable(() -> BigInteger.valueOf(nonce));
         }
         else
         {
-            return networkRepository.getLastTransactionNonce(web3j, wallet);
+            Timber.d("TransactionRepository: Fetching nonce from blockchain for wallet %s", wallet);
+            return networkRepository.getLastTransactionNonce(web3j, wallet)
+                    .doOnSuccess(fetchedNonce -> Timber.d("TransactionRepository: Blockchain returned nonce %d for wallet %s", fetchedNonce.longValue(), wallet));
         }
     }
 

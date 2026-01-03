@@ -23,8 +23,8 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/mumblechat_background"
             app:titleTextColor="@color/mumblechat_text_primary"
-            app:title="Conversations"
-            app:menu="@menu/menu_chat" />
+            app:subtitleTextColor="@color/mumblechat_text_secondary"
+            app:title="Chat" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -40,15 +40,11 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Connection Status Bar -->
+            <!-- Connection Status Bar (Hidden - using dot indicator) -->
             <LinearLayout
                 android:id="@+id/connectionStatus"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/pumpkin"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp"
+                android:layout_height="0dp"
                 android:visibility="gone"
                 tools:visibility="gone">
 

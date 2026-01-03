@@ -120,6 +120,12 @@ class MumbleChatFragment : BaseFragment(),
     private fun setupToolbar() {
         binding.toolbar.title = getString(R.string.chat_label)
         binding.toolbar.inflateMenu(R.menu.menu_chat)
+        
+        // Set subtitle with wallet address
+        viewModel.currentWalletAddress?.let { address ->
+            binding.toolbar.subtitle = "Connected • ${formatAddress(address)}"
+        }
+        
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_settings -> {
@@ -128,6 +134,14 @@ class MumbleChatFragment : BaseFragment(),
                 }
                 else -> false
             }
+        }
+    }
+    
+    private fun formatAddress(address: String): String {
+        return if (address.length > 10) {
+            "${address.take(4)}...${address.takeLast(4)}"
+        } else {
+            address
         }
     }
     
@@ -233,11 +247,39 @@ class MumbleChatFragment : BaseFragment(),
     private fun handleTransactionSuccess(result: com.ramapay.app.entity.TransactionReturn) {
         Timber.d("$TAG: Transaction successful: ${result.hash}")
         resultDialog?.dismiss()
+        confirmationDialog?.dismiss()
+        registerDialog?.dismiss()
         
-        // Show immediate success - transaction is on blockchain
+        // Show success with full transaction hash
+        val txHash = result.hash ?: "Unknown"
+        val shortHash = if (txHash.length > 20) "${txHash.take(10)}...${txHash.takeLast(8)}" else txHash
+        
+        // Complete registration
         viewModel.completeRegistration()
-        showSuccess("Registration transaction confirmed!\n\nTransaction: ${result.hash?.take(16)}...\n\nYour MumbleChat identity is now active on the Ramestta blockchain.")
+        
+        showSuccessWithTxHash(
+            "Registration Successful!",
+            "Your MumbleChat identity is now active on the Ramestta blockchain.",
+            txHash
+        )
         viewModel.clearTransactionResult()
+    }
+    
+    private fun showSuccessWithTxHash(title: String, message: String, txHash: String) {
+        val dialog = AWalletAlertDialog(requireActivity())
+        dialog.setTitle(title)
+        dialog.setMessage("$message\n\nTransaction Hash:\n$txHash")
+        dialog.setIcon(AWalletAlertDialog.SUCCESS)
+        dialog.setButtonText(R.string.ok)
+        dialog.setButtonListener { dialog.dismiss() }
+        dialog.setSecondaryButtonText(R.string.copy)
+        dialog.setSecondaryButtonListener {
+            val clipboard = requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = android.content.ClipData.newPlainText("Transaction Hash", txHash)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(requireContext(), "Transaction hash copied", Toast.LENGTH_SHORT).show()
+        }
+        dialog.show()
     }
     
     private fun handleTransactionError(error: com.ramapay.app.entity.TransactionReturn) {
@@ -252,10 +294,13 @@ class MumbleChatFragment : BaseFragment(),
                 // Nonce issue - might already be registered or have pending tx
                 handleNonceTooLowError()
             }
-            errorMessage.contains("already known", ignoreCase = true) -> {
-                // Transaction already in mempool
-                showError("Transaction Pending", 
-                    "This transaction is already being processed. Please wait a few minutes and check your registration status.")
+            errorMessage.contains("already known", ignoreCase = true) || 
+            errorMessage.contains("pending", ignoreCase = true) -> {
+                // Transaction already in mempool - show with clear option
+                showNonceErrorWithClearOption(
+                    "Transaction Pending",
+                    "There may be a pending transaction for this wallet.\n\nPlease wait 1-2 minutes and try again. If the problem persists, tap 'Clear Pending' to reset."
+                )
             }
             errorMessage.contains("insufficient funds", ignoreCase = true) -> {
                 showError("Insufficient RAMA", 
@@ -272,47 +317,119 @@ class MumbleChatFragment : BaseFragment(),
     private fun handleNonceTooLowError() {
         val walletAddress = viewModel.currentWalletAddress ?: return
         
+        // Dismiss all dialogs
+        confirmationDialog?.dismiss()
+        registerDialog?.dismiss()
+        
         viewLifecycleOwner.lifecycleScope.launch {
             // Force check from blockchain (bypass cache)
             val isRegistered = viewModel.forceCheckRegistration(walletAddress)
             
             if (isRegistered) {
                 // User is already registered!
-                showSuccess("You're Already Registered!\n\nYour wallet is already registered for MumbleChat. You can start chatting now!")
-                viewModel.completeRegistration()
+                val dialog = AWalletAlertDialog(requireActivity())
+                dialog.setTitle("Already Registered!")
+                dialog.setMessage("Your wallet is already registered for MumbleChat. You can start chatting now!")
+                dialog.setIcon(AWalletAlertDialog.SUCCESS)
+                dialog.setButtonText(R.string.ok)
+                dialog.setButtonListener { 
+                    dialog.dismiss()
+                    viewModel.completeRegistration()
+                }
+                dialog.show()
             } else {
-                // Not registered but nonce error - likely pending tx or node issue
-                showError("Transaction Nonce Error", 
-                    "There may be a pending transaction. Please wait 1-2 minutes and try again.\n\n" +
-                    "If the problem persists, try:\n" +
-                    "• Waiting for any pending transactions to complete\n" +
-                    "• Restarting the app"
-                )
+                // Not registered but nonce error - show option to clear pending transactions
+                showNonceErrorWithClearOption()
+            }
+        }
+    }
+    
+    private fun showNonceErrorWithClearOption(
+        title: String = "Transaction Nonce Error",
+        message: String = "There may be pending transactions blocking new ones.\n\nTap 'Clear Pending' to reset and try again."
+    ) {
+        val dialog = AWalletAlertDialog(requireActivity())
+        dialog.setTitle(title)
+        dialog.setMessage(message)
+        dialog.setIcon(AWalletAlertDialog.WARNING)
+        dialog.setButtonText(R.string.ok)
+        dialog.setButtonListener { dialog.dismiss() }
+        dialog.setSecondaryButtonText(R.string.action_clear)
+        dialog.setSecondaryButtonListener {
+            dialog.dismiss()
+            clearPendingTransactionsAndRetry()
+        }
+        dialog.show()
+    }
+    
+    private fun clearPendingTransactionsAndRetry() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // Show progress
+                val progressDialog = AWalletAlertDialog(requireActivity())
+                progressDialog.setTitle("Clearing Pending Transactions")
+                progressDialog.setMessage("Please wait...")
+                progressDialog.setProgressMode()
+                progressDialog.setCancelable(false)
+                progressDialog.show()
+                
+                // Clear nonce cache and pending transactions
+                viewModel.clearPendingTransactions()
+                
+                // Wait a moment for network to sync
+                delay(2000)
+                
+                progressDialog.dismiss()
+                
+                // Show success and offer to retry
+                val successDialog = AWalletAlertDialog(requireActivity())
+                successDialog.setTitle("Cleared!")
+                successDialog.setMessage("Pending transactions cleared. You can now try registering again.")
+                successDialog.setIcon(AWalletAlertDialog.SUCCESS)
+                successDialog.setButtonText("Register Now")
+                successDialog.setButtonListener {
+                    successDialog.dismiss()
+                    // Retry registration
+                    showRegistrationDialog()
+                }
+                successDialog.setSecondaryButtonText(R.string.cancel)
+                successDialog.setSecondaryButtonListener { successDialog.dismiss() }
+                successDialog.show()
+                
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to clear pending transactions")
+                Toast.makeText(requireContext(), "Failed to clear: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
 
     private fun updateConnectionStatus(state: ConnectionState) {
-        binding.connectionStatus.apply {
-            when (state) {
-                ConnectionState.CONNECTED -> {
-                    isVisible = false
+        // Update connection dot color in menu
+        val menu = binding.toolbar.menu
+        val connectionItem = menu.findItem(R.id.action_connection_status)
+        
+        when (state) {
+            ConnectionState.CONNECTED -> {
+                connectionItem?.setIcon(R.drawable.ic_connection_dot)
+                connectionItem?.icon?.setTint(resources.getColor(R.color.success, null))
+                viewModel.currentWalletAddress?.let { address ->
+                    binding.toolbar.subtitle = "Connected • ${formatAddress(address)}"
                 }
-                ConnectionState.CONNECTING, ConnectionState.RECONNECTING -> {
-                    isVisible = true
-                    binding.textConnectionStatus.text = getString(R.string.connecting)
-                    setBackgroundColor(resources.getColor(R.color.warning, null))
-                }
-                ConnectionState.DISCONNECTED -> {
-                    isVisible = true
-                    binding.textConnectionStatus.text = getString(R.string.disconnected)
-                    setBackgroundColor(resources.getColor(R.color.error, null))
-                }
-                ConnectionState.ERROR -> {
-                    isVisible = true
-                    binding.textConnectionStatus.text = getString(R.string.connection_error)
-                    setBackgroundColor(resources.getColor(R.color.error, null))
-                }
+            }
+            ConnectionState.CONNECTING, ConnectionState.RECONNECTING -> {
+                connectionItem?.setIcon(R.drawable.ic_connection_dot)
+                connectionItem?.icon?.setTint(resources.getColor(R.color.warning, null))
+                binding.toolbar.subtitle = "Connecting..."
+            }
+            ConnectionState.DISCONNECTED -> {
+                connectionItem?.setIcon(R.drawable.ic_connection_dot)
+                connectionItem?.icon?.setTint(resources.getColor(R.color.error, null))
+                binding.toolbar.subtitle = "Disconnected"
+            }
+            ConnectionState.ERROR -> {
+                connectionItem?.setIcon(R.drawable.ic_connection_dot)
+                connectionItem?.icon?.setTint(resources.getColor(R.color.error, null))
+                binding.toolbar.subtitle = "Connection Error"
             }
         }
     }

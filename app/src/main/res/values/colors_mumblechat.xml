@@ -25,6 +25,7 @@
     <!-- Status Colors -->
     <color name="status_online">#00D9C0</color>
     <color name="status_offline">#6E7681</color>
+    <color name="success">#4CAF50</color>
     <color name="warning">#FF9800</color>
     
     <!-- Avatar Colors Array -->

@@ -15,6 +15,7 @@ import com.ramapay.app.service.TransactionSendHandlerInterface
 import com.ramapay.app.web3.entity.Address
 import com.ramapay.app.web3.entity.Web3Transaction
 import com.ramapay.hardware.SignatureFromKey
+import com.ramapay.app.entity.tokens.Token
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -139,14 +140,17 @@ class ProfileViewModel @Inject constructor(
         try {
             val txData = registrationManager.getUpdateDisplayNameTxData(newName)
             
+            // Web3Transaction(recipient, contract, value, gasPrice, gasLimit, nonce, payload, leafPosition)
             val tx = Web3Transaction(
-                Address(wallet.address),
-                Address(MumbleChatContracts.REGISTRY_PROXY),
-                BigInteger.ZERO,
-                BigInteger.ZERO,
-                BigInteger.valueOf(150000),
-                -1,
-                txData
+                Address(MumbleChatContracts.REGISTRY_PROXY),  // recipient (contract)
+                null,                                          // contract (null for direct call)
+                Address(wallet.address),                       // from
+                BigInteger.ZERO,                               // value
+                BigInteger.ZERO,                               // gasPrice (will be estimated)
+                BigInteger.valueOf(100000),                    // gasLimit
+                -1,                                            // nonce
+                txData,                                        // payload
+                -1                                             // leafPosition
             )
             
             pendingDisplayNameTx = tx
@@ -158,6 +162,18 @@ class ProfileViewModel @Inject constructor(
             return null
         }
     }
+    
+    /**
+     * Get native token for gas payment.
+     */
+    fun getNativeToken(): Token? {
+        return tokensService.getToken(MumbleChatContracts.CHAIN_ID, tokensService.getCurrentAddress())
+    }
+    
+    /**
+     * Get the token service.
+     */
+    fun getTokenService(): TokensService = tokensService
 
     /**
      * Send the prepared transaction.

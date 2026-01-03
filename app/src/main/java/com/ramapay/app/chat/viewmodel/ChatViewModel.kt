@@ -406,6 +406,42 @@ class ChatViewModel @Inject constructor(
         _transactionResult.value = null
         _transactionError.value = null
     }
+    
+    /**
+     * Clear pending transactions and reset nonce.
+     * This helps recover from "nonce too low" errors.
+     */
+    suspend fun clearPendingTransactions() {
+        withContext(Dispatchers.IO) {
+            try {
+                // Clear caches
+                chatService.cleanup()
+                
+                // Clear any pending transaction states
+                _transactionResult.value = null
+                _transactionError.value = null
+                _registrationState.value = RegistrationState.Unknown
+                
+                // Re-check registration status
+                val address = walletBridge.getCurrentWalletAddress()
+                if (address != null) {
+                    val isRegistered = chatService.forceCheckRegistration(address)
+                    withContext(Dispatchers.Main) {
+                        _registrationState.value = if (isRegistered) {
+                            RegistrationState.Registered
+                        } else {
+                            RegistrationState.NotRegistered
+                        }
+                    }
+                }
+                
+                Timber.d("Cleared pending transactions and reset state")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to clear pending transactions")
+                throw e
+            }
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()

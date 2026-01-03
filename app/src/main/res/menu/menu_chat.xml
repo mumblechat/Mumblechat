@@ -3,8 +3,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_connection_status"
+        android:icon="@drawable/ic_connection_dot"
+        android:title="Connection Status"
+        android:enabled="false"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/action_settings"
-        android:icon="@drawable/ic_settings"
         android:title="@string/action_settings"
         app:showAsAction="never" />
 

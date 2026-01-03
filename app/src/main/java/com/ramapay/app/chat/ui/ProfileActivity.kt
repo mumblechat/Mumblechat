@@ -11,6 +11,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.ramapay.app.R
+import com.ramapay.app.chat.MumbleChatContracts
 import com.ramapay.app.chat.viewmodel.ProfileViewModel
 import com.ramapay.app.databinding.ActivityProfileBinding
 import com.ramapay.app.entity.SignAuthenticationCallback
@@ -117,8 +118,22 @@ class ProfileActivity : AppCompatActivity(), ActionSheetCallback {
         lifecycleScope.launch {
             viewModel.updateSuccess.collect { success ->
                 if (success) {
-                    Toast.makeText(this@ProfileActivity, "Display name updated successfully!", Toast.LENGTH_SHORT).show()
-                    viewModel.loadProfile() // Refresh
+                    confirmationDialog?.dismiss()
+                    // Show success dialog first
+                    val dialog = AWalletAlertDialog(this@ProfileActivity)
+                    dialog.setTitle("Display Name Updated")
+                    dialog.setMessage("Your display name has been updated on the blockchain.")
+                    dialog.setIcon(AWalletAlertDialog.SUCCESS)
+                    dialog.setButtonText(R.string.ok)
+                    dialog.setButtonListener { 
+                        dialog.dismiss()
+                        // Reload profile after user dismisses dialog with small delay
+                        lifecycleScope.launch {
+                            kotlinx.coroutines.delay(1000) // Give blockchain time to sync
+                            viewModel.loadProfile()
+                        }
+                    }
+                    dialog.show()
                 }
             }
         }
@@ -126,10 +141,31 @@ class ProfileActivity : AppCompatActivity(), ActionSheetCallback {
         lifecycleScope.launch {
             viewModel.error.collect { error ->
                 if (error != null) {
-                    Toast.makeText(this@ProfileActivity, "Error: $error", Toast.LENGTH_LONG).show()
+                    confirmationDialog?.dismiss()
+                    showErrorDialog("Update Failed", error)
                 }
             }
         }
+    }
+    
+    private fun showSuccessDialog(title: String, message: String) {
+        val dialog = AWalletAlertDialog(this)
+        dialog.setTitle(title)
+        dialog.setMessage(message)
+        dialog.setIcon(AWalletAlertDialog.SUCCESS)
+        dialog.setButtonText(R.string.ok)
+        dialog.setButtonListener { dialog.dismiss() }
+        dialog.show()
+    }
+    
+    private fun showErrorDialog(title: String, message: String) {
+        val dialog = AWalletAlertDialog(this)
+        dialog.setTitle(title)
+        dialog.setMessage(message)
+        dialog.setIcon(AWalletAlertDialog.ERROR)
+        dialog.setButtonText(R.string.ok)
+        dialog.setButtonListener { dialog.dismiss() }
+        dialog.show()
     }
 
     private fun updateUI(data: ProfileViewModel.ProfileData) {
@@ -162,13 +198,14 @@ class ProfileActivity : AppCompatActivity(), ActionSheetCallback {
 
     private fun showEditNameDialog() {
         val input = android.widget.EditText(this)
-        input.hint = "Enter display name"
+        input.hint = "Enter display name (max 15 chars)"
         input.setText(viewModel.profileData.value?.displayName ?: "")
         input.setPadding(50, 20, 50, 20)
+        input.filters = arrayOf(android.text.InputFilter.LengthFilter(15))
         
         val dialog = AWalletAlertDialog(this)
         dialog.setTitle("Update Display Name")
-        dialog.setMessage("This will be stored on the blockchain and visible to other users.")
+        dialog.setMessage("This will require a blockchain transaction to update your on-chain identity.")
         dialog.setView(input)
         dialog.setButtonText(R.string.update)
         dialog.setSecondaryButtonText(R.string.cancel)
@@ -177,11 +214,11 @@ class ProfileActivity : AppCompatActivity(), ActionSheetCallback {
             val newName = input.text.toString().trim()
             if (newName.isEmpty()) {
                 Toast.makeText(this, "Name cannot be empty", Toast.LENGTH_SHORT).show()
-            } else if (newName.length > 50) {
-                Toast.makeText(this, "Name too long (max 50 characters)", Toast.LENGTH_SHORT).show()
+            } else if (newName.length > 15) {
+                Toast.makeText(this, "Name too long (max 15 characters)", Toast.LENGTH_SHORT).show()
             } else {
                 dialog.dismiss()
-                viewModel.updateDisplayName(newName)
+                showDisplayNameTransactionConfirmation(newName)
             }
         }
         
@@ -190,6 +227,42 @@ class ProfileActivity : AppCompatActivity(), ActionSheetCallback {
         }
         
         dialog.show()
+    }
+    
+    private var confirmationDialog: com.ramapay.app.widget.ActionSheet? = null
+    private var pendingNewName: String? = null
+    
+    private fun showDisplayNameTransactionConfirmation(newName: String) {
+        pendingNewName = newName
+        
+        // Prepare transaction
+        val tx = viewModel.prepareDisplayNameUpdate(newName)
+        if (tx == null) {
+            Toast.makeText(this, "Failed to prepare transaction", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        // Get native token for gas
+        val token = viewModel.getNativeToken()
+        if (token == null) {
+            Toast.makeText(this, "Cannot find RAMA token for gas payment", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        // Get tokens service
+        val tokensService = viewModel.getTokenService()
+        
+        // Show transaction confirmation dialog
+        confirmationDialog = com.ramapay.app.widget.ActionSheetDialog(
+            this,
+            tx,
+            token,
+            "MumbleChat Registry",
+            MumbleChatContracts.REGISTRY_PROXY,
+            tokensService,
+            this
+        )
+        confirmationDialog?.show()
     }
 
     private fun copyToClipboard(text: String, label: String) {
