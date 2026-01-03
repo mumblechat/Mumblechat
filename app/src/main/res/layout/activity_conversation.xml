@@ -76,7 +76,8 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_attach"
-                android:contentDescription="@string/attach_file" />
+                android:contentDescription="@string/attach_file"
+                app:tint="@color/mumblechat_accent" />
 
             <!-- Message Input -->
             <com.google.android.material.textfield.TextInputEditText

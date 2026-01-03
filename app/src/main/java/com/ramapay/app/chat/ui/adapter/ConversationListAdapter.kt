@@ -22,6 +22,26 @@ class ConversationListAdapter(
     private val onItemLongClick: (ConversationEntity) -> Boolean
 ) : ListAdapter<ConversationEntity, ConversationListAdapter.ViewHolder>(ConversationDiffCallback()) {
 
+    // Set of wallet addresses that are online
+    private val onlinePeers = mutableSetOf<String>()
+    
+    /**
+     * Update the set of online peers and refresh affected items.
+     */
+    fun updateOnlinePeers(peers: Set<String>) {
+        val oldPeers = onlinePeers.toSet()
+        onlinePeers.clear()
+        onlinePeers.addAll(peers)
+        
+        // Find which items need updating
+        val changedAddresses = (oldPeers - peers) + (peers - oldPeers)
+        currentList.forEachIndexed { index, conversation ->
+            if (changedAddresses.contains(conversation.peerAddress.lowercase())) {
+                notifyItemChanged(index, "online_status")
+            }
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemConversationBinding.inflate(
             LayoutInflater.from(parent.context),
@@ -33,6 +53,15 @@ class ConversationListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
+    }
+    
+    override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.contains("online_status")) {
+            // Only update online indicator
+            holder.updateOnlineStatus(getItem(position))
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     inner class ViewHolder(
@@ -102,6 +131,18 @@ class ConversationListAdapter(
             val colors = binding.root.context.resources.getIntArray(R.array.avatar_colors)
             val bgColor = colors[colorIndex % colors.size]
             binding.avatarBackground.setBackgroundColor(bgColor)
+            
+            // Online status indicator
+            val isOnline = onlinePeers.contains(conversation.peerAddress.lowercase())
+            binding.onlineIndicator.isVisible = isOnline
+        }
+        
+        /**
+         * Update only the online status indicator (for efficient partial updates).
+         */
+        fun updateOnlineStatus(conversation: ConversationEntity) {
+            val isOnline = onlinePeers.contains(conversation.peerAddress.lowercase())
+            binding.onlineIndicator.isVisible = isOnline
         }
 
         private fun formatAddress(address: String): String {

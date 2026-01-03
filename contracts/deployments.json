@@ -20,14 +20,25 @@
     },
     "MumbleChatRegistry": {
       "proxy": "0x4f8D4955F370881B05b68D2344345E749d8632e3",
-      "implementation": "0xC69C387a67324A08d1410aEB770dB0AC18c9ad15",
-      "version": "2.0.0",
-      "lastUpgraded": "2026-01-03T09:15:02.818Z",
-      "verified": true
+      "implementation": "0xe73f98b22528E34eDE1Ee4AD6facF704ED5dF8C3",
+      "version": "3.2.0",
+      "lastUpgraded": "2026-01-03T19:09:06.074Z",
+      "verified": true,
+      "features": [
+        "Identity registration",
+        "Relay node registration",
+        "Tier-based rewards",
+        "User blocking",
+        "Decentralized relay proofs",
+        "Batch proof submission",
+        "Fair daily pool distribution",
+        "Anti-inflation protection"
+      ]
     }
   },
   "verification": {
     "mctTokenProxy": "https://ramascan.com/address/0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE#code",
-    "registryProxy": "https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3#code"
+    "registryProxy": "https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3#code",
+    "registryImplementation": "https://ramascan.com/address/0xe73f98b22528E34eDE1Ee4AD6facF704ED5dF8C3#code"
   }
 }

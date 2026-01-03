@@ -531,6 +531,198 @@ class MumbleChatBlockchainService @Inject constructor(
             BigInteger.ZERO
         }
     }
+    
+    // ============ User Blocking Functions ============
+    
+    /**
+     * Block a user on the blockchain.
+     * This adds the address to the caller's blocked list.
+     * 
+     * NOTE: This is a write operation that requires a signed transaction.
+     * For now, we store blocking locally and sync to chain when possible.
+     * 
+     * @param addressToBlock The wallet address to block
+     * @return Transaction hash or null if failed
+     */
+    suspend fun blockUser(addressToBlock: String): String? = withContext(Dispatchers.IO) {
+        try {
+            // For now, just log and return a placeholder
+            // Full implementation requires signed transaction support
+            Timber.d("$TAG: Blocking user $addressToBlock (local only for now)")
+            "local-block-${System.currentTimeMillis()}"
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to block user $addressToBlock")
+            null
+        }
+    }
+    
+    /**
+     * Unblock a user on the blockchain.
+     * This removes the address from the caller's blocked list.
+     * 
+     * NOTE: This is a write operation that requires a signed transaction.
+     * For now, we store blocking locally and sync to chain when possible.
+     * 
+     * @param addressToUnblock The wallet address to unblock
+     * @return Transaction hash or null if failed
+     */
+    suspend fun unblockUser(addressToUnblock: String): String? = withContext(Dispatchers.IO) {
+        try {
+            // For now, just log and return a placeholder
+            // Full implementation requires signed transaction support
+            Timber.d("$TAG: Unblocking user $addressToUnblock (local only for now)")
+            "local-unblock-${System.currentTimeMillis()}"
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to unblock user $addressToUnblock")
+            null
+        }
+    }
+    
+    /**
+     * Check if a user is blocked on the blockchain.
+     * 
+     * @param blocker The wallet address of the potential blocker
+     * @param blocked The wallet address to check
+     * @return True if blocked, false otherwise
+     */
+    suspend fun isBlocked(blocker: String, blocked: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val function = Function(
+                "isBlocked",
+                listOf(Address(blocker), Address(blocked)),
+                listOf(object : TypeReference<Bool>() {})
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            val response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                    null,
+                    MumbleChatContracts.REGISTRY_PROXY,
+                    encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (response.hasError()) {
+                return@withContext false
+            }
+            
+            val output = FunctionReturnDecoder.decode(
+                response.value,
+                function.outputParameters
+            )
+            
+            if (output.isEmpty()) {
+                return@withContext false
+            }
+            
+            (output[0] as Bool).value
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to check block status")
+            false
+        }
+    }
+    
+    /**
+     * Check if sender can send message to recipient.
+     * Verifies both are registered and recipient hasn't blocked sender.
+     * 
+     * @param sender The wallet address of the sender
+     * @param recipient The wallet address of the recipient
+     * @return True if message can be sent, false otherwise
+     */
+    suspend fun canSendMessage(sender: String, recipient: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val function = Function(
+                "canSendMessage",
+                listOf(Address(sender), Address(recipient)),
+                listOf(object : TypeReference<Bool>() {})
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            val response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                    null,
+                    MumbleChatContracts.REGISTRY_PROXY,
+                    encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (response.hasError()) {
+                // If contract doesn't support this function, fallback to isBlocked check
+                val isBlockedByRecipient = isBlocked(recipient, sender)
+                return@withContext !isBlockedByRecipient
+            }
+            
+            val output = FunctionReturnDecoder.decode(
+                response.value,
+                function.outputParameters
+            )
+            
+            if (output.isEmpty()) {
+                // Fallback: check if blocked
+                val isBlockedByRecipient = isBlocked(recipient, sender)
+                return@withContext !isBlockedByRecipient
+            }
+            
+            (output[0] as Bool).value
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to check canSendMessage, falling back to isBlocked")
+            // Fallback to isBlocked check
+            try {
+                !isBlocked(recipient, sender)
+            } catch (e2: Exception) {
+                Timber.e(e2, "$TAG: Fallback isBlocked also failed")
+                true // Allow sending if we can't verify
+            }
+        }
+    }
+
+    /**
+     * Get list of blocked users for an address.
+     * 
+     * @param address The wallet address to get blocked list for
+     * @return List of blocked wallet addresses
+     */
+    suspend fun getBlockedUsers(address: String): List<String> = withContext(Dispatchers.IO) {
+        try {
+            val function = Function(
+                "getBlockedUsers",
+                listOf(Address(address)),
+                listOf(object : TypeReference<DynamicArray<Address>>() {})
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            val response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                    null,
+                    MumbleChatContracts.REGISTRY_PROXY,
+                    encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (response.hasError()) {
+                return@withContext emptyList()
+            }
+            
+            val output = FunctionReturnDecoder.decode(
+                response.value,
+                function.outputParameters
+            )
+            
+            if (output.isEmpty()) {
+                return@withContext emptyList()
+            }
+            
+            @Suppress("UNCHECKED_CAST")
+            (output[0] as DynamicArray<Address>).value.map { it.value }
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to get blocked users")
+            emptyList()
+        }
+    }
 }
 
 /**

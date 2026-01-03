@@ -52,11 +52,23 @@ class ConversationRepository @Inject constructor(
 
     suspend fun updateLastMessage(
         conversationId: String,
-        messageId: String,
-        preview: String,
-        timestamp: Long
+        messageId: String?,
+        preview: String?,
+        timestamp: Long?
     ) {
-        conversationDao.updateLastMessage(conversationId, messageId, preview, timestamp)
+        if (messageId != null && preview != null && timestamp != null) {
+            conversationDao.updateLastMessage(conversationId, messageId, preview, timestamp)
+        } else {
+            conversationDao.clearLastMessage(conversationId)
+        }
+    }
+    
+    /**
+     * Archive a conversation (for now, just delete it).
+     * In future, could move to a separate archived table.
+     */
+    suspend fun archive(conversationId: String) {
+        conversationDao.delete(conversationId)
     }
 
     suspend fun incrementUnread(conversationId: String) {

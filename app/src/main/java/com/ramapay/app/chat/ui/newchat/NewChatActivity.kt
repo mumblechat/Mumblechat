@@ -31,6 +31,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var binding: ActivityNewChatBinding
     private val viewModel: NewChatViewModel by viewModels()
     private var verificationJob: Job? = null
+    private var lastVerifiedAddress: String? = null  // Track to prevent re-verification
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,13 +72,17 @@ class NewChatActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 val address = s?.toString()?.trim() ?: ""
                 if (isValidAddress(address)) {
-                    // Debounce verification
-                    verificationJob?.cancel()
-                    verificationJob = lifecycleScope.launch {
-                        delay(500) // Wait 500ms before verifying
-                        verifyAddress(address)
+                    // Only verify if address changed from last verified
+                    if (address.lowercase() != lastVerifiedAddress?.lowercase()) {
+                        // Debounce verification
+                        verificationJob?.cancel()
+                        verificationJob = lifecycleScope.launch {
+                            delay(500) // Wait 500ms before verifying
+                            verifyAddress(address)
+                        }
                     }
                 } else {
+                    lastVerifiedAddress = null
                     hideVerificationStatus()
                 }
             }
@@ -172,6 +177,7 @@ class NewChatActivity : AppCompatActivity() {
         binding.statusText.setTextColor(getColor(R.color.success))
         binding.registrationStatusCard.strokeColor = getColor(R.color.success)
         binding.buttonStartChat.isEnabled = true
+        binding.buttonInvite.isVisible = false
     }
     
     private fun showNotRegisteredStatus() {
@@ -184,11 +190,95 @@ class NewChatActivity : AppCompatActivity() {
         binding.statusText.setTextColor(getColor(R.color.error))
         binding.registrationStatusCard.strokeColor = getColor(R.color.error)
         binding.buttonStartChat.isEnabled = false
+        
+        // Show invite button
+        binding.buttonInvite.isVisible = true
+        binding.buttonInvite.setOnClickListener {
+            showInviteOptions(binding.editAddress.text.toString().trim())
+        }
+    }
+    
+    private fun showInviteDialog() {
+        val address = binding.editAddress.text.toString().trim()
+        
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.user_not_registered)
+            .setMessage(R.string.invite_user_message)
+            .setPositiveButton(R.string.send_invite) { _, _ ->
+                showInviteOptions(address)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+        dialog.show()
+    }
+    
+    private fun showInviteOptions(address: String) {
+        val deepLink = "https://mumblechat.io/chat?address=${viewModel.getMyAddress()}"
+        val inviteMessage = getString(R.string.invite_message_template, deepLink)
+        
+        val options = arrayOf(
+            getString(R.string.invite_via_whatsapp),
+            getString(R.string.invite_via_sms),
+            getString(R.string.invite_via_email),
+            getString(R.string.invite_via_share)
+        )
+        
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.choose_invite_method)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> sendWhatsAppInvite(inviteMessage)
+                    1 -> sendSmsInvite(inviteMessage)
+                    2 -> sendEmailInvite(inviteMessage)
+                    3 -> sendGenericShare(inviteMessage)
+                }
+            }
+            .show()
+    }
+    
+    private fun sendWhatsAppInvite(message: String) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                setPackage("com.whatsapp")
+                putExtra(Intent.EXTRA_TEXT, message)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            // WhatsApp not installed, use generic share
+            sendGenericShare(message)
+        }
+    }
+    
+    private fun sendSmsInvite(message: String) {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = android.net.Uri.parse("sms:")
+            putExtra("sms_body", message)
+        }
+        startActivity(intent)
+    }
+    
+    private fun sendEmailInvite(message: String) {
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = android.net.Uri.parse("mailto:")
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.invite_email_subject))
+            putExtra(Intent.EXTRA_TEXT, message)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.send_invite)))
+    }
+    
+    private fun sendGenericShare(message: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, message)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.send_invite)))
     }
     
     private fun hideVerificationStatus() {
         binding.registrationStatusCard.isVisible = false
         binding.buttonStartChat.isEnabled = true
+        binding.buttonInvite.isVisible = false
     }
 
     private fun startChat() {
@@ -240,6 +330,8 @@ class NewChatActivity : AppCompatActivity() {
                         Toast.makeText(this@NewChatActivity, state.message, Toast.LENGTH_LONG).show()
                     }
                     is NewChatState.AddressVerified -> {
+                        // Store verified address to prevent re-verification
+                        lastVerifiedAddress = state.address
                         if (state.isRegistered) {
                             showRegisteredStatus()
                         } else {

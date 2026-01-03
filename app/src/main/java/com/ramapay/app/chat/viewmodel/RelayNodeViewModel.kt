@@ -69,6 +69,13 @@ class RelayNodeViewModel @Inject constructor(
     private val _feePoolShare = MutableStateFlow(0.0)
     val feePoolShare: StateFlow<Double> = _feePoolShare
 
+    // V3.1: Daily pool stats
+    private val _dailyPoolStats = MutableStateFlow<DailyPoolStats?>(null)
+    val dailyPoolStats: StateFlow<DailyPoolStats?> = _dailyPoolStats
+
+    private val _claimableReward = MutableStateFlow(0.0)
+    val claimableReward: StateFlow<Double> = _claimableReward
+
     private var pendingOperation: String? = null
 
     // Data classes for UI
@@ -87,6 +94,17 @@ class RelayNodeViewModel @Inject constructor(
         val violations: Int,
         val isBlacklisted: Boolean,
         val canOperate: Boolean
+    )
+    
+    // V3.1: Daily pool stats
+    data class DailyPoolStats(
+        val dayId: Long,                // Today's day ID
+        val myRelaysToday: Long,        // My relay count today
+        val networkRelaysToday: Long,   // Total network relays today
+        val numContributors: Int,       // Number of nodes contributing
+        val poolAmount: Double,         // Pool amount (100 MCT)
+        val estimatedReward: Double,    // My estimated share
+        val yesterdayClaimable: Double  // Claimable from yesterday
     )
 
     fun loadRelayStatus() {
@@ -398,6 +416,71 @@ class RelayNodeViewModel @Inject constructor(
             }
         }
     }
+    
+    // V3.1: Claim daily pool reward for yesterday
+    fun claimDailyPoolReward() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            pendingOperation = "claim_daily"
+
+            try {
+                val wallet = walletBridge.getCurrentWallet() ?: return@launch
+                
+                // Calculate yesterday's day ID (Unix timestamp / 86400)
+                val yesterdayDayId = (System.currentTimeMillis() / 1000 / 86400) - 1
+
+                val function = Function(
+                    "claimDailyPoolReward",
+                    listOf(Uint256(yesterdayDayId)),
+                    emptyList()
+                )
+                val txData = FunctionEncoder.encode(function)
+
+                val tx = Web3Transaction(
+                    Address(wallet.address),
+                    Address(MumbleChatContracts.REGISTRY_PROXY),
+                    BigInteger.ZERO,
+                    BigInteger.ZERO,
+                    BigInteger.valueOf(200000),
+                    -1,
+                    txData
+                )
+
+                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to claim daily pool reward")
+                _error.value = "Claim failed: ${e.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    // V3.1: Load daily pool stats
+    fun loadDailyPoolStats() {
+        viewModelScope.launch {
+            try {
+                val wallet = walletBridge.getCurrentWallet() ?: return@launch
+                
+                // In production, call the contract's getTodayPoolInfo and getMyTodayStats
+                // For now, estimate based on local data
+                val todayDayId = System.currentTimeMillis() / 1000 / 86400
+                
+                // TODO: Call registrationManager.blockchainService.getTodayPoolInfo()
+                // For now, provide placeholder data
+                _dailyPoolStats.value = DailyPoolStats(
+                    dayId = todayDayId,
+                    myRelaysToday = _relayStatus.value?.messagesRelayed ?: 0,
+                    networkRelaysToday = 0, // Will be fetched from contract
+                    numContributors = 0,
+                    poolAmount = 100.0,
+                    estimatedReward = 0.0,
+                    yesterdayClaimable = _claimableReward.value
+                )
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load daily pool stats")
+            }
+        }
+    }
 
     // V2: Update storage capacity
     fun updateStorage(storageMB: Int) {
@@ -489,6 +572,123 @@ class RelayNodeViewModel @Inject constructor(
             }
         }
     }
+    
+    // V3: Submit relay proof for decentralized relay rewards
+    fun submitRelayProof(
+        messageHash: ByteArray,
+        senderAddress: String,
+        recipientAddress: String,
+        timestamp: Long,
+        senderSignature: ByteArray
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            pendingOperation = "submit_proof"
+
+            try {
+                val wallet = walletBridge.getCurrentWallet() ?: return@launch
+
+                // Encode submitRelayProof function call
+                val function = Function(
+                    "submitRelayProof",
+                    listOf(
+                        org.web3j.abi.datatypes.generated.Bytes32(messageHash),
+                        org.web3j.abi.datatypes.Address(senderAddress),
+                        org.web3j.abi.datatypes.Address(recipientAddress),
+                        Uint256(timestamp),
+                        org.web3j.abi.datatypes.DynamicBytes(senderSignature)
+                    ),
+                    emptyList()
+                )
+                val txData = FunctionEncoder.encode(function)
+
+                val tx = Web3Transaction(
+                    Address(wallet.address),
+                    Address(MumbleChatContracts.REGISTRY_PROXY),
+                    BigInteger.ZERO,
+                    BigInteger.ZERO,
+                    BigInteger.valueOf(200000),
+                    -1,
+                    txData
+                )
+
+                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to submit relay proof")
+                _error.value = "Submit proof failed: ${e.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    // V3: Submit batch relay proofs (more efficient)
+    fun submitBatchRelayProofs(proofs: List<RelayProof>) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            pendingOperation = "submit_batch_proof"
+
+            try {
+                val wallet = walletBridge.getCurrentWallet() ?: return@launch
+                
+                if (proofs.isEmpty()) {
+                    _error.value = "No proofs to submit"
+                    _isLoading.value = false
+                    return@launch
+                }
+                
+                if (proofs.size > 50) {
+                    _error.value = "Maximum 50 proofs per batch"
+                    _isLoading.value = false
+                    return@launch
+                }
+
+                // Encode submitBatchRelayProofs function call
+                val messageHashes = proofs.map { org.web3j.abi.datatypes.generated.Bytes32(it.messageHash) }
+                val senders = proofs.map { org.web3j.abi.datatypes.Address(it.senderAddress) }
+                val recipients = proofs.map { org.web3j.abi.datatypes.Address(it.recipientAddress) }
+                val timestamps = proofs.map { Uint256(it.timestamp) }
+                val signatures = proofs.map { org.web3j.abi.datatypes.DynamicBytes(it.senderSignature) }
+                
+                val function = Function(
+                    "submitBatchRelayProofs",
+                    listOf(
+                        org.web3j.abi.datatypes.DynamicArray(org.web3j.abi.datatypes.generated.Bytes32::class.java, messageHashes),
+                        org.web3j.abi.datatypes.DynamicArray(org.web3j.abi.datatypes.Address::class.java, senders),
+                        org.web3j.abi.datatypes.DynamicArray(org.web3j.abi.datatypes.Address::class.java, recipients),
+                        org.web3j.abi.datatypes.DynamicArray(Uint256::class.java, timestamps),
+                        org.web3j.abi.datatypes.DynamicArray(org.web3j.abi.datatypes.DynamicBytes::class.java, signatures)
+                    ),
+                    emptyList()
+                )
+                val txData = FunctionEncoder.encode(function)
+
+                val tx = Web3Transaction(
+                    Address(wallet.address),
+                    Address(MumbleChatContracts.REGISTRY_PROXY),
+                    BigInteger.ZERO,
+                    BigInteger.ZERO,
+                    BigInteger.valueOf(500000), // Higher gas for batch
+                    -1,
+                    txData
+                )
+
+                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to submit batch relay proofs")
+                _error.value = "Submit batch proof failed: ${e.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    // Data class for relay proof
+    data class RelayProof(
+        val messageHash: ByteArray,
+        val senderAddress: String,
+        val recipientAddress: String,
+        val timestamp: Long,
+        val senderSignature: ByteArray
+    )
 
     // TransactionSendHandlerInterface implementation
     override fun transactionFinalised(transactionReturn: TransactionReturn?) {
@@ -508,9 +708,23 @@ class RelayNodeViewModel @Inject constructor(
                     _success.value = "Fee rewards claimed!"
                     loadRelayStatus() // Refresh balance
                 }
+                "claim_daily" -> {
+                    _success.value = "Daily pool reward claimed!"
+                    _claimableReward.value = 0.0 // Reset claimable
+                    loadRelayStatus() // Refresh balance
+                    loadDailyPoolStats() // Refresh stats
+                }
                 "update_storage" -> {
                     _success.value = "Storage capacity updated!"
                     loadRelayStatus() // Refresh tier info
+                }
+                "submit_proof" -> {
+                    _success.value = "Relay proof submitted! Reward earned."
+                    loadRelayStatus() // Refresh stats
+                }
+                "submit_batch_proof" -> {
+                    _success.value = "Batch relay proofs submitted! Rewards earned."
+                    loadRelayStatus() // Refresh stats
                 }
                 else -> _success.value = "Transaction successful!"
             }

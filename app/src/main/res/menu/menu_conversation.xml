@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_view_contact"
+        android:icon="@drawable/ic_person"
+        android:title="@string/view_contact"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_block_user"
+        android:icon="@drawable/ic_block"
+        android:title="@string/block_user"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_unblock_user"
+        android:icon="@drawable/ic_check_circle"
+        android:title="@string/unblock_user"
+        android:visible="false"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_archive_chat"
+        android:icon="@drawable/ic_archive"
+        android:title="@string/archive_chat"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_clear_history"
+        android:icon="@drawable/ic_delete_sweep"
+        android:title="@string/clear_chat_history"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_export_chat"
+        android:icon="@drawable/ic_share"
+        android:title="@string/export_chat"
+        app:showAsAction="never" />
+
+</menu>

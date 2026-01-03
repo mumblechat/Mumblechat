@@ -58,6 +58,15 @@ interface ConversationDao {
     
     @Query("UPDATE conversations SET customName = :customName WHERE id = :conversationId")
     suspend fun setCustomName(conversationId: String, customName: String?)
+    
+    @Query("""
+        UPDATE conversations 
+        SET lastMessageId = NULL, 
+            lastMessagePreview = NULL, 
+            lastMessageTime = NULL
+        WHERE id = :conversationId
+    """)
+    suspend fun clearLastMessage(conversationId: String)
 
     @Query("DELETE FROM conversations WHERE id = :id")
     suspend fun delete(id: String)

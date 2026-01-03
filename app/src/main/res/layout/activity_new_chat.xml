@@ -134,6 +134,7 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
                 android:text="@string/scan_qr"
+                android:backgroundTint="@android:color/transparent"
                 app:icon="@drawable/ic_qr_scan"
                 app:iconGravity="start"
                 app:strokeColor="@color/mumblechat_accent"
@@ -149,6 +150,7 @@
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:text="@string/my_qr"
+                android:backgroundTint="@android:color/transparent"
                 app:icon="@drawable/ic_qr_code"
                 app:iconGravity="start"
                 app:strokeColor="@color/mumblechat_accent"
@@ -168,6 +170,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/start_chat" />
+
+        <!-- Invite Button (shown when address is not registered) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonInvite"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/invite_to_mumblechat"
+            android:visibility="gone"
+            app:icon="@drawable/ic_share"
+            app:strokeColor="@color/mumblechat_accent"
+            android:textColor="@color/mumblechat_accent"
+            app:iconTint="@color/mumblechat_accent" />
 
         <!-- Progress -->
         <ProgressBar

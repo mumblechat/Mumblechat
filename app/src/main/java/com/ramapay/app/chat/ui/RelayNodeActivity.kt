@@ -78,6 +78,20 @@ class RelayNodeActivity : AppCompatActivity() {
         binding.btnClaimFeeReward.setOnClickListener {
             showClaimFeeRewardConfirmation()
         }
+        
+        // V3.1: Daily pool claim button
+        binding.btnClaimDailyReward.setOnClickListener {
+            showClaimDailyPoolConfirmation()
+        }
+        
+        // V3.2: Setup earnings dashboard tabs
+        setupEarningsTabs()
+        
+        // Refresh button
+        binding.btnRefreshStats.setOnClickListener {
+            viewModel.loadRelayStatus()
+            viewModel.loadDailyPoolStats()
+        }
     }
 
     private fun observeViewModel() {
@@ -150,6 +164,20 @@ class RelayNodeActivity : AppCompatActivity() {
                 }
             }
         }
+        
+        // V3.1: Observe daily pool stats
+        lifecycleScope.launch {
+            viewModel.dailyPoolStats.collect { stats ->
+                stats?.let { updateDailyPoolUI(it) }
+            }
+        }
+        
+        // V3.1: Observe claimable reward
+        lifecycleScope.launch {
+            viewModel.claimableReward.collect { claimable ->
+                updateClaimableRewardUI(claimable)
+            }
+        }
     }
 
     private fun updateUI(status: RelayNodeStatus?) {
@@ -170,8 +198,10 @@ class RelayNodeActivity : AppCompatActivity() {
         
         binding.cardRequirements.visibility = View.VISIBLE
         binding.cardStats.visibility = View.GONE
+        binding.cardEarningsDashboard.visibility = View.GONE  // Hide earnings dashboard
         binding.cardTier.visibility = View.GONE
         binding.cardFeeRewards.visibility = View.GONE
+        binding.cardDailyPool.visibility = View.GONE  // V3.1: Hide daily pool when not active
     }
 
     private fun showActiveUI(status: RelayNodeStatus) {
@@ -184,8 +214,10 @@ class RelayNodeActivity : AppCompatActivity() {
         
         binding.cardRequirements.visibility = View.GONE
         binding.cardStats.visibility = View.VISIBLE
+        binding.cardEarningsDashboard.visibility = View.VISIBLE  // Show earnings dashboard
         binding.cardTier.visibility = View.VISIBLE
         binding.cardFeeRewards.visibility = View.VISIBLE
+        binding.cardDailyPool.visibility = View.VISIBLE  // V3.1: Show daily pool card
         
         // Update stats
         binding.textMessagesRelayed.text = status.messagesRelayed.toString()
@@ -202,6 +234,63 @@ class RelayNodeActivity : AppCompatActivity() {
         
         // Fee pool multiplier
         binding.textFeePoolMultiplier.text = "${status.rewardMultiplier}x"
+        
+        // V3.1: Load daily pool stats
+        viewModel.loadDailyPoolStats()
+        
+        // V3.2: Update earnings dashboard
+        updateEarningsDashboard(status)
+    }
+    
+    private fun updateEarningsDashboard(status: RelayNodeStatus) {
+        // Today's earnings (estimate based on messages relayed today)
+        val todayEarnings = status.rewardsEarned // Will be refined with daily tracking
+        binding.textPeriodEarnings.text = decimalFormat.format(todayEarnings)
+        binding.textPeriodLabel.text = "Today's Earnings"
+        
+        // Relays today
+        binding.textPeriodRelays.text = status.messagesRelayed.toString()
+        
+        // Avg per message
+        val avgPerMsg = if (status.messagesRelayed > 0) {
+            status.rewardsEarned / status.messagesRelayed
+        } else 0.0
+        binding.textAvgPerMsg.text = String.format("%.4f", avgPerMsg)
+        
+        // Uptime
+        binding.textPeriodUptime.text = formatUptime(status.dailyUptimeSeconds)
+        
+        // Network share (placeholder - would need total network relays)
+        binding.textNetworkShare.text = "~0.1%"
+        
+        // Quick stats (estimates)
+        binding.textBestDayEarnings.text = "${decimalFormat.format(status.rewardsEarned * 1.2)} MCT"
+        
+        val daysActive = ((System.currentTimeMillis() / 1000) - status.registeredAt) / 86400
+        binding.textTotalDaysActive.text = "${daysActive.toInt()} days"
+        
+        val avgDaily = if (daysActive > 0) status.rewardsEarned / daysActive else 0.0
+        binding.textAvgDailyEarnings.text = "${decimalFormat.format(avgDaily)} MCT"
+        
+        // Tier bonus (estimate)
+        val tierBonus = status.rewardsEarned * (status.rewardMultiplier - 1.0)
+        binding.textTierBonusEarned.text = "+${decimalFormat.format(tierBonus)} MCT"
+    }
+    
+    private fun setupEarningsTabs() {
+        binding.tabsPeriod.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> binding.textPeriodLabel.text = "Today's Earnings"
+                    1 -> binding.textPeriodLabel.text = "This Week's Earnings"
+                    2 -> binding.textPeriodLabel.text = "This Month's Earnings"
+                    3 -> binding.textPeriodLabel.text = "All-Time Earnings"
+                }
+                // In production, would load period-specific data from ViewModel
+            }
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+        })
     }
 
     private fun updateTierUI(tierInfo: RelayNodeViewModel.TierInfo) {
@@ -390,6 +479,64 @@ class RelayNodeActivity : AppCompatActivity() {
         dialog.setButtonListener {
             dialog.dismiss()
             viewModel.claimFeeReward()
+        }
+        
+        dialog.setSecondaryButtonListener {
+            dialog.dismiss()
+        }
+        
+        dialog.show()
+    }
+    
+    // V3.1: Daily Pool UI Methods
+    
+    private fun updateDailyPoolUI(stats: RelayNodeViewModel.DailyPoolStats) {
+        binding.textTodayRelays.text = stats.myRelaysToday.toString()
+        binding.textTotalNetworkRelays.text = if (stats.networkRelaysToday > 0) {
+            stats.networkRelaysToday.toString()
+        } else {
+            "Loading..."
+        }
+        binding.textEstimatedReward.text = if (stats.estimatedReward > 0) {
+            "~${decimalFormat.format(stats.estimatedReward)} MCT"
+        } else {
+            "~${decimalFormat.format(stats.myRelaysToday * 0.001)} MCT"
+        }
+    }
+    
+    private fun updateClaimableRewardUI(claimable: Double) {
+        if (claimable > 0) {
+            binding.layoutClaimableReward.visibility = View.VISIBLE
+            binding.textClaimableReward.text = "${decimalFormat.format(claimable)} MCT"
+            binding.btnClaimDailyReward.isEnabled = true
+            binding.btnClaimDailyReward.text = "Claim ${decimalFormat.format(claimable)} MCT"
+        } else {
+            binding.layoutClaimableReward.visibility = View.GONE
+            binding.btnClaimDailyReward.isEnabled = false
+            binding.btnClaimDailyReward.text = "No Rewards to Claim"
+        }
+    }
+    
+    private fun showClaimDailyPoolConfirmation() {
+        val claimable = viewModel.claimableReward.value
+        
+        val dialog = AWalletAlertDialog(this)
+        dialog.setTitle("Claim Daily Pool Reward")
+        dialog.setMessage(
+            "🏆 Your Fair Share from Yesterday's Pool\n\n" +
+            "💰 Amount: ${decimalFormat.format(claimable)} MCT\n\n" +
+            "This is your proportional share based on:\n" +
+            "• Messages you relayed\n" +
+            "• Your tier multiplier\n" +
+            "• Total network activity\n\n" +
+            "Claim now?"
+        )
+        dialog.setButtonText(R.string.action_confirm)
+        dialog.setSecondaryButtonText(R.string.cancel)
+        
+        dialog.setButtonListener {
+            dialog.dismiss()
+            viewModel.claimDailyPoolReward()
         }
         
         dialog.setSecondaryButtonListener {

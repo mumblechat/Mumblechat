@@ -59,8 +59,11 @@
     
     <!-- MumbleChat Colors -->
     <color name="lima">#14B8A6</color>
+    <color name="lima_alpha_10">#1A14B8A6</color>
+    <color name="lima_alpha_30">#4D14B8A6</color>
     <color name="text">#FFFFFF</color>
     <color name="divider">#3C3C3C</color>
+    <color name="primary">#6366F1</color>
     
     <!-- Tier Colors -->
     <color name="bronze">#CD7F32</color>

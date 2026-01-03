@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ramapay.app.chat.core.ChatService
 import com.ramapay.app.chat.core.WalletBridge
+import com.ramapay.app.chat.data.dao.ContactDao
+import com.ramapay.app.chat.data.entity.ContactEntity
 import com.ramapay.app.chat.data.entity.MessageEntity
 import com.ramapay.app.chat.data.entity.MessageType
 import com.ramapay.app.chat.data.repository.ConversationRepository
 import com.ramapay.app.chat.data.repository.MessageRepository
+import com.ramapay.app.chat.blockchain.MumbleChatBlockchainService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -37,7 +40,9 @@ class ConversationViewModel @Inject constructor(
     private val chatService: ChatService,
     private val walletBridge: WalletBridge,
     private val messageRepository: MessageRepository,
-    private val conversationRepository: ConversationRepository
+    private val conversationRepository: ConversationRepository,
+    private val contactDao: ContactDao,
+    private val blockchainService: MumbleChatBlockchainService
 ) : ViewModel() {
 
     private var conversationId: String? = null
@@ -144,6 +149,15 @@ class ConversationViewModel @Inject constructor(
             messageRepository.deleteMessage(messageId)
         }
     }
+    
+    /**
+     * Delete a message (overload that accepts MessageEntity).
+     */
+    fun deleteMessage(message: MessageEntity) {
+        viewModelScope.launch {
+            messageRepository.deleteMessage(message.id)
+        }
+    }
 
     /**
      * Retry sending a failed message.
@@ -160,6 +174,92 @@ class ConversationViewModel @Inject constructor(
                 // Delete the old failed message
                 messageRepository.deleteMessage(message.id)
             }
+        }
+    }
+    
+    /**
+     * Check if a user is blocked (locally).
+     */
+    suspend fun isUserBlocked(address: String): Boolean {
+        val wallet = walletBridge.getCurrentWalletAddress() ?: return false
+        val contact = contactDao.getByAddress(wallet, address)
+        return contact?.isBlocked ?: false
+    }
+    
+    /**
+     * Block a user (locally and on-chain).
+     */
+    suspend fun blockUser(address: String): Boolean {
+        return try {
+            val wallet = walletBridge.getCurrentWalletAddress() ?: return false
+            
+            // Block on blockchain
+            val txHash = blockchainService.blockUser(address)
+            Timber.d("Blocked user on-chain: $txHash")
+            
+            // Block locally
+            val contact = contactDao.getByAddress(wallet, address)
+            if (contact != null) {
+                contactDao.setBlocked(contact.id, true)
+            } else {
+                // Create contact and block
+                val newContact = ContactEntity(
+                    id = "$wallet-$address",
+                    ownerWallet = wallet,
+                    address = address,
+                    sessionPublicKey = null,
+                    isBlocked = true,
+                    addedAt = System.currentTimeMillis()
+                )
+                contactDao.insert(newContact)
+            }
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to block user")
+            false
+        }
+    }
+    
+    /**
+     * Unblock a user (locally and on-chain).
+     */
+    suspend fun unblockUser(address: String): Boolean {
+        return try {
+            val wallet = walletBridge.getCurrentWalletAddress() ?: return false
+            
+            // Unblock on blockchain
+            val txHash = blockchainService.unblockUser(address)
+            Timber.d("Unblocked user on-chain: $txHash")
+            
+            // Unblock locally
+            val contact = contactDao.getByAddress(wallet, address)
+            if (contact != null) {
+                contactDao.setBlocked(contact.id, false)
+            }
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to unblock user")
+            false
+        }
+    }
+    
+    /**
+     * Archive the conversation.
+     */
+    suspend fun archiveConversation() {
+        conversationId?.let { id ->
+            conversationRepository.archive(id)
+        }
+    }
+    
+    /**
+     * Clear all messages in this conversation.
+     */
+    suspend fun clearChatHistory() {
+        conversationId?.let { id ->
+            messageRepository.deleteAllForConversation(id)
+            // Update conversation to clear last message preview
+            conversationRepository.updateLastMessage(id, null, null, null)
         }
     }
 }

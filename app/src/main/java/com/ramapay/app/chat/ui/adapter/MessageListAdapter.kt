@@ -20,7 +20,8 @@ import java.util.Locale
 class MessageListAdapter(
     private val currentWalletAddress: String,
     private val onRetryClick: (MessageEntity) -> Unit,
-    private val onMessageLongClick: (MessageEntity) -> Boolean
+    private val onMessageLongClick: (MessageEntity) -> Boolean,
+    private val showSenderInfo: Boolean = false  // For group chats
 ) : ListAdapter<MessageEntity, RecyclerView.ViewHolder>(MessageDiffCallback()) {
 
     companion object {

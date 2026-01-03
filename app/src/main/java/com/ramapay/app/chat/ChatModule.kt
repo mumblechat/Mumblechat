@@ -171,7 +171,9 @@ object ChatModule {
         chatKeyManager: ChatKeyManager,
         messageEncryption: MessageEncryption,
         walletBridge: WalletBridge,
-        registrationManager: RegistrationManager
+        registrationManager: RegistrationManager,
+        blockchainService: MumbleChatBlockchainService,
+        contactDao: ContactDao
     ): ChatService {
         return ChatService(
             context,
@@ -182,7 +184,9 @@ object ChatModule {
             chatKeyManager,
             messageEncryption,
             walletBridge,
-            registrationManager
+            registrationManager,
+            blockchainService,
+            contactDao
         )
     }
 }

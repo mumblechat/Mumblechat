@@ -1,8 +1,15 @@
 package com.ramapay.app.chat.ui.conversation
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
@@ -11,12 +18,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.ramapay.app.R
+import com.ramapay.app.chat.core.ChatService
 import com.ramapay.app.chat.ui.adapter.MessageListAdapter
 import com.ramapay.app.chat.viewmodel.ConversationViewModel
 import com.ramapay.app.chat.viewmodel.SendingState
 import com.ramapay.app.databinding.ActivityConversationBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * Activity for 1:1 conversation.
@@ -32,6 +43,23 @@ class ConversationActivity : AppCompatActivity() {
     private lateinit var binding: ActivityConversationBinding
     private val viewModel: ConversationViewModel by viewModels()
     private lateinit var messageAdapter: MessageListAdapter
+    private var peerAddress: String = ""
+    private var isUserBlocked: Boolean = false
+    
+    @Inject
+    lateinit var chatService: ChatService
+    
+    // File picker for attachments
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { selectedUri ->
+            // Handle selected file
+            Toast.makeText(this, "File attachments coming soon", Toast.LENGTH_SHORT).show()
+            // TODO: Implement file transfer
+            // viewModel.sendFile(selectedUri)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +70,7 @@ class ConversationActivity : AppCompatActivity() {
             finish()
             return
         }
-        val peerAddress = intent.getStringExtra(EXTRA_PEER_ADDRESS) ?: run {
+        peerAddress = intent.getStringExtra(EXTRA_PEER_ADDRESS) ?: run {
             finish()
             return
         }
@@ -50,14 +78,189 @@ class ConversationActivity : AppCompatActivity() {
         setupToolbar(peerAddress)
         setupRecyclerView()
         setupMessageInput()
+        setupAttachButton()
 
         viewModel.loadConversation(conversationId, peerAddress)
         observeViewModel()
+        
+        // Initialize ChatService if needed
+        initializeChatService()
+        
+        // Check if user is blocked
+        checkBlockStatus()
+    }
+    
+    private fun initializeChatService() {
+        lifecycleScope.launch {
+            if (!chatService.isInitialized.value) {
+                val result = chatService.initialize()
+                result.onFailure { error ->
+                    Toast.makeText(
+                        this@ConversationActivity,
+                        "Chat initialization failed: ${error.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+    
+    private fun setupAttachButton() {
+        binding.buttonAttach.setOnClickListener {
+            showAttachmentOptions()
+        }
+    }
+    
+    private fun showAttachmentOptions() {
+        val options = arrayOf(
+            getString(R.string.attach_image),
+            getString(R.string.attach_document),
+            getString(R.string.attach_file)
+        )
+        
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.attach_file)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> filePickerLauncher.launch("image/*")
+                    1 -> filePickerLauncher.launch("application/pdf")
+                    2 -> filePickerLauncher.launch("*/*")
+                }
+            }
+            .show()
+    }
+    
+    private fun checkBlockStatus() {
+        lifecycleScope.launch {
+            isUserBlocked = viewModel.isUserBlocked(peerAddress)
+            invalidateOptionsMenu()
+        }
     }
 
     private fun setupToolbar(peerAddress: String) {
-        binding.toolbar.title = formatAddress(peerAddress)
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.title = formatAddress(peerAddress)
         binding.toolbar.setNavigationOnClickListener { finish() }
+    }
+    
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_conversation, menu)
+        
+        // Show/hide block/unblock based on current status
+        menu.findItem(R.id.action_block_user)?.isVisible = !isUserBlocked
+        menu.findItem(R.id.action_unblock_user)?.isVisible = isUserBlocked
+        
+        return true
+    }
+    
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_view_contact -> {
+                // TODO: Open contact details
+                Toast.makeText(this, "Contact details coming soon", Toast.LENGTH_SHORT).show()
+                true
+            }
+            R.id.action_block_user -> {
+                showBlockConfirmation()
+                true
+            }
+            R.id.action_unblock_user -> {
+                showUnblockConfirmation()
+                true
+            }
+            R.id.action_archive_chat -> {
+                archiveChat()
+                true
+            }
+            R.id.action_clear_history -> {
+                showClearHistoryConfirmation()
+                true
+            }
+            R.id.action_export_chat -> {
+                exportChat()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+    
+    private fun showBlockConfirmation() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.block_user)
+            .setMessage(R.string.block_confirm_message)
+            .setPositiveButton(R.string.block_user) { _, _ ->
+                blockUser()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun showUnblockConfirmation() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.unblock_user)
+            .setMessage(R.string.unblock_confirm_message)
+            .setPositiveButton(R.string.unblock_user) { _, _ ->
+                unblockUser()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun blockUser() {
+        lifecycleScope.launch {
+            val success = viewModel.blockUser(peerAddress)
+            if (success) {
+                isUserBlocked = true
+                invalidateOptionsMenu()
+                Toast.makeText(this@ConversationActivity, R.string.user_blocked, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this@ConversationActivity, "Failed to block user", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun unblockUser() {
+        lifecycleScope.launch {
+            val success = viewModel.unblockUser(peerAddress)
+            if (success) {
+                isUserBlocked = false
+                invalidateOptionsMenu()
+                Toast.makeText(this@ConversationActivity, R.string.user_unblocked, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this@ConversationActivity, "Failed to unblock user", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun archiveChat() {
+        lifecycleScope.launch {
+            viewModel.archiveConversation()
+            Toast.makeText(this@ConversationActivity, R.string.chat_archived, Toast.LENGTH_SHORT).show()
+            finish()
+        }
+    }
+    
+    private fun showClearHistoryConfirmation() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.clear_chat_history)
+            .setMessage(R.string.clear_history_confirm)
+            .setPositiveButton(R.string.clear_chat_history) { _, _ ->
+                clearChatHistory()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun clearChatHistory() {
+        lifecycleScope.launch {
+            viewModel.clearChatHistory()
+            Toast.makeText(this@ConversationActivity, R.string.chat_cleared, Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun exportChat() {
+        // TODO: Implement export
+        Toast.makeText(this, "Export coming soon", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupRecyclerView() {
@@ -67,7 +270,7 @@ class ConversationActivity : AppCompatActivity() {
                 viewModel.retryMessage(message)
             },
             onMessageLongClick = { message ->
-                // TODO: Show message options (copy, delete, etc.)
+                showMessageOptionsDialog(message)
                 true
             }
         )
@@ -78,6 +281,48 @@ class ConversationActivity : AppCompatActivity() {
                 reverseLayout = false
             }
             adapter = messageAdapter
+        }
+    }
+    
+    private fun showMessageOptionsDialog(message: com.ramapay.app.chat.data.entity.MessageEntity) {
+        val options = arrayOf(
+            getString(R.string.copy_message),
+            getString(R.string.delete_message)
+        )
+        
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.message_options)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> copyMessage(message)
+                    1 -> showDeleteMessageConfirmation(message)
+                }
+            }
+            .show()
+    }
+    
+    private fun copyMessage(message: com.ramapay.app.chat.data.entity.MessageEntity) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("message", message.content)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, R.string.message_copied, Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun showDeleteMessageConfirmation(message: com.ramapay.app.chat.data.entity.MessageEntity) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.delete_message)
+            .setMessage(R.string.delete_message_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                deleteMessage(message)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun deleteMessage(message: com.ramapay.app.chat.data.entity.MessageEntity) {
+        lifecycleScope.launch {
+            viewModel.deleteMessage(message)
+            Toast.makeText(this@ConversationActivity, R.string.message_deleted, Toast.LENGTH_SHORT).show()
         }
     }
 

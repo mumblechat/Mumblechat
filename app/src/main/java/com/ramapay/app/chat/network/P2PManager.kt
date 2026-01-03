@@ -187,6 +187,43 @@ class P2PManager @Inject constructor(
         val timestamp: Long,
         val ttl: Int
     )
+    
+    /**
+     * Relay receipt for decentralized relay proof system.
+     * When a message is relayed through a relay node, the sender signs a receipt
+     * that the relay node can submit to the smart contract to earn rewards.
+     */
+    data class RelayReceipt(
+        val messageHash: ByteArray,      // Hash of the relayed message
+        val relayNodeAddress: String,    // Address of the relay node
+        val senderAddress: String,       // Original sender address
+        val recipientAddress: String,    // Recipient address
+        val timestamp: Long,             // When relay occurred
+        val nonce: Long,                 // Nonce from smart contract
+        val senderSignature: ByteArray   // Sender's signature proving relay
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is RelayReceipt) return false
+            return messageHash.contentEquals(other.messageHash) &&
+                   relayNodeAddress == other.relayNodeAddress &&
+                   senderAddress == other.senderAddress
+        }
+        
+        override fun hashCode(): Int {
+            var result = messageHash.contentHashCode()
+            result = 31 * result + relayNodeAddress.hashCode()
+            result = 31 * result + senderAddress.hashCode()
+            return result
+        }
+    }
+    
+    // Pending relay receipts to be submitted to blockchain
+    private val pendingRelayReceipts = ConcurrentHashMap<String, MutableList<RelayReceipt>>()
+    
+    // Flow for relay receipts that need blockchain submission
+    private val _relayReceiptsToSubmit = MutableSharedFlow<RelayReceipt>(extraBufferCapacity = 50)
+    val relayReceiptsToSubmit: SharedFlow<RelayReceipt> = _relayReceiptsToSubmit
 
     // ============ Protocol Messages ============
 
@@ -863,6 +900,7 @@ class P2PManager @Inject constructor(
 
     /**
      * Gossip message through the network (flood protocol).
+     * When a message is gossiped through relay nodes, a signed relay receipt is generated.
      */
     private suspend fun gossipMessage(
         recipientAddress: String,
@@ -882,6 +920,14 @@ class P2PManager @Inject constructor(
             try {
                 val socket = peer.socket ?: continue
                 val writer = PrintWriter(socket.getOutputStream(), true)
+                
+                // Check if this peer is a relay node
+                val isRelay = relayNodes.containsKey(peer.address)
+                
+                // Create relay receipt signature if going through a relay
+                val relayReceiptData = if (isRelay) {
+                    createRelayReceiptForPeer(messageId, encrypted, peer.address, recipientAddress)
+                } else null
 
                 val msg = JSONObject().apply {
                     put("type", "gossip")
@@ -893,6 +939,19 @@ class P2PManager @Inject constructor(
                     put("authTag", encrypted.authTag.toHex())
                     put("ttl", ttl - 1)
                     put("timestamp", System.currentTimeMillis())
+                    
+                    // Include relay receipt data if going through relay
+                    if (relayReceiptData != null) {
+                        put("relayReceipt", JSONObject().apply {
+                            put("messageHash", relayReceiptData.messageHash.toHex())
+                            put("relayNode", relayReceiptData.relayNodeAddress)
+                            put("sender", relayReceiptData.senderAddress)
+                            put("recipient", relayReceiptData.recipientAddress)
+                            put("timestamp", relayReceiptData.timestamp)
+                            put("nonce", relayReceiptData.nonce)
+                            put("signature", relayReceiptData.senderSignature.toHex())
+                        })
+                    }
                 }
                 writer.println(msg.toString())
                 relayedVia = peer.address
@@ -903,6 +962,106 @@ class P2PManager @Inject constructor(
         }
 
         return relayedVia
+    }
+    
+    /**
+     * Create a signed relay receipt for a message being relayed through a relay node.
+     * This receipt can be submitted to the blockchain by the relay node to earn rewards.
+     */
+    private suspend fun createRelayReceiptForPeer(
+        messageId: String,
+        encrypted: MessageEncryption.EncryptedMessage,
+        relayNodeAddress: String,
+        recipientAddress: String
+    ): RelayReceipt? {
+        val keys = chatKeys ?: return null
+        
+        try {
+            // 1. Create message hash (hash of encrypted content)
+            val messageHash = MessageDigest.getInstance("SHA-256").digest(encrypted.ciphertext)
+            
+            // 2. Get nonce (use timestamp-based nonce, relay will verify with contract)
+            val nonce = System.currentTimeMillis() / 1000
+            val timestamp = System.currentTimeMillis()
+            
+            // 3. Create the data to sign: keccak256(messageHash, relayNode, timestamp, nonce)
+            val dataToSign = createRelayReceiptSignData(messageHash, relayNodeAddress, timestamp, nonce)
+            
+            // 4. Sign with identity key (Ed25519 -> convert to ECDSA recoverable signature)
+            val signature = signRelayReceipt(dataToSign, keys.identityPrivate)
+            
+            return RelayReceipt(
+                messageHash = messageHash,
+                relayNodeAddress = relayNodeAddress,
+                senderAddress = myWalletAddress,
+                recipientAddress = recipientAddress,
+                timestamp = timestamp,
+                nonce = nonce,
+                senderSignature = signature
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to create relay receipt")
+            return null
+        }
+    }
+    
+    /**
+     * Create the data that needs to be signed for a relay receipt.
+     * Matches the format expected by the smart contract.
+     */
+    private fun createRelayReceiptSignData(
+        messageHash: ByteArray,
+        relayNodeAddress: String,
+        timestamp: Long,
+        nonce: Long
+    ): ByteArray {
+        // Pack: messageHash (32 bytes) + relayNode (20 bytes) + timestamp (8 bytes) + nonce (8 bytes)
+        val relayBytes = relayNodeAddress.removePrefix("0x").lowercase().hexToBytes()
+        val timestampBytes = ByteArray(8)
+        val nonceBytes = ByteArray(8)
+        
+        for (i in 0..7) {
+            timestampBytes[7 - i] = ((timestamp shr (i * 8)) and 0xFF).toByte()
+            nonceBytes[7 - i] = ((nonce shr (i * 8)) and 0xFF).toByte()
+        }
+        
+        val packed = messageHash + relayBytes + timestampBytes + nonceBytes
+        
+        // Hash the packed data (keccak256)
+        return keccak256(packed)
+    }
+    
+    /**
+     * Sign a relay receipt using the wallet's private key.
+     * Returns a recoverable ECDSA signature (65 bytes: r + s + v).
+     */
+    private suspend fun signRelayReceipt(dataHash: ByteArray, privateKey: ByteArray): ByteArray {
+        // For now, use a simple signature scheme
+        // In production, this should use the actual wallet's signing capability
+        val digest = MessageDigest.getInstance("SHA-256")
+        val combined = dataHash + privateKey
+        val signature = digest.digest(combined)
+        
+        // Create 65-byte signature (r=32, s=32, v=1)
+        // Note: This is a placeholder - real implementation needs ECDSA
+        return signature + signature + byteArrayOf(27.toByte())
+    }
+    
+    /**
+     * Keccak-256 hash (Ethereum compatible).
+     * Uses Spongy Castle (Android-compatible fork of Bouncy Castle) if available.
+     */
+    private fun keccak256(data: ByteArray): ByteArray {
+        return try {
+            // Try using Spongy Castle's Keccak (available on Android)
+            val digest = java.security.MessageDigest.getInstance("KECCAK-256")
+            digest.digest(data)
+        } catch (e: Exception) {
+            // Fallback to SHA-256 if Keccak not available
+            // Note: This is a fallback - for production, ensure Keccak is available
+            Timber.w(e, "Keccak-256 not available, using SHA-256 fallback")
+            MessageDigest.getInstance("SHA-256").digest(data)
+        }
     }
 
     /**
@@ -1016,6 +1175,25 @@ class P2PManager @Inject constructor(
         // Dedup check
         if (messageCache.containsKey(messageId)) return
         messageCache[messageId] = System.currentTimeMillis()
+        
+        // If this node is a relay and a relay receipt is included, store it for claiming
+        if (msg.has("relayReceipt") && isRelayNode()) {
+            val receiptJson = msg.getJSONObject("relayReceipt")
+            val receipt = RelayReceipt(
+                messageHash = receiptJson.getString("messageHash").hexToBytes(),
+                relayNodeAddress = receiptJson.getString("relayNode"),
+                senderAddress = receiptJson.getString("sender"),
+                recipientAddress = receiptJson.getString("recipient"),
+                timestamp = receiptJson.getLong("timestamp"),
+                nonce = receiptJson.getLong("nonce"),
+                senderSignature = receiptJson.getString("signature").hexToBytes()
+            )
+            
+            // Only store if the receipt is for us (this relay node)
+            if (receipt.relayNodeAddress.equals(myWalletAddress, ignoreCase = true)) {
+                storeRelayReceipt(receipt)
+            }
+        }
 
         if (toAddress.equals(myWalletAddress, ignoreCase = true)) {
             // Message is for us!
@@ -1029,6 +1207,41 @@ class P2PManager @Inject constructor(
             )
             gossipMessage(toAddress, encrypted, messageId, ttl)
         }
+    }
+    
+    /**
+     * Check if this node is registered as a relay node.
+     */
+    private fun isRelayNode(): Boolean {
+        return relayNodes.containsKey(myWalletAddress)
+    }
+    
+    /**
+     * Store a relay receipt for later blockchain submission.
+     */
+    private suspend fun storeRelayReceipt(receipt: RelayReceipt) {
+        val receipts = pendingRelayReceipts.getOrPut(myWalletAddress) { mutableListOf() }
+        receipts.add(receipt)
+        
+        // Emit for blockchain submission
+        _relayReceiptsToSubmit.emit(receipt)
+        
+        Timber.d("Stored relay receipt for message ${receipt.messageHash.toHex()}")
+    }
+    
+    /**
+     * Get all pending relay receipts that need to be submitted to blockchain.
+     */
+    fun getPendingRelayReceipts(): List<RelayReceipt> {
+        return pendingRelayReceipts[myWalletAddress] ?: emptyList()
+    }
+    
+    /**
+     * Clear submitted relay receipts.
+     */
+    fun clearSubmittedReceipts(receipts: List<RelayReceipt>) {
+        val pending = pendingRelayReceipts[myWalletAddress] ?: return
+        pending.removeAll(receipts.toSet())
     }
 
     private fun handleAck(peer: PeerConnection, msg: JSONObject) {

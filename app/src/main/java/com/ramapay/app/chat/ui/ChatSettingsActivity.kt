@@ -111,12 +111,17 @@ class ChatSettingsActivity : AppCompatActivity() {
         
         // Notifications
         binding.itemNotifications.setOnClickListener {
-            Toast.makeText(this, "Notification settings coming soon", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, NotificationSettingsActivity::class.java))
         }
 
         // Privacy
         binding.itemPrivacy.setOnClickListener {
-            Toast.makeText(this, "Privacy settings coming soon", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, PrivacySettingsActivity::class.java))
+        }
+        
+        // Blocked Contacts
+        binding.itemBlockedContacts.setOnClickListener {
+            startActivity(Intent(this, BlockedContactsActivity::class.java))
         }
 
         // Relay Node

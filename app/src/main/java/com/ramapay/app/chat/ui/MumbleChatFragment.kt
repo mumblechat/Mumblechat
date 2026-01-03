@@ -177,11 +177,28 @@ class MumbleChatFragment : BaseFragment(),
         binding.fabNewChat.setOnClickListener {
             // Check if registered first
             if (viewModel.registrationState.value == RegistrationState.Registered) {
-                startActivity(Intent(requireContext(), NewChatActivity::class.java))
+                showNewChatOptions()
             } else {
                 showRegistrationDialog()
             }
         }
+    }
+    
+    private fun showNewChatOptions() {
+        val options = arrayOf(
+            getString(R.string.new_chat),
+            getString(R.string.create_group)
+        )
+        
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.start_conversation)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> startActivity(Intent(requireContext(), NewChatActivity::class.java))
+                    1 -> startActivity(Intent(requireContext(), com.ramapay.app.chat.ui.group.NewGroupActivity::class.java))
+                }
+            }
+            .show()
     }
 
     private fun setupSwipeRefresh() {

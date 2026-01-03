@@ -1,8 +1,10 @@
 package com.ramapay.app.chat.core
 
 import android.content.Context
+import com.ramapay.app.chat.blockchain.MumbleChatBlockchainService
 import com.ramapay.app.chat.crypto.ChatKeyManager
 import com.ramapay.app.chat.crypto.MessageEncryption
+import com.ramapay.app.chat.data.dao.ContactDao
 import com.ramapay.app.chat.data.entity.MessageEntity
 import com.ramapay.app.chat.data.entity.MessageStatus
 import com.ramapay.app.chat.data.entity.MessageType
@@ -44,7 +46,9 @@ class ChatService @Inject constructor(
     private val chatKeyManager: ChatKeyManager,
     private val messageEncryption: MessageEncryption,
     private val walletBridge: WalletBridge,
-    private val registrationManager: RegistrationManager
+    private val registrationManager: RegistrationManager,
+    private val blockchainService: MumbleChatBlockchainService,
+    private val contactDao: ContactDao
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
@@ -192,6 +196,18 @@ class ChatService @Inject constructor(
             ?: return Result.failure(Exception("No wallet"))
 
         return try {
+            // 0. Check if recipient has blocked sender
+            val canSend = blockchainService.canSendMessage(senderAddress, recipientAddress)
+            if (!canSend) {
+                return Result.failure(Exception("Cannot send message - you may be blocked by this user"))
+            }
+            
+            // Also check local block status - don't send to blocked users
+            val contact = contactDao.getByAddress(senderAddress, recipientAddress)
+            if (contact?.isBlocked == true) {
+                return Result.failure(Exception("Cannot send message to blocked user"))
+            }
+
             // 1. Get or create conversation
             val conversation = conversationRepository.getOrCreate(senderAddress, recipientAddress)
 

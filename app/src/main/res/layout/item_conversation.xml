@@ -42,6 +42,16 @@
                 android:textStyle="bold"
                 tools:text="55" />
 
+            <!-- Online Status Indicator -->
+            <View
+                android:id="@+id/onlineIndicator"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_gravity="bottom|end"
+                android:background="@drawable/bg_online_indicator"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
         </FrameLayout>
 
         <!-- Name/Address -->

@@ -27,6 +27,8 @@
     <color name="status_offline">#6E7681</color>
     <color name="success">#4CAF50</color>
     <color name="warning">#FF9800</color>
+    <color name="warning_background">#FFF3E0</color>
+    <color name="positive_background">#E8F5E9</color>
     
     <!-- Avatar Colors Array -->
     <integer-array name="avatar_colors">

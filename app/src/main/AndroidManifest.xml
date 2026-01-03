@@ -193,6 +193,37 @@
                 android:label="@string/chat_settings" />
 
         <activity
+                android:name=".chat.ui.NotificationSettingsActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="Notifications" />
+
+        <activity
+                android:name=".chat.ui.PrivacySettingsActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="Privacy" />
+
+        <activity
+                android:name=".chat.ui.BlockedContactsActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/blocked_users" />
+
+        <activity
+                android:name=".chat.ui.group.NewGroupActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/create_group" />
+
+        <activity
+                android:name=".chat.ui.group.GroupChatActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/group"
+                android:windowSoftInputMode="adjustResize" />
+
+        <activity
+                android:name=".chat.ui.group.GroupInfoActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/group_info" />
+
+        <activity
                 android:name=".chat.ui.ProfileActivity"
                 android:theme="@style/AppTheme.NoActionBar"
                 android:label="@string/my_profile" />
