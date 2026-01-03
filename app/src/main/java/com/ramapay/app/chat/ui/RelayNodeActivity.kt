@@ -64,7 +64,7 @@ class RelayNodeActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         binding.btnActivate.setOnClickListener {
-            showActivateConfirmation()
+            showTierSelectionDialog()
         }
         
         binding.btnDeactivate.setOnClickListener {
@@ -230,7 +230,14 @@ class RelayNodeActivity : AppCompatActivity() {
         binding.textCurrentTier.setTextColor(getTierColor(status.tier))
         binding.textRewardMultiplier.text = "${status.rewardMultiplier}x"
         binding.textDailyUptime.text = formatUptime(status.dailyUptimeSeconds)
-        binding.textStorageProvided.text = "${status.storageMB} MB"
+        
+        // Display storage in GB for cleaner UI
+        val storageGB = status.storageMB / 1024.0
+        if (storageGB >= 1.0) {
+            binding.textStorageProvided.text = "${String.format("%.1f", storageGB)} GB"
+        } else {
+            binding.textStorageProvided.text = "${status.storageMB} MB"
+        }
         
         // Fee pool multiplier
         binding.textFeePoolMultiplier.text = "${status.rewardMultiplier}x"
@@ -298,13 +305,28 @@ class RelayNodeActivity : AppCompatActivity() {
         binding.textCurrentTier.setTextColor(getTierColorByName(tierInfo.tier))
         binding.textRewardMultiplier.text = "${tierInfo.multiplier}x"
         binding.textDailyUptime.text = String.format("%.1f hours", tierInfo.dailyUptimeHours)
-        binding.textStorageProvided.text = "${tierInfo.storageMB} MB"
         
-        // Update next tier hint
+        // Display storage in GB for cleaner UI
+        val storageGB = tierInfo.storageMB / 1024.0
+        if (storageGB >= 1.0) {
+            binding.textStorageProvided.text = "${String.format("%.1f", storageGB)} GB"
+        } else {
+            binding.textStorageProvided.text = "${tierInfo.storageMB} MB"
+        }
+        
+        // Update next tier hint with GB-based thresholds
         if (tierInfo.nextTier != null) {
             val hints = mutableListOf<String>()
             if (tierInfo.uptimeNeeded > 0) hints.add("${tierInfo.uptimeNeeded.toInt()}h more uptime")
-            if (tierInfo.storageNeeded > 0) hints.add("${tierInfo.storageNeeded} MB more storage")
+            if (tierInfo.storageNeeded > 0) {
+                // Convert MB needed to GB for display
+                val storageGB = tierInfo.storageNeeded / 1024.0
+                if (storageGB >= 1.0) {
+                    hints.add("${String.format("%.1f", storageGB)} GB more storage")
+                } else {
+                    hints.add("${tierInfo.storageNeeded} MB more storage")
+                }
+            }
             
             val nextMultiplier = when (tierInfo.nextTier) {
                 "Silver" -> "1.5x"
@@ -312,30 +334,36 @@ class RelayNodeActivity : AppCompatActivity() {
                 "Platinum" -> "3.0x"
                 else -> ""
             }
-            binding.textNextTierHint.text = "${hints.joinToString(" + ")} for ${tierInfo.nextTier} ($nextMultiplier)"
+            val poolShare = when (tierInfo.nextTier) {
+                "Silver" -> "20%"
+                "Gold" -> "30%"
+                "Platinum" -> "40%"
+                else -> ""
+            }
+            binding.textNextTierHint.text = "${hints.joinToString(" + ")} for ${tierInfo.nextTier} ($nextMultiplier, $poolShare pool)"
             binding.textNextTierHint.visibility = View.VISIBLE
             
             // Update progress
             val progress = calculateTierProgress(tierInfo)
             binding.progressNextTier.progress = progress
         } else {
-            binding.textNextTierHint.text = "Maximum tier achieved! 🎉"
+            binding.textNextTierHint.text = "Maximum tier achieved! 🎉 (3.0x, 40% pool share)"
             binding.progressNextTier.progress = 100
         }
     }
 
     private fun calculateTierProgress(tierInfo: RelayNodeViewModel.TierInfo): Int {
-        // Calculate progress to next tier (0-100)
+        // Calculate progress to next tier (0-100) - Updated for GB scale
         val uptimeProgress = when (tierInfo.tier) {
-            "Bronze" -> (tierInfo.dailyUptimeHours / 4.0 * 50).toInt()
-            "Silver" -> (tierInfo.dailyUptimeHours / 8.0 * 50).toInt()
-            "Gold" -> (tierInfo.dailyUptimeHours / 16.0 * 50).toInt()
+            "Bronze" -> (tierInfo.dailyUptimeHours / 8.0 * 50).toInt()   // Progress to Silver (8h)
+            "Silver" -> (tierInfo.dailyUptimeHours / 12.0 * 50).toInt()  // Progress to Gold (12h)
+            "Gold" -> (tierInfo.dailyUptimeHours / 16.0 * 50).toInt()    // Progress to Platinum (16h)
             else -> 50
         }
         val storageProgress = when (tierInfo.tier) {
-            "Bronze" -> (tierInfo.storageMB / 50.0 * 50).toInt()
-            "Silver" -> (tierInfo.storageMB / 200.0 * 50).toInt()
-            "Gold" -> (tierInfo.storageMB / 500.0 * 50).toInt()
+            "Bronze" -> (tierInfo.storageMB / 2048.0 * 50).toInt()  // Progress to Silver (2GB)
+            "Silver" -> (tierInfo.storageMB / 4096.0 * 50).toInt()  // Progress to Gold (4GB)
+            "Gold" -> (tierInfo.storageMB / 8192.0 * 50).toInt()    // Progress to Platinum (8GB)
             else -> 50
         }
         return minOf(100, uptimeProgress + storageProgress)
@@ -367,11 +395,26 @@ class RelayNodeActivity : AppCompatActivity() {
         return "${hours}h ${minutes}m"
     }
 
+    /**
+     * Show tier selection bottom sheet dialog
+     */
+    private fun showTierSelectionDialog() {
+        val dialog = TierSelectionDialog.newInstance { selectedTier ->
+            showFinalActivateConfirmation(selectedTier.storageMB)
+        }
+        dialog.show(supportFragmentManager, "TierSelectionDialog")
+    }
+
     private fun showActivateConfirmation() {
+        // Legacy function - now replaced by showTierSelectionDialog()
+        showTierSelectionDialog()
+    }
+    
+    private fun showLegacyActivateConfirmation() {
         // V2: Ask for storage capacity
-        val storageOptions = arrayOf("50 MB (Bronze)", "200 MB (Silver)", "500 MB (Gold+)")
-        val storageMBValues = arrayOf(50, 200, 500)
-        var selectedStorage = 50
+        val storageOptions = arrayOf("1 GB (Bronze)", "2 GB (Silver)", "4 GB (Gold)", "8+ GB (Platinum)")
+        val storageMBValues = arrayOf(1024, 2048, 4096, 8192)
+        var selectedStorage = 1024
 
         AlertDialog.Builder(this)
             .setTitle("Select Storage Capacity")
@@ -390,20 +433,38 @@ class RelayNodeActivity : AppCompatActivity() {
 
     private fun showFinalActivateConfirmation(storageMB: Int) {
         val tierName = when {
-            storageMB >= 500 -> "Gold or higher"
-            storageMB >= 200 -> "Silver or higher"
+            storageMB >= 8192 -> "Platinum"
+            storageMB >= 4096 -> "Gold"
+            storageMB >= 2048 -> "Silver"
             else -> "Bronze"
         }
         
+        val storageGB = storageMB / 1024.0
+        val multiplier = when (tierName) {
+            "Platinum" -> "3.0x"
+            "Gold" -> "2.0x"
+            "Silver" -> "1.5x"
+            else -> "1.0x"
+        }
+        val poolShare = when (tierName) {
+            "Platinum" -> "40%"
+            "Gold" -> "30%"
+            "Silver" -> "20%"
+            else -> "10%"
+        }
+        
         val dialog = AWalletAlertDialog(this)
-        dialog.setTitle("Activate Relay Node")
+        dialog.setTitle("Activate as $tierName Node")
         dialog.setMessage(
             "You will stake 100 MCT tokens to become a relay node.\n\n" +
-            "Storage: ${storageMB} MB → Eligible for $tierName tier\n\n" +
-            "• Minting rewards: 0.001 MCT per 1,000 messages\n" +
-            "• Fee pool bonus: Up to 3x based on tier\n" +
-            "• Keep app running to increase uptime\n" +
-            "• Withdraw stake anytime\n\n" +
+            "📦 Storage: ${String.format("%.0f", storageGB)} GB\n" +
+            "🏆 Tier: $tierName ($multiplier rewards)\n" +
+            "📊 Daily Pool Share: $poolShare\n\n" +
+            "Benefits:\n" +
+            "• Earn 0.001 MCT per message relayed\n" +
+            "• Get $multiplier bonus on fee pool rewards\n" +
+            "• Higher tier = bigger share of daily pool\n" +
+            "• Stake is fully refundable on deactivation\n\n" +
             "Continue?"
         )
         dialog.setButtonText(R.string.action_confirm)
@@ -445,13 +506,18 @@ class RelayNodeActivity : AppCompatActivity() {
     }
 
     private fun showUpdateStorageDialog() {
-        val storageOptions = arrayOf("50 MB (Bronze tier)", "200 MB (Silver tier)", "500 MB (Gold tier)")
-        val storageMBValues = arrayOf(50, 200, 500)
-        var selectedStorage = 50
+        val storageOptions = arrayOf(
+            "1 GB (Bronze tier - 1.0x)",
+            "2 GB (Silver tier - 1.5x)", 
+            "4 GB (Gold tier - 2.0x)", 
+            "8+ GB (Platinum tier - 3.0x)"
+        )
+        val storageMBValues = arrayOf(1024, 2048, 4096, 8192)
+        var selectedStorage = 1024
 
         AlertDialog.Builder(this)
             .setTitle("Update Storage Capacity")
-            .setMessage("Select the storage capacity you want to provide.\nHigher storage = Higher tier potential!")
+            .setMessage("Select the storage capacity you want to provide.\nHigher storage = Higher tier = Bigger pool share!")
             .setSingleChoiceItems(storageOptions, 0) { _, which ->
                 selectedStorage = storageMBValues[which]
             }

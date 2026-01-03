@@ -154,19 +154,20 @@ class RelayNodeViewModel @Inject constructor(
         val uptimeHours = relay.dailyUptimeSeconds / 3600.0
         val storageMB = relay.storageMB
 
-        // Determine current tier
+        // Determine current tier - GB scale thresholds
+        // Bronze: 1GB (1024MB), 4h | Silver: 2GB (2048MB), 8h | Gold: 4GB (4096MB), 12h | Platinum: 8GB (8192MB), 16h
         val (tier, multiplier) = when {
-            uptimeHours >= 16 && storageMB >= 500 -> "Platinum" to 3.0
-            uptimeHours >= 8 && storageMB >= 200 -> "Gold" to 2.0
-            uptimeHours >= 4 && storageMB >= 50 -> "Silver" to 1.5
+            uptimeHours >= 16 && storageMB >= 8192 -> "Platinum" to 3.0
+            uptimeHours >= 12 && storageMB >= 4096 -> "Gold" to 2.0
+            uptimeHours >= 8 && storageMB >= 2048 -> "Silver" to 1.5
             else -> "Bronze" to 1.0
         }
 
-        // Calculate next tier requirements
+        // Calculate next tier requirements (with GB thresholds)
         val (nextTier, uptimeNeeded, storageNeeded) = when (tier) {
-            "Bronze" -> Triple("Silver", maxOf(0.0, 4.0 - uptimeHours), maxOf(0, 50 - storageMB))
-            "Silver" -> Triple("Gold", maxOf(0.0, 8.0 - uptimeHours), maxOf(0, 200 - storageMB))
-            "Gold" -> Triple("Platinum", maxOf(0.0, 16.0 - uptimeHours), maxOf(0, 500 - storageMB))
+            "Bronze" -> Triple("Silver", maxOf(0.0, 8.0 - uptimeHours), maxOf(0, 2048 - storageMB))
+            "Silver" -> Triple("Gold", maxOf(0.0, 12.0 - uptimeHours), maxOf(0, 4096 - storageMB))
+            "Gold" -> Triple("Platinum", maxOf(0.0, 16.0 - uptimeHours), maxOf(0, 8192 - storageMB))
             else -> Triple(null, 0.0, 0)
         }
 

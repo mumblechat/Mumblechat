@@ -18,14 +18,14 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
  * - Relay node registration with TIER-BASED REWARDS
  * - Uptime & Storage tracking for bonus rewards
  * 
- * TIER SYSTEM:
+ * TIER SYSTEM (GB-Scale for Global Users):
  * ════════════════════════════════════════════════════════════════
- * | Tier     | Uptime/Day | Storage  | Reward Multiplier |
- * |----------|------------|----------|-------------------|
- * | Bronze   | 0-4 hours  | 0-50 MB  | 1.0x (base)       |
- * | Silver   | 4-8 hours  | 50-200MB | 1.5x              |
- * | Gold     | 8-16 hours | 200-500MB| 2.0x              |
- * | Platinum | 16+ hours  | 500MB+   | 3.0x              |
+ * | Tier     | Uptime/Day | Storage | Pool % | Reward Multiplier |
+ * |----------|------------|---------|--------|-------------------|
+ * | Bronze   | 4+ hours   | 1 GB    | 10%    | 1.0x (base)       |
+ * | Silver   | 8+ hours   | 2 GB    | 20%    | 1.5x              |
+ * | Gold     | 12+ hours  | 4 GB    | 30%    | 2.0x              |
+ * | Platinum | 16+ hours  | 8+ GB   | 40%    | 3.0x              |
  * ════════════════════════════════════════════════════════════════
  */
 contract MumbleChatRegistry is 
@@ -96,17 +96,18 @@ contract MumbleChatRegistry is
     
     // ============ Tier Thresholds ============
     
-    // Uptime thresholds (seconds per day)
-    uint256 public constant BRONZE_UPTIME = 0;
-    uint256 public constant SILVER_UPTIME = 4 hours;
-    uint256 public constant GOLD_UPTIME = 8 hours;
-    uint256 public constant PLATINUM_UPTIME = 16 hours;
+    // Uptime thresholds (seconds per day) - Reasonable for global relay nodes
+    uint256 public constant BRONZE_UPTIME = 4 hours;    // 4+ hours/day minimum
+    uint256 public constant SILVER_UPTIME = 8 hours;    // 8+ hours/day
+    uint256 public constant GOLD_UPTIME = 12 hours;     // 12+ hours/day
+    uint256 public constant PLATINUM_UPTIME = 16 hours; // 16+ hours/day (dedicated)
     
-    // Storage thresholds (in MB)
-    uint256 public constant BRONZE_STORAGE = 0;
-    uint256 public constant SILVER_STORAGE = 50;
-    uint256 public constant GOLD_STORAGE = 200;
-    uint256 public constant PLATINUM_STORAGE = 500;
+    // Storage thresholds (in MB) - GB scale for global users
+    // Bronze: 1GB, Silver: 2GB, Gold: 4GB, Platinum: 8GB+
+    uint256 public constant BRONZE_STORAGE = 1024;     // 1 GB
+    uint256 public constant SILVER_STORAGE = 2048;     // 2 GB
+    uint256 public constant GOLD_STORAGE = 4096;       // 4 GB
+    uint256 public constant PLATINUM_STORAGE = 8192;   // 8 GB
     
     // Reward multipliers (in basis points, 100 = 1x)
     uint256 public constant BRONZE_MULTIPLIER = 100;   // 1.0x
