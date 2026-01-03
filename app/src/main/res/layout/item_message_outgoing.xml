@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="2dp"
+    android:layout_marginStart="48dp"
+    android:layout_marginEnd="8dp">
+
+    <!-- Message Bubble -->
+    <LinearLayout
+        android:id="@+id/bubbleContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_message_outgoing"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- Message Text -->
+        <TextView
+            android:id="@+id/textMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="15sp"
+            tools:text="I'm doing great, thanks!" />
+
+        <!-- Bottom Row (time + status + encrypted) -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Encryption Icon -->
+            <ImageView
+                android:id="@+id/iconEncrypted"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_lock"
+                android:tint="@android:color/white"
+                android:alpha="0.7"
+                android:visibility="gone"
+                android:contentDescription="@null"
+                tools:visibility="visible" />
+
+            <!-- Time -->
+            <TextView
+                android:id="@+id/textTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:textColor="@android:color/white"
+                android:textSize="11sp"
+                android:alpha="0.8"
+                tools:text="12:30 PM" />
+
+            <!-- Sending Progress -->
+            <ProgressBar
+                android:id="@+id/progressSending"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:visibility="gone" />
+
+            <!-- Status Icon (sent, delivered, read) -->
+            <ImageView
+                android:id="@+id/iconStatus"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_check"
+                android:tint="@android:color/white"
+                android:alpha="0.8"
+                android:contentDescription="@null" />
+
+            <!-- Retry Button -->
+            <ImageButton
+                android:id="@+id/buttonRetry"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_retry"
+                android:tint="@color/error"
+                android:visibility="gone"
+                android:contentDescription="@string/retry_send"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

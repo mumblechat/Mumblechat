@@ -1,0 +1,34 @@
+{
+  "name": "mumblechat-contracts",
+  "version": "1.0.0",
+  "description": "MumbleChat Protocol Smart Contracts for Ramestta Blockchain",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network ramesttaTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network ramestta",
+    "verify": "hardhat verify --network ramestta",
+    "upgrade:mct": "hardhat run scripts/upgrade-mct.js --network ramestta",
+    "upgrade:registry": "hardhat run scripts/upgrade-registry.js --network ramestta"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
+    "@openzeppelin/hardhat-upgrades": "^3.0.0",
+    "dotenv": "^16.3.1",
+    "hardhat": "^2.19.0"
+  },
+  "keywords": [
+    "mumblechat",
+    "ramestta",
+    "blockchain",
+    "chat",
+    "decentralized",
+    "mct",
+    "token"
+  ],
+  "author": "RamaPay Team",
+  "license": "MIT"
+}

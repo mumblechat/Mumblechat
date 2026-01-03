@@ -97,6 +97,7 @@ import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import timber.log.Timber;
+import com.ramapay.app.chat.ui.MumbleChatFragment;
 
 @AndroidEntryPoint
 public class HomeActivity extends BaseNavigationActivity implements View.OnClickListener, HomeCommsInterface,
@@ -107,6 +108,9 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
     
     @Inject
     AppSecurityManager appSecurityManager;
+    
+    @Inject
+    com.ramapay.app.chat.core.WalletBridge walletBridge;
     
     public static final int RC_ASSET_EXTERNAL_WRITE_PERM = 223;
     public static final int RC_ASSET_NOTIFICATION_PERM = 224;
@@ -408,6 +412,11 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
 
     private void onDefaultWallet(Wallet wallet)
     {
+        // Notify WalletBridge about wallet change for MumbleChat
+        if (walletBridge != null) {
+            walletBridge.setCurrentWallet(wallet);
+        }
+        
         // TODO: [Notifications] Uncomment once backend service is implemented
 //        if (!viewModel.isWatchOnlyWallet() && !viewModel.isPostNotificationsPermissionRequested(wallet.address))
 //        {
@@ -1172,7 +1181,7 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
             case DappBrowserFragment.REQUEST_CAMERA_ACCESS:
                 getFragment(DAPP_BROWSER).gotCameraAccess(permissions, grantResults);
                 break;
-            case ChatFragment.REQUEST_CAMERA_ACCESS:
+            case MumbleChatFragment.REQUEST_CAMERA_ACCESS:
                 getFragment(CHAT).gotCameraAccess(permissions, grantResults);
                 break;
             case DappBrowserFragment.REQUEST_FILE_ACCESS:
@@ -1453,8 +1462,10 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
         {
             switch (WalletPage.values()[position])
             {
-                case WALLET:
+                case CHAT:
                 default:
+                    return new MumbleChatFragment();
+                case WALLET:
                     return new WalletFragment();
                 case ACTIVITY:
                     return new ActivityFragment();
@@ -1467,8 +1478,6 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
                     {
                         return new DappBrowserFragment();
                     }
-                case CHAT:
-                    return new ChatFragment();
                 case SETTINGS:
                     return new NewSettingsFragment();
             }

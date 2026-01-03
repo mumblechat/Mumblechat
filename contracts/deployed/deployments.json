@@ -1,0 +1,45 @@
+{
+  "network": "ramestta",
+  "chainId": 1370,
+  "deployedAt": "2026-01-02T16:09:08.784Z",
+  "lastUpdated": "2026-01-03T00:00:00.000Z",
+  "deployer": "0xDF5522431567362bDBF901DB3bCCa7B26524AF99",
+  "contracts": {
+    "MCTToken": {
+      "proxy": "0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE",
+      "implementation": "0xC76ea6934D24615E9A348C5eF5Aed54E638A5AAD",
+      "version": "3.0.0",
+      "symbol": "MCT",
+      "decimals": 18,
+      "initialSupply": "1000",
+      "maxSupply": "1000000",
+      "dailyMintCap": "100",
+      "transferFeeBps": 10,
+      "verified": true,
+      "features": [
+        "Transfer Fee Pool",
+        "DAO Governance",
+        "Tier-based Distribution",
+        "Halving Mechanism"
+      ]
+    },
+    "MumbleChatRegistry": {
+      "proxy": "0x4f8D4955F370881B05b68D2344345E749d8632e3",
+      "implementation": "0xC69C387a67324A08d1410aEB770dB0AC18c9ad15",
+      "version": "2.0.0",
+      "verified": true,
+      "features": [
+        "Identity Management",
+        "Relay Node System",
+        "Tier System",
+        "Reputation & Slashing",
+        "Blacklist Protection"
+      ]
+    }
+  },
+  "verification": {
+    "explorer": "https://ramascan.com",
+    "mctToken": "https://ramascan.com/address/0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE#code",
+    "registry": "https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3#code"
+  }
+}

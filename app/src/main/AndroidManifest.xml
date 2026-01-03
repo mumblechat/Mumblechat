@@ -175,6 +175,33 @@
                 android:label="@string/unlock_ramapay"
                 android:excludeFromRecents="true" />
 
+        <!-- MumbleChat Activities -->
+        <activity
+                android:name=".chat.ui.conversation.ConversationActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/mumblechat"
+                android:windowSoftInputMode="adjustResize" />
+
+        <activity
+                android:name=".chat.ui.newchat.NewChatActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/new_chat" />
+
+        <activity
+                android:name=".chat.ui.ChatSettingsActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/chat_settings" />
+
+        <activity
+                android:name=".chat.ui.ProfileActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/my_profile" />
+
+        <activity
+                android:name=".chat.ui.RelayNodeActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="Relay Node" />
+
         <service
                 android:name=".service.RamaPayFirebaseMessagingService"
                 android:exported="false">

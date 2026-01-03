@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- MumbleChat Logo - Chat bubble with M -->
+    <path
+        android:fillColor="#5C6BC0"
+        android:pathData="M40,4H8C5.8,4 4,5.8 4,8v32l8,-8h28c2.2,0 4,-1.8 4,-4V8C44,5.8 42.2,4 40,4z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M14,14h4l6,10 6,-10h4v16h-4v-10l-6,10 -6,-10v10h-4z"/>
+</vector>

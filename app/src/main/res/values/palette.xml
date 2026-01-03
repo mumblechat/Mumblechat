@@ -56,4 +56,15 @@
 	<color name="dark_golden">#B8860B</color>
 	<color name="dark_golden_darker">#996515</color>
     <color name="base_logo">#0052FF</color>
+    
+    <!-- MumbleChat Colors -->
+    <color name="lima">#14B8A6</color>
+    <color name="text">#FFFFFF</color>
+    <color name="divider">#3C3C3C</color>
+    
+    <!-- Tier Colors -->
+    <color name="bronze">#CD7F32</color>
+    <color name="tier_silver">#C0C0C0</color>
+    <color name="gold">#FFD700</color>
+    <color name="platinum">#E5E4E2</color>
 </resources>

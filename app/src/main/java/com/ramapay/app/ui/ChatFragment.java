@@ -99,6 +99,9 @@ public class ChatFragment extends BaseFragment implements
     private Bundle webViewState;
     private boolean hasLoadedOnce = false;
     
+    // JavaScript bridge for native features (file attachments, crypto payments)
+    private com.ramapay.app.chat.ui.ChatBridge chatBridge;
+    
     // Keys for persistent storage
     private static final String PREF_NAME = "chat_prefs";
     private static final String KEY_LAST_URL = "last_url";
@@ -266,6 +269,11 @@ public class ChatFragment extends BaseFragment implements
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setUserAgentString(webSettings.getUserAgentString() + " RamaPay(Platform=Android)");
 
+        // Initialize JavaScript bridge for native features (file attachments, crypto payments)
+        chatBridge = new com.ramapay.app.chat.ui.ChatBridge(this, web3, wallet, viewModel);
+        web3.addJavascriptInterface(chatBridge, "RamaPayBridge");
+        Timber.d("ChatBridge initialized and injected into WebView");
+
         web3.setWebChromeClient(new WebChromeClient()
         {
             @Override
@@ -338,7 +346,73 @@ public class ChatFragment extends BaseFragment implements
                     "  console.log('RamaPay: RPC URL fix injected');" +
                     "})();";
                 view.evaluateJavascript(fixRpcScript, null);
-                Timber.d("Injected RPC URL fix script for MumbleChat");
+                
+                // FIX: Inject CSS to make chat input text visible (change from white to dark)
+                String fixInputColorCSS = 
+                    "(function() {" +
+                    "  const style = document.createElement('style');" +
+                    "  style.innerHTML = '" +
+                    "    input, textarea, [contenteditable=\"true\"] { " +
+                    "      color: #1a1a1a !important; " +
+                    "      -webkit-text-fill-color: #1a1a1a !important; " +
+                    "    } " +
+                    "    input::placeholder, textarea::placeholder { " +
+                    "      color: #666 !important; " +
+                    "      -webkit-text-fill-color: #666 !important; " +
+                    "    } " +
+                    "    /* Dark mode support */ " +
+                    "    @media (prefers-color-scheme: dark) { " +
+                    "      input, textarea, [contenteditable=\"true\"] { " +
+                    "        color: #ffffff !important; " +
+                    "        -webkit-text-fill-color: #ffffff !important; " +
+                    "      } " +
+                    "    }';" +
+                    "  document.head.appendChild(style);" +
+                    "  console.log('RamaPay: Fixed input text color');" +
+                    "})();";
+                view.evaluateJavascript(fixInputColorCSS, null);
+                
+                // Inject RamaPay Bridge API for file attachments and crypto payments
+                String bridgeAPI = 
+                    "(function() {" +
+                    "  if (typeof window.RamaPayBridge === 'undefined') {" +
+                    "    console.warn('RamaPayBridge not available');" +
+                    "    return;" +
+                    "  }" +
+                    "  window.RamaPay = {" +
+                    "    getWalletAddress: () => RamaPayBridge.getWalletAddress()," +
+                    "    getBalances: () => JSON.parse(RamaPayBridge.getWalletBalances())," +
+                    "    pickFile: (callback) => {" +
+                    "      const callbackId = 'file_' + Date.now();" +
+                    "      window.onFileSelected = (id, result) => {" +
+                    "        if (id === callbackId && callback) callback(result);" +
+                    "      };" +
+                    "      RamaPayBridge.pickFile(callbackId);" +
+                    "    }," +
+                    "    pickImage: (callback) => {" +
+                    "      const callbackId = 'img_' + Date.now();" +
+                    "      window.onFileSelected = (id, result) => {" +
+                    "        if (id === callbackId && callback) callback(result);" +
+                    "      };" +
+                    "      RamaPayBridge.pickImage(callbackId);" +
+                    "    }," +
+                    "    sendPayment: (recipient, token, amount) => {" +
+                    "      RamaPayBridge.sendCryptoPayment(recipient, token, amount);" +
+                    "    }," +
+                    "    showReceipt: (txHash, details) => {" +
+                    "      RamaPayBridge.showTransactionReceipt(txHash, JSON.stringify(details));" +
+                    "    }," +
+                    "    capabilities: () => JSON.parse(RamaPayBridge.getCapabilities())" +
+                    "  };" +
+                    "  console.log('RamaPay Bridge API initialized:', window.RamaPay.capabilities());" +
+                    "  // Notify web app that native features are available" +
+                    "  window.dispatchEvent(new CustomEvent('RamaPayReady', {" +
+                    "    detail: window.RamaPay.capabilities()" +
+                    "  }));" +
+                    "})();";
+                view.evaluateJavascript(bridgeAPI, null);
+                
+                Timber.d("Injected RPC fix, input color fix, and RamaPay Bridge API");
             }
             
             @Override

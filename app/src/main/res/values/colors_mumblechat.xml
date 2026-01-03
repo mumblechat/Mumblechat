@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MumbleChat Colors - Modern Dark Theme -->
+<resources>
+    <!-- Primary Theme Colors -->
+    <color name="mumblechat_background">#0F1419</color>
+    <color name="mumblechat_surface">#1A1F26</color>
+    <color name="mumblechat_card">#1E2429</color>
+    <color name="mumblechat_primary">#00D9C0</color>
+    <color name="mumblechat_primary_dark">#00B8A3</color>
+    <color name="mumblechat_accent">#00FFD9</color>
+    
+    <!-- Text Colors -->
+    <color name="mumblechat_text_primary">#FFFFFF</color>
+    <color name="mumblechat_text_secondary">#8B949E</color>
+    <color name="mumblechat_text_tertiary">#6E7681</color>
+    
+    <!-- Chat Colors -->
+    <color name="message_incoming_background">#252C33</color>
+    <color name="message_outgoing_background">#00D9C0</color>
+    <color name="badge_background">#00D9C0</color>
+    <color name="overlay_background">#99000000</color>
+    <color name="edit_text_background">#1A1F26</color>
+    <color name="card_background">#1E2429</color>
+    
+    <!-- Status Colors -->
+    <color name="status_online">#00D9C0</color>
+    <color name="status_offline">#6E7681</color>
+    <color name="warning">#FF9800</color>
+    
+    <!-- Avatar Colors Array -->
+    <integer-array name="avatar_colors">
+        <item>0xFF1E88E5</item> <!-- Blue -->
+        <item>0xFF43A047</item> <!-- Green -->
+        <item>0xFFE53935</item> <!-- Red -->
+        <item>0xFFFDD835</item> <!-- Yellow -->
+        <item>0xFF8E24AA</item> <!-- Purple -->
+        <item>0xFFFF6F00</item> <!-- Orange -->
+        <item>0xFF00ACC1</item> <!-- Cyan -->
+        <item>0xFFD81B60</item> <!-- Pink -->
+        <item>0xFF5C6BC0</item> <!-- Indigo -->
+        <item>0xFF26A69A</item> <!-- Teal -->
+    </integer-array>
+</resources>

@@ -58,8 +58,8 @@ public class AWalletBottomNavigationView extends LinearLayout
         regularTypeface = ResourcesCompat.getFont(getContext(), R.font.font_regular);
         semiboldTypeface = ResourcesCompat.getFont(getContext(), R.font.font_semibold);
 
-        // set wallet fragment selected on start
-        setSelectedItem(WALLET);
+        // set chat fragment selected on start (MumbleChat is primary)
+        setSelectedItem(CHAT);
     }
 
     public void setListener(OnBottomNavigationItemSelectedListener listener)
