@@ -92,6 +92,34 @@ You can submit feedback and report bugs as GitHub issues. Please include:
 | Mainnet | 1370 | https://blockchain.rfrm.io | https://ramascan.com |
 | Testnet | 1377 | https://testnet.rfrm.io | https://pingaksha.ramascan.com |
 
+## MumbleChat Protocol Integration
+
+RamaPay includes **MumbleChat** - a fully decentralized, wallet-native messaging protocol.
+
+### Smart Contracts (Deployed ✅)
+
+| Contract | Proxy Address | Version |
+|----------|---------------|---------|
+| MumbleChatRegistry | `0x4f8D4955F370881B05b68D2344345E749d8632e3` | V3.2 |
+| MCTToken | `0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE` | V3.0 |
+
+### Relay Node Tier System
+
+| Tier | Storage | Uptime | Pool Share | Multiplier |
+|------|---------|--------|------------|------------|
+| 🥉 Bronze | 1 GB | 4+ hours | 10% | 1.0x |
+| 🥈 Silver | 2 GB | 8+ hours | 20% | 1.5x |
+| 🥇 Gold | 4 GB | 12+ hours | 30% | 2.0x |
+| 💎 Platinum | 8+ GB | 16+ hours | 40% | 3.0x |
+
+### Features
+- **Wallet-to-Wallet Chat**: E2E encrypted messaging
+- **Relay Node Rewards**: Earn MCT for relaying messages
+- **GB-Scale Tiers**: Higher storage = bigger daily pool share
+- **Chrome Extension**: MumbleChat browser integration
+
+📖 Full documentation: [docs/MUMBLECHAT_PROTOCOL/](docs/MUMBLECHAT_PROTOCOL/)
+
 ## Fork & Customize Your Own Wallet
 
 RamaPay is designed to be easily forked and customized. Create your own branded blockchain wallet in minutes!

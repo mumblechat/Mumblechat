@@ -1,6 +1,6 @@
 # MumbleChat Protocol - Overview
 
-## Version 2.0 | January 2026
+## Version 3.2 | January 2026
 
 ---
 
@@ -24,7 +24,7 @@ MumbleChat is a **fully decentralized, wallet-native chat protocol** built for t
 | **Privacy** | E2E encryption, no metadata leaks |
 | **Self-Sovereignty** | Users own their identity and data |
 | **Sustainable Incentives** | Relay nodes earn MCT with halving + fee pool |
-| **Tier-Based Rewards** | Higher uptime & storage = higher rewards |
+| **GB-Scale Tiers** | 1GB/2GB/4GB/8GB+ storage with 10-40% daily pool share |
 | **Compatibility** | Works across Android, Web, Browser Extension |
 
 ---
@@ -145,7 +145,7 @@ RamaPay Wallet (UNCHANGED)
 ### Smart Contracts (DEPLOYED ✅)
 | Contract | Purpose | Proxy Address |
 |----------|---------|---------------|
-| MumbleChatRegistry V2 | Identity + Relay + Tier System | `0x4f8D4955F370881B05b68D2344345E749d8632e3` |
+| MumbleChatRegistry V3.2 | Identity + Relay + GB-Scale Tier System + Daily Pool | `0x4f8D4955F370881B05b68D2344345E749d8632e3` |
 | MCTToken V3 | Reward token + Fee Pool + Governance | `0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE` |
 
 > **Note:** Contracts are UUPS upgradeable proxies. RelayStaking functionality is built into MCTToken V3.
@@ -201,12 +201,12 @@ RamaPay Wallet (UNCHANGED)
 
 ### Tier System (Fee Pool Distribution Only)
 
-| Tier | Daily Uptime | Storage | Fee Pool Multiplier |
-|------|--------------|---------|---------------------|
-| 🥉 Bronze | 0-4 hours | 0-50 MB | 1.0x |
-| 🥈 Silver | 4-8 hours | 50-200 MB | 1.5x |
-| 🥇 Gold | 8-16 hours | 200-500 MB | 2.0x |
-| 💎 Platinum | 16+ hours | 500+ MB | 3.0x |
+| Tier | Daily Uptime | Storage | Pool Share | Fee Pool Multiplier |
+|------|--------------|---------|------------|---------------------|
+| 🥉 Bronze | 4+ hours | 1 GB | 10% | 1.0x |
+| 🥈 Silver | 8+ hours | 2 GB | 20% | 1.5x |
+| 🥇 Gold | 12+ hours | 4 GB | 30% | 2.0x |
+| 💎 Platinum | 16+ hours | 8+ GB | 40% | 3.0x |
 
 > **Note:** Minting rewards are always 1x (no tier bonus). Tier bonuses ONLY apply to fee pool distribution to keep max supply controlled.
 

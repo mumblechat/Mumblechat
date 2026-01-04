@@ -6,7 +6,7 @@
 
 ## 1. CONTRACT OVERVIEW
 
-### 1.1 Contract Architecture (V2/V3 - UUPS Upgradeable)
+### 1.1 Contract Architecture (V3.x - UUPS Upgradeable)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -14,28 +14,28 @@
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌────────────────────────────┐    ┌────────────────────────┐   │
-│  │  MumbleChatRegistry V2     │    │     MCTToken V3        │   │
+│  │  MumbleChatRegistry V3.2   │    │     MCTToken V3        │   │
 │  │  (UUPS Proxy)              │    │     (UUPS Proxy)       │   │
 │  │                            │    │                        │   │
 │  │  • Register identity       │◄──►│  • ERC-20 Token       │   │
 │  │  • Store pubKeys           │    │  • 1M max supply      │   │
-│  │  • TIER-BASED Relay System │    │  • Halving rewards    │   │
-│  │  • Uptime tracking         │    │  • Fee pool (0.1%)    │   │
-│  │  • Storage tracking        │    │  • Governance votes   │   │
+│  │  • GB-Scale Tier System    │    │  • Halving rewards    │   │
+│  │  • Daily Pool (10-40%)     │    │  • Fee pool (0.1%)    │   │
+│  │  • Uptime/Storage tracking │    │  • Governance votes   │   │
 │  │                            │    │                        │   │
 │  └────────────────────────────┘    └────────────────────────┘   │
 │                                                                  │
 │  ═══════════════════════════════════════════════════════════    │
 │                                                                  │
-│  TIER SYSTEM (Built into Registry V2):                          │
-│  ┌─────────┬────────────┬──────────┬─────────────────────┐      │
-│  │  Tier   │  Uptime    │  Storage │  Fee Pool Bonus     │      │
-│  ├─────────┼────────────┼──────────┼─────────────────────┤      │
-│  │ Bronze  │  0-4h/day  │  0-50MB  │  1.0x               │      │
-│  │ Silver  │  4-8h/day  │  50-200MB│  1.5x               │      │
-│  │ Gold    │  8-16h/day │ 200-500MB│  2.0x               │      │
-│  │ Platinum│  16+h/day  │  500MB+  │  3.0x               │      │
-│  └─────────┴────────────┴──────────┴─────────────────────┘      │
+│  TIER SYSTEM (Built into Registry V3.2 - GB Scale):             │
+│  ┌─────────┬────────────┬──────────┬─────────┬────────────┐     │
+│  │  Tier   │  Uptime    │  Storage │ Pool %  │ Fee Bonus  │     │
+│  ├─────────┼────────────┼──────────┼─────────┼────────────┤     │
+│  │ Bronze  │  4+h/day   │  1 GB    │  10%    │  1.0x      │     │
+│  │ Silver  │  8+h/day   │  2 GB    │  20%    │  1.5x      │     │
+│  │ Gold    │  12+h/day  │  4 GB    │  30%    │  2.0x      │     │
+│  │ Platinum│  16+h/day  │  8+ GB   │  40%    │  3.0x      │     │
+│  └─────────┴────────────┴──────────┴─────────┴────────────┘     │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -45,7 +45,7 @@
 | Contract | Type | Proxy Address | Implementation |
 |----------|------|---------------|----------------|
 | MCTToken V3 | UUPS Proxy | `0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE` | `0xC76ea6934D24615E9A348C5eF5Aed54E638A5AAD` |
-| MumbleChatRegistry V2 | UUPS Proxy | `0x4f8D4955F370881B05b68D2344345E749d8632e3` | `0xC69C387a67324A08d1410aEB770dB0AC18c9ad15` |
+| MumbleChatRegistry V3.2 | UUPS Proxy | `0x4f8D4955F370881B05b68D2344345E749d8632e3` | `0xe73f98b22528E34eDE1Ee4AD6facF704ED5dF8C3` |
 
 > **Note:** RelayStaking functionality is integrated into MCTToken V3 (fee pool) and MumbleChatRegistry V2 (tier tracking). No separate RelayStaking contract needed.
 

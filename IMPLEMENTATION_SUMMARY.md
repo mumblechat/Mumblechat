@@ -169,15 +169,22 @@ Based on the MumbleChat protocol documentation:
 | Contract | Address | Purpose |
 |----------|---------|---------|
 | **MCTToken V3** | `0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE` | Reward token with fee pool |
-| **MumbleChatRegistry V2** | `0x4f8D4955F370881B05b68D2344345E749d8632e3` | Identity + Relay + Tiers |
+| **MumbleChatRegistry V3.2** | `0x4f8D4955F370881B05b68D2344345E749d8632e3` | Identity + Relay + GB-Scale Tiers + Daily Pool |
 
-### Relay Node System
-- **Tiers**: Bronze (1x) → Silver (1.5x) → Gold (2x) → Platinum (3x)
+### Relay Node Tier System (V3.2 - GB Scale)
+
+| Tier | Storage | Uptime | Pool Share | Multiplier |
+|------|---------|--------|------------|------------|
+| 🥉 Bronze | 1 GB | 4+ hours | 10% | 1.0x |
+| 🥈 Silver | 2 GB | 8+ hours | 20% | 1.5x |
+| 🥇 Gold | 4 GB | 12+ hours | 30% | 2.0x |
+| 💎 Platinum | 8+ GB | 16+ hours | 40% | 3.0x |
+
+### Rewards
+- **Minting**: 0.001 MCT per 1000 messages (no tier bonus)
+- **Fee Pool**: 0.1% of transfers (tier bonus applies)
+- **Daily Pool**: Per-tier percentage allocation
 - **Uptime Tracking**: Heartbeat every 5 minutes
-- **Storage Tracking**: MB reported by nodes
-- **Rewards**: 
-  - Minting: 0.001 MCT per 1000 messages (no tier bonus)
-  - Fee Pool: 0.1% of transfers (tier bonus applies)
 
 ### Network Architecture
 - **P2P DHT**: Kademlia-based peer discovery
