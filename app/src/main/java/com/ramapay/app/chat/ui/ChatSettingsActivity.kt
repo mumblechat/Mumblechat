@@ -19,8 +19,12 @@ import com.ramapay.app.chat.backup.WalletMismatchException
 import com.ramapay.app.chat.core.WalletBridge
 import com.ramapay.app.chat.data.dao.ConversationDao
 import com.ramapay.app.chat.data.dao.MessageDao
+import com.ramapay.app.chat.service.NonceClearService
 import com.ramapay.app.databinding.ActivityChatSettingsBinding
+import com.ramapay.app.widget.AWalletAlertDialog
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -54,6 +58,11 @@ class ChatSettingsActivity : AppCompatActivity() {
     
     @Inject
     lateinit var messageDao: MessageDao
+    
+    @Inject
+    lateinit var nonceClearService: NonceClearService
+    
+    private val disposables = CompositeDisposable()
     
     private var pendingBackupPassword: String? = null
     private var pendingImportPassword: String? = null
@@ -127,6 +136,11 @@ class ChatSettingsActivity : AppCompatActivity() {
         // Relay Node
         binding.itemRelayNode.setOnClickListener {
             startActivity(Intent(this, RelayNodeActivity::class.java))
+        }
+        
+        // Clear Stuck Transactions
+        binding.itemClearNonce.setOnClickListener {
+            checkAndClearStuckTransactions()
         }
 
         // Backup
@@ -563,6 +577,145 @@ class ChatSettingsActivity : AppCompatActivity() {
                 Toast.makeText(this@ChatSettingsActivity, "Error clearing data: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+    
+    // ============ Clear Stuck Transactions ============
+    
+    private fun checkAndClearStuckTransactions() {
+        val walletAddress = walletBridge.getCurrentWalletAddress()
+        if (walletAddress == null) {
+            Toast.makeText(this, "No wallet connected", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val progressDialog = AWalletAlertDialog(this).apply {
+            setTitle("Checking Transactions")
+            setMessage("Looking for stuck transactions...")
+            setProgressMode()
+            setCancelable(false)
+            show()
+        }
+        
+        disposables.add(
+            nonceClearService.checkNonceStatus(walletAddress)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ status ->
+                    progressDialog.dismiss()
+                    
+                    if (status.hasStuckTransactions) {
+                        showClearNonceDialog(status.stuckCount, status.confirmedNonce)
+                    } else {
+                        showNoStuckTransactionsDialog()
+                    }
+                }, { error ->
+                    progressDialog.dismiss()
+                    Toast.makeText(this, "Error: ${error.message}", Toast.LENGTH_LONG).show()
+                })
+        )
+    }
+    
+    private fun showNoStuckTransactionsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("✅ No Issues Found")
+            .setMessage("Your wallet has no stuck transactions. All pending transactions have been confirmed.")
+            .setPositiveButton("OK", null)
+            .show()
+    }
+    
+    private fun showClearNonceDialog(stuckCount: Int, startingNonce: Long) {
+        AlertDialog.Builder(this)
+            .setTitle("⚠️ Stuck Transactions Found")
+            .setMessage(
+                "Found $stuckCount stuck transaction${if (stuckCount > 1) "s" else ""}.\n\n" +
+                "These are pending transactions that haven't been confirmed by the network.\n\n" +
+                "Clearing them will:\n" +
+                "• Send $stuckCount small replacement transaction${if (stuckCount > 1) "s" else ""}\n" +
+                "• Use a higher gas price to replace stuck ones\n" +
+                "• Cost a small amount of RAMA for gas\n\n" +
+                "Do you want to proceed?"
+            )
+            .setPositiveButton("Clear Now") { _, _ ->
+                performNonceClear()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun performNonceClear() {
+        val wallet = walletBridge.getCurrentWallet()
+        if (wallet == null) {
+            Toast.makeText(this, "No wallet connected", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val progressDialog = AWalletAlertDialog(this).apply {
+            setTitle("Clearing Transactions")
+            setMessage("Sending replacement transactions...")
+            setProgressMode()
+            setCancelable(false)
+            show()
+        }
+        
+        disposables.add(
+            nonceClearService.clearStuckTransactions(wallet)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ result ->
+                    progressDialog.dismiss()
+                    
+                    if (result.success) {
+                        showClearSuccessDialog(result.clearedCount)
+                    } else {
+                        showClearErrorDialog(result.clearedCount, result.failedAt, result.error)
+                    }
+                }, { error ->
+                    progressDialog.dismiss()
+                    AlertDialog.Builder(this)
+                        .setTitle("Error")
+                        .setMessage("Failed to clear transactions: ${error.message}")
+                        .setPositiveButton("OK", null)
+                        .show()
+                })
+        )
+    }
+    
+    private fun showClearSuccessDialog(clearedCount: Int) {
+        if (clearedCount == 0) {
+            AlertDialog.Builder(this)
+                .setTitle("✅ All Clear")
+                .setMessage("No transactions needed to be cleared.")
+                .setPositiveButton("OK", null)
+                .show()
+        } else {
+            AlertDialog.Builder(this)
+                .setTitle("✅ Transactions Cleared!")
+                .setMessage(
+                    "Successfully cleared $clearedCount stuck transaction${if (clearedCount > 1) "s" else ""}.\n\n" +
+                    "You can now send transactions normally."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+        }
+    }
+    
+    private fun showClearErrorDialog(clearedCount: Int, failedAt: Long?, error: String?) {
+        AlertDialog.Builder(this)
+            .setTitle("Partial Success")
+            .setMessage(
+                "Cleared $clearedCount transaction${if (clearedCount > 1) "s" else ""}, but encountered an error.\n\n" +
+                (if (failedAt != null) "Failed at nonce: $failedAt\n" else "") +
+                (if (error != null) "Error: $error\n\n" else "\n") +
+                "You may try again to clear remaining stuck transactions."
+            )
+            .setPositiveButton("OK", null)
+            .setNeutralButton("Try Again") { _, _ ->
+                checkAndClearStuckTransactions()
+            }
+            .show()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        disposables.clear()
     }
 
     private fun showAboutDialog() {

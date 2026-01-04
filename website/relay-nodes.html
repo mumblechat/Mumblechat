@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relay Nodes - Earn MCT by Running a MumbleChat Relay</title>
+    <meta name="description" content="Become a MumbleChat relay node. Stake 100 MCT, provide storage and uptime, earn rewards. Bronze, Silver, Gold, Platinum tiers.">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <div class="logo-icon">💬</div>
+                <span>MumbleChat</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/protocol">Protocol</a></li>
+                <li><a href="/token">MCT Token</a></li>
+                <li><a href="/relay-nodes" class="active">Relay Nodes</a></li>
+                <li><a href="/download">Download</a></li>
+                <li><a href="/docs">Docs</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="/download" class="btn btn-primary">Download App</a>
+                <button class="mobile-menu-btn">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" style="min-height: 60vh;">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>🌐</span>
+                <span>Earn MCT Rewards</span>
+            </div>
+            <h1 class="hero-title">Become a <span>Relay Node</span></h1>
+            <p class="hero-subtitle">
+                Run a relay node to store encrypted messages for offline users. 
+                Stake 100 MCT, provide uptime and storage, earn rewards based on your tier.
+            </p>
+            <div class="hero-actions">
+                <a href="/download" class="btn btn-primary btn-lg">
+                    📱 Download RamaPay to Start
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="section" id="how-it-works">
+        <div class="container">
+            <div class="section-title">
+                <h2>How <span>Relay Nodes</span> Work</h2>
+            </div>
+            
+            <div class="card mb-4">
+                <pre class="code-block"><code>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       RELAY NODE PURPOSE                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   WITHOUT RELAYS:                                                       │
+│   ───────────────                                                       │
+│                                                                          │
+│   [Alice] ────X────► [Bob] (offline)                                    │
+│              │                                                           │
+│              └── Message LOST ❌                                        │
+│                                                                          │
+│   ─────────────────────────────────────────────────────────────────     │
+│                                                                          │
+│   WITH RELAYS:                                                          │
+│   ────────────                                                          │
+│                                                                          │
+│   [Alice] ─────► [Relay Node] ─────► [Bob] (when online)                │
+│                  (stores msg)                                            │
+│              │                                                           │
+│              └── Message DELIVERED ✅                                   │
+│                                                                          │
+│   ─────────────────────────────────────────────────────────────────     │
+│                                                                          │
+│   RELAY NODES:                                                          │
+│   • Store encrypted messages for offline users                          │
+│   • Deliver when recipient comes online                                 │
+│   • Earn MCT rewards for service                                        │
+│   • Can't read message content (encrypted)                              │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                </code></pre>
+            </div>
+            
+            <div class="grid grid-4">
+                <div class="card text-center">
+                    <div style="font-size: 2rem; margin-bottom: 12px;">1️⃣</div>
+                    <h4>Register Identity</h4>
+                    <p class="card-text">First register as a normal user with your public key.</p>
+                </div>
+                <div class="card text-center">
+                    <div style="font-size: 2rem; margin-bottom: 12px;">2️⃣</div>
+                    <h4>Stake 100 MCT</h4>
+                    <p class="card-text">Stake MCT tokens to become a relay node.</p>
+                </div>
+                <div class="card text-center">
+                    <div style="font-size: 2rem; margin-bottom: 12px;">3️⃣</div>
+                    <h4>Provide Service</h4>
+                    <p class="card-text">Store messages and maintain uptime.</p>
+                </div>
+                <div class="card text-center">
+                    <div style="font-size: 2rem; margin-bottom: 12px;">4️⃣</div>
+                    <h4>Earn Rewards</h4>
+                    <p class="card-text">Claim MCT from minting + fee pool.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tier System -->
+    <section class="section" id="tiers" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>Tier <span>System</span></h2>
+                <p class="section-subtitle">
+                    Higher tiers earn more from the fee pool. Tier is calculated from uptime + storage.
+                </p>
+            </div>
+            
+            <div class="grid grid-4">
+                <div class="tier-card bronze">
+                    <div class="tier-badge">🥉</div>
+                    <h3 class="tier-name" style="color: var(--bronze);">Bronze</h3>
+                    <div class="tier-requirements">
+                        4+ hours/day uptime<br>
+                        1 GB storage
+                    </div>
+                    <ul class="tier-benefits">
+                        <li>10% of daily pool</li>
+                        <li>1.0x fee multiplier</li>
+                        <li>Basic rewards</li>
+                        <li>Entry tier</li>
+                    </ul>
+                </div>
+                
+                <div class="tier-card silver">
+                    <div class="tier-badge">🥈</div>
+                    <h3 class="tier-name" style="color: var(--silver);">Silver</h3>
+                    <div class="tier-requirements">
+                        8+ hours/day uptime<br>
+                        2 GB storage
+                    </div>
+                    <ul class="tier-benefits">
+                        <li>20% of daily pool</li>
+                        <li>1.5x fee multiplier</li>
+                        <li>50% bonus rewards</li>
+                        <li>Part-time node</li>
+                    </ul>
+                </div>
+                
+                <div class="tier-card gold">
+                    <div class="tier-badge">🥇</div>
+                    <h3 class="tier-name" style="color: var(--gold);">Gold</h3>
+                    <div class="tier-requirements">
+                        12+ hours/day uptime<br>
+                        4 GB storage
+                    </div>
+                    <ul class="tier-benefits">
+                        <li>30% of daily pool</li>
+                        <li>2.0x fee multiplier</li>
+                        <li>100% bonus rewards</li>
+                        <li>Active node</li>
+                    </ul>
+                </div>
+                
+                <div class="tier-card platinum">
+                    <div class="tier-badge">💎</div>
+                    <h3 class="tier-name" style="color: var(--platinum);">Platinum</h3>
+                    <div class="tier-requirements">
+                        16+ hours/day uptime<br>
+                        8+ GB storage
+                    </div>
+                    <ul class="tier-benefits">
+                        <li>40% of daily pool</li>
+                        <li>3.0x fee multiplier</li>
+                        <li>200% bonus rewards</li>
+                        <li>Dedicated node</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Earnings Calculator -->
+    <section class="section" id="earnings">
+        <div class="container">
+            <div class="section-title">
+                <h2>💰 Earning <span>Potential</span></h2>
+                <p class="section-subtitle">
+                    Relay nodes earn from two sources: minting rewards + fee pool distribution.
+                </p>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-icon">⛏️</div>
+                    <h3 class="card-title">Minting Rewards</h3>
+                    <p class="card-text mb-3">Earn newly minted MCT for relaying messages.</p>
+                    
+                    <div class="table-container">
+                        <table>
+                            <tr>
+                                <td>Rate</td>
+                                <td><strong>0.001 MCT</strong> per 1,000 messages</td>
+                            </tr>
+                            <tr>
+                                <td>Daily Cap</td>
+                                <td>100 MCT total (shared by all nodes)</td>
+                            </tr>
+                            <tr>
+                                <td>Halving</td>
+                                <td>Every 100,000 MCT minted</td>
+                            </tr>
+                            <tr>
+                                <td>Tier Bonus</td>
+                                <td>❌ No (always 1x)</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <p class="card-text mt-3" style="font-size: 0.85rem;">
+                        <em>Example: Relay 10 million messages = 10 MCT earned</em>
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">💰</div>
+                    <h3 class="card-title">Fee Pool Rewards</h3>
+                    <p class="card-text mb-3">Share of 0.1% transfer fees based on tier.</p>
+                    
+                    <div class="table-container">
+                        <table>
+                            <tr>
+                                <td>Source</td>
+                                <td>0.1% of all MCT transfers</td>
+                            </tr>
+                            <tr>
+                                <td>Distribution</td>
+                                <td>Tier-weighted among active nodes</td>
+                            </tr>
+                            <tr>
+                                <td>Daily Cap</td>
+                                <td>❌ No cap</td>
+                            </tr>
+                            <tr>
+                                <td>Tier Bonus</td>
+                                <td>✅ Yes (1x - 3x)</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <p class="card-text mt-3" style="font-size: 0.85rem;">
+                        <em>Example: 1M MCT transferred = 1,000 MCT in pool</em>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Requirements -->
+    <section class="section" id="requirements" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>📋 <span>Requirements</span></h2>
+            </div>
+            
+            <div class="grid grid-3">
+                <div class="card">
+                    <div class="card-icon">🪙</div>
+                    <h3 class="card-title">100 MCT Stake</h3>
+                    <p class="card-text">
+                        Stake MCT tokens to register as a relay node. 
+                        Stake is returned when you deactivate.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">👤</div>
+                    <h3 class="card-title">Registered Identity</h3>
+                    <p class="card-text">
+                        Must register your identity on-chain first before becoming a relay node.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">⛽</div>
+                    <h3 class="card-title">RAMA for Gas</h3>
+                    <p class="card-text">
+                        Need RAMA tokens to pay transaction fees on Ramestta blockchain.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">💾</div>
+                    <h3 class="card-title">Storage Space</h3>
+                    <p class="card-text">
+                        Minimum 1 GB for Bronze tier. More storage = higher tier = more rewards.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">⏰</div>
+                    <h3 class="card-title">Uptime</h3>
+                    <p class="card-text">
+                        Minimum 4 hours/day for Bronze. Tracked via heartbeat every 5 minutes.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">📱</div>
+                    <h3 class="card-title">Android Device</h3>
+                    <p class="card-text">
+                        Run RamaPay wallet with relay service enabled. Works on phone or tablet.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Can Still Chat? -->
+    <section class="section">
+        <div class="container">
+            <div class="section-title">
+                <h2>❓ Frequently <span>Asked Questions</span></h2>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <h3 class="card-title">Can I still chat as a normal user?</h3>
+                    <p class="card-text">
+                        <strong>YES!</strong> When you become a relay node, you're BOTH a normal user AND a relay node. 
+                        You can still send and receive your own messages while earning rewards for relaying others' messages.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Can I stop being a relay node?</h3>
+                    <p class="card-text">
+                        <strong>YES!</strong> Call deactivateRelay() anytime. Your 100 MCT stake is returned, 
+                        and you go back to being a normal user. No penalties.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Can relay nodes read my messages?</h3>
+                    <p class="card-text">
+                        <strong>NO!</strong> Messages are encrypted end-to-end BEFORE being sent to relay nodes. 
+                        Relays only see encrypted blobs - they cannot decrypt the content.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">What happens if I go offline?</h3>
+                    <p class="card-text">
+                        Your uptime tracker stops accumulating. If offline for more than 5 minutes, 
+                        your session ends. Your tier may decrease if daily uptime drops below thresholds.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">How do I claim rewards?</h3>
+                    <p class="card-text">
+                        In RamaPay: Go to Chat Settings → Relay Node → Claim Rewards. 
+                        You can claim minting rewards and fee pool rewards separately.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Can I lose my stake?</h3>
+                    <p class="card-text">
+                        Only if you're blacklisted for malicious behavior (e.g., spam, attacks). 
+                        Normal deactivation always returns your full stake.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section" style="background: var(--gradient-primary);">
+        <div class="container text-center">
+            <h2 style="color: white; margin-bottom: 16px;">Ready to Earn MCT?</h2>
+            <p style="color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 32px;">
+                Download RamaPay, stake 100 MCT, and start earning rewards as a relay node.
+            </p>
+            <a href="/download" class="btn btn-lg" style="background: white; color: var(--primary);">
+                📱 Download RamaPay Now
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="/" class="logo">
+                        <div class="logo-icon">💬</div>
+                        <span>MumbleChat</span>
+                    </a>
+                    <p>Native decentralized messaging protocol on Ramestta blockchain.</p>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Protocol</h4>
+                    <ul class="footer-links">
+                        <li><a href="/protocol">How It Works</a></li>
+                        <li><a href="/protocol#encryption">Encryption</a></li>
+                        <li><a href="/protocol#identity">Identity</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Token</h4>
+                    <ul class="footer-links">
+                        <li><a href="/token">MCT Tokenomics</a></li>
+                        <li><a href="/token#halving">Halving</a></li>
+                        <li><a href="/token#rewards">Rewards</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Resources</h4>
+                    <ul class="footer-links">
+                        <li><a href="/download">Download</a></li>
+                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="https://ramascan.com" target="_blank">RamaScan</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <span>© 2026 MumbleChat Protocol. Built on Ramestta.</span>
+            </div>
+        </div>
+    </footer>
+    <script src="js/app.js"></script>
+</body>
+</html>

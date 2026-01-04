@@ -23,6 +23,7 @@ import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Function
 import org.web3j.abi.datatypes.Utf8String
 import org.web3j.abi.datatypes.generated.Uint256
+import org.web3j.abi.datatypes.Bool
 import timber.log.Timber
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -77,6 +78,10 @@ class RelayNodeViewModel @Inject constructor(
     val claimableReward: StateFlow<Double> = _claimableReward
 
     private var pendingOperation: String? = null
+    
+    // For two-step approve + register flow
+    private var pendingStorageMB: Int = 50
+    private var pendingEndpoint: String = ""
 
     // Data classes for UI
     data class TierInfo(
@@ -236,7 +241,7 @@ class RelayNodeViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            pendingOperation = "activate"
+            pendingOperation = "approve"  // First step: approve MCT
 
             try {
                 val wallet = walletBridge.getCurrentWallet()
@@ -260,35 +265,38 @@ class RelayNodeViewModel @Inject constructor(
                     return@launch
                 }
 
-                // First, approve MCT spending
-                // Then register as relay
-                // For simplicity, we'll do the registerAsRelay transaction
-                // In production, you'd first do an approve() transaction
+                // Store endpoint for later use after approval
+                pendingEndpoint = generateP2PEndpoint(wallet.address)
+                pendingStorageMB = 50 // Default storage
 
-                // Generate P2P endpoint (device-specific)
-                val endpoint = generateP2PEndpoint(wallet.address)
-
-                // Encode registerAsRelay function call
-                val function = Function(
-                    "registerAsRelay",
-                    listOf(Utf8String(endpoint)),
-                    emptyList()
+                // Step 1: Approve MCT spending (100 MCT = 100 * 10^18 wei)
+                val stakeAmount = BigInteger.valueOf(100).multiply(BigInteger.TEN.pow(18))
+                
+                val approveFunction = Function(
+                    "approve",
+                    listOf(
+                        org.web3j.abi.datatypes.Address(MumbleChatContracts.REGISTRY_PROXY),
+                        Uint256(stakeAmount)
+                    ),
+                    listOf(org.web3j.abi.TypeReference.create(Bool::class.java))
                 )
-                val txData = FunctionEncoder.encode(function)
+                val approveTxData = FunctionEncoder.encode(approveFunction)
 
-                // Create transaction
-                val tx = Web3Transaction(
+                // Create approve transaction to MCT token
+                val approveTx = Web3Transaction(
                     Address(wallet.address),
-                    Address(MumbleChatContracts.REGISTRY_PROXY),
+                    Address(MumbleChatContracts.MCT_TOKEN_PROXY),
                     BigInteger.ZERO,
                     BigInteger.ZERO,
-                    BigInteger.valueOf(300000), // Higher gas for stake transfer
+                    BigInteger.valueOf(100000), // Gas limit for approve
                     -1,
-                    txData
+                    approveTxData
                 )
 
+                Timber.d("Sending MCT approve transaction to ${MumbleChatContracts.MCT_TOKEN_PROXY}")
+                
                 // Request signature and send
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                createTransactionInteract.requestSignature(approveTx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
 
             } catch (e: Exception) {
                 Timber.e(e, "Failed to activate as relay")
@@ -456,27 +464,59 @@ class RelayNodeViewModel @Inject constructor(
         }
     }
     
-    // V3.1: Load daily pool stats
+    // V3.1: Load daily pool stats from blockchain
     fun loadDailyPoolStats() {
         viewModelScope.launch {
             try {
                 val wallet = walletBridge.getCurrentWallet() ?: return@launch
                 
-                // In production, call the contract's getTodayPoolInfo and getMyTodayStats
-                // For now, estimate based on local data
-                val todayDayId = System.currentTimeMillis() / 1000 / 86400
-                
-                // TODO: Call registrationManager.blockchainService.getTodayPoolInfo()
-                // For now, provide placeholder data
-                _dailyPoolStats.value = DailyPoolStats(
-                    dayId = todayDayId,
-                    myRelaysToday = _relayStatus.value?.messagesRelayed ?: 0,
-                    networkRelaysToday = 0, // Will be fetched from contract
-                    numContributors = 0,
-                    poolAmount = 100.0,
-                    estimatedReward = 0.0,
-                    yesterdayClaimable = _claimableReward.value
-                )
+                withContext(Dispatchers.IO) {
+                    // Fetch today's pool info from blockchain
+                    val poolInfo = registrationManager.blockchainService.getTodayPoolInfo()
+                    
+                    // Fetch my stats for today
+                    val myStats = registrationManager.blockchainService.getMyTodayStats(wallet.address)
+                    
+                    // Fetch yesterday's claimable reward
+                    val yesterdayDayId = (System.currentTimeMillis() / 1000 / 86400) - 1
+                    val claimable = registrationManager.blockchainService.getClaimableReward(wallet.address, yesterdayDayId)
+                    _claimableReward.value = claimable
+                    
+                    // Fetch fee pool balance
+                    val feePoolBalance = registrationManager.blockchainService.getFeePoolBalance()
+                    
+                    if (poolInfo != null) {
+                        _dailyPoolStats.value = DailyPoolStats(
+                            dayId = poolInfo.dayId,
+                            myRelaysToday = myStats?.relayCount ?: 0,
+                            networkRelaysToday = poolInfo.totalRelays,
+                            numContributors = poolInfo.numContributors,
+                            poolAmount = poolInfo.poolAmount,
+                            estimatedReward = myStats?.estimatedReward ?: 0.0,
+                            yesterdayClaimable = claimable
+                        )
+                        
+                        // Update fee pool share based on actual data
+                        val tierInfo = _tierInfo.value
+                        if (tierInfo != null && poolInfo.totalWeightedRelays > 0) {
+                            val myWeightedRelays = (myStats?.relayCount ?: 0) * tierInfo.multiplier * 100
+                            val sharePercent = (myWeightedRelays / poolInfo.totalWeightedRelays) * feePoolBalance
+                            _feePoolShare.value = sharePercent
+                        }
+                    } else {
+                        // Fallback to local estimate
+                        val todayDayId = System.currentTimeMillis() / 1000 / 86400
+                        _dailyPoolStats.value = DailyPoolStats(
+                            dayId = todayDayId,
+                            myRelaysToday = _relayStatus.value?.messagesRelayed ?: 0,
+                            networkRelaysToday = 0,
+                            numContributors = 0,
+                            poolAmount = 100.0,
+                            estimatedReward = 0.0,
+                            yesterdayClaimable = claimable
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load daily pool stats")
             }
@@ -523,7 +563,7 @@ class RelayNodeViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            pendingOperation = "activate"
+            pendingOperation = "approve"  // First step: approve MCT
 
             try {
                 val wallet = walletBridge.getCurrentWallet()
@@ -545,27 +585,36 @@ class RelayNodeViewModel @Inject constructor(
                     return@launch
                 }
 
-                val endpoint = generateP2PEndpoint(wallet.address)
+                // Store for later use after approval
+                pendingEndpoint = generateP2PEndpoint(wallet.address)
+                pendingStorageMB = storageMB
 
-                // V2: registerAsRelay with storage parameter
-                val function = Function(
-                    "registerAsRelay",
-                    listOf(Utf8String(endpoint), Uint256(storageMB.toLong())),
-                    emptyList()
+                // Step 1: Approve MCT spending (100 MCT = 100 * 10^18 wei)
+                val stakeAmount = BigInteger.valueOf(100).multiply(BigInteger.TEN.pow(18))
+                
+                val approveFunction = Function(
+                    "approve",
+                    listOf(
+                        org.web3j.abi.datatypes.Address(MumbleChatContracts.REGISTRY_PROXY),
+                        Uint256(stakeAmount)
+                    ),
+                    listOf(org.web3j.abi.TypeReference.create(Bool::class.java))
                 )
-                val txData = FunctionEncoder.encode(function)
+                val approveTxData = FunctionEncoder.encode(approveFunction)
 
-                val tx = Web3Transaction(
+                val approveTx = Web3Transaction(
                     Address(wallet.address),
-                    Address(MumbleChatContracts.REGISTRY_PROXY),
+                    Address(MumbleChatContracts.MCT_TOKEN_PROXY),
                     BigInteger.ZERO,
                     BigInteger.ZERO,
-                    BigInteger.valueOf(300000),
+                    BigInteger.valueOf(100000),
                     -1,
-                    txData
+                    approveTxData
                 )
 
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                Timber.d("Sending MCT approve transaction for $storageMB MB storage")
+                
+                createTransactionInteract.requestSignature(approveTx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
             } catch (e: Exception) {
                 Timber.e(e, "Failed to activate as relay")
                 _error.value = "Failed to activate: ${e.message}"
@@ -694,42 +743,115 @@ class RelayNodeViewModel @Inject constructor(
     // TransactionSendHandlerInterface implementation
     override fun transactionFinalised(transactionReturn: TransactionReturn?) {
         viewModelScope.launch {
-            _isLoading.value = false
             val txHash = transactionReturn?.hash ?: "unknown"
-            Timber.d("Relay transaction finalized: $txHash")
+            Timber.d("Relay transaction finalized: $txHash, operation: $pendingOperation")
             
             when (pendingOperation) {
-                "activate" -> _success.value = "Successfully activated as relay node!"
-                "deactivate" -> _success.value = "Relay node deactivated. Stake returned."
+                "approve" -> {
+                    // Approve succeeded, now send the registerAsRelay transaction
+                    _success.value = "MCT approved! Registering as relay node..."
+                    pendingOperation = "activate"
+                    sendRegisterAsRelayTx()
+                }
+                "activate" -> {
+                    _isLoading.value = false
+                    _success.value = "Successfully activated as relay node!"
+                    pendingOperation = null
+                    loadRelayStatus() // Refresh status
+                }
+                "deactivate" -> {
+                    _isLoading.value = false
+                    _success.value = "Relay node deactivated. Stake returned."
+                    pendingOperation = null
+                }
                 "heartbeat" -> {
+                    _isLoading.value = false
                     _success.value = "Heartbeat sent! Uptime updated."
+                    pendingOperation = null
                     loadRelayStatus() // Refresh tier info
                 }
                 "claim_fee" -> {
+                    _isLoading.value = false
                     _success.value = "Fee rewards claimed!"
+                    pendingOperation = null
                     loadRelayStatus() // Refresh balance
                 }
                 "claim_daily" -> {
+                    _isLoading.value = false
                     _success.value = "Daily pool reward claimed!"
                     _claimableReward.value = 0.0 // Reset claimable
+                    pendingOperation = null
                     loadRelayStatus() // Refresh balance
                     loadDailyPoolStats() // Refresh stats
                 }
                 "update_storage" -> {
+                    _isLoading.value = false
                     _success.value = "Storage capacity updated!"
+                    pendingOperation = null
                     loadRelayStatus() // Refresh tier info
                 }
                 "submit_proof" -> {
+                    _isLoading.value = false
                     _success.value = "Relay proof submitted! Reward earned."
+                    pendingOperation = null
                     loadRelayStatus() // Refresh stats
                 }
                 "submit_batch_proof" -> {
+                    _isLoading.value = false
                     _success.value = "Batch relay proofs submitted! Rewards earned."
+                    pendingOperation = null
                     loadRelayStatus() // Refresh stats
                 }
-                else -> _success.value = "Transaction successful!"
+                else -> {
+                    _isLoading.value = false
+                    _success.value = "Transaction successful!"
+                    pendingOperation = null
+                }
             }
-            pendingOperation = null
+        }
+    }
+    
+    /**
+     * Step 2: Send registerAsRelay transaction after approval
+     */
+    private fun sendRegisterAsRelayTx() {
+        viewModelScope.launch {
+            try {
+                val wallet = walletBridge.getCurrentWallet()
+                if (wallet == null) {
+                    _error.value = "No wallet available"
+                    _isLoading.value = false
+                    pendingOperation = null
+                    return@launch
+                }
+
+                Timber.d("Sending registerAsRelay with endpoint=$pendingEndpoint, storage=$pendingStorageMB")
+
+                // V2: registerAsRelay with storage parameter
+                val function = Function(
+                    "registerAsRelay",
+                    listOf(Utf8String(pendingEndpoint), Uint256(pendingStorageMB.toLong())),
+                    emptyList()
+                )
+                val txData = FunctionEncoder.encode(function)
+
+                val tx = Web3Transaction(
+                    Address(wallet.address),
+                    Address(MumbleChatContracts.REGISTRY_PROXY),
+                    BigInteger.ZERO,
+                    BigInteger.ZERO,
+                    BigInteger.valueOf(300000), // Higher gas for stake transfer
+                    -1,
+                    txData
+                )
+
+                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to send registerAsRelay")
+                _error.value = "Failed to register: ${e.message}"
+                _isLoading.value = false
+                pendingOperation = null
+            }
         }
     }
 

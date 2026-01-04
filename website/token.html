@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCT Token - MumbleChat Protocol Tokenomics</title>
+    <meta name="description" content="MCT Token: The native token of MumbleChat Protocol. Halving mechanism, fee pool rewards, governance, and sustainable tokenomics.">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <div class="logo-icon">💬</div>
+                <span>MumbleChat</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/protocol">Protocol</a></li>
+                <li><a href="/token" class="active">MCT Token</a></li>
+                <li><a href="/relay-nodes">Relay Nodes</a></li>
+                <li><a href="/download">Download</a></li>
+                <li><a href="/docs">Docs</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="/download" class="btn btn-primary">Download App</a>
+                <button class="mobile-menu-btn">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" style="min-height: 60vh;">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>🪙</span>
+                <span>MCT Tokenomics</span>
+            </div>
+            <h1 class="hero-title"><span>MCT</span> Token</h1>
+            <p class="hero-subtitle">
+                The native utility token of MumbleChat Protocol. Stake to become a relay node, 
+                earn rewards for message delivery, and participate in governance.
+            </p>
+            
+            <div class="contract-address mt-4" style="display: inline-flex;">
+                <code>0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE</code>
+                <button onclick="copyAddress('0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE')">📋</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Token Overview -->
+    <section class="section">
+        <div class="container">
+            <div class="section-title">
+                <h2>Token <span>Overview</span></h2>
+            </div>
+            
+            <div class="grid grid-4">
+                <div class="card text-center">
+                    <div class="stat-value">MCT</div>
+                    <div class="stat-label">Symbol</div>
+                </div>
+                <div class="card text-center">
+                    <div class="stat-value">18</div>
+                    <div class="stat-label">Decimals</div>
+                </div>
+                <div class="card text-center">
+                    <div class="stat-value">1,000,000</div>
+                    <div class="stat-label">Max Supply</div>
+                </div>
+                <div class="card text-center">
+                    <div class="stat-value">1,000</div>
+                    <div class="stat-label">Initial Supply</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dual Reward System -->
+    <section class="section" id="rewards" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>Dual <span>Reward System</span></h2>
+                <p class="section-subtitle">
+                    Two sustainable reward sources for relay nodes: Minting + Fee Pool.
+                </p>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-icon">⛏️</div>
+                    <h3 class="card-title">1. Minting Rewards</h3>
+                    <p class="card-text mb-3">New MCT minted for relaying messages (during growth phase).</p>
+                    
+                    <div class="table-container">
+                        <table>
+                            <tr>
+                                <td>Base Reward</td>
+                                <td><strong>0.001 MCT</strong> per 1,000 messages</td>
+                            </tr>
+                            <tr>
+                                <td>Daily Cap</td>
+                                <td><strong>100 MCT</strong> max minted/day</td>
+                            </tr>
+                            <tr>
+                                <td>Halving</td>
+                                <td>Every <strong>100,000 MCT</strong> minted</td>
+                            </tr>
+                            <tr>
+                                <td>Max Supply</td>
+                                <td><strong>1,000,000 MCT</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Tier Bonus</td>
+                                <td>❌ No (always 1x)</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">💰</div>
+                    <h3 class="card-title">2. Fee Pool Rewards</h3>
+                    <p class="card-text mb-3">Sustainable long-term rewards from transfer fees.</p>
+                    
+                    <div class="table-container">
+                        <table>
+                            <tr>
+                                <td>Source</td>
+                                <td><strong>0.1%</strong> of all MCT transfers</td>
+                            </tr>
+                            <tr>
+                                <td>Distribution</td>
+                                <td>Proportional to relay nodes</td>
+                            </tr>
+                            <tr>
+                                <td>Daily Cap</td>
+                                <td>❌ No cap (grows with usage)</td>
+                            </tr>
+                            <tr>
+                                <td>Tier Bonus</td>
+                                <td>✅ Yes (1x - 3x)</td>
+                            </tr>
+                            <tr>
+                                <td>Claim</td>
+                                <td>Manual via claimFeeReward()</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Halving Section -->
+    <section class="section" id="halving">
+        <div class="container">
+            <div class="section-title">
+                <h2>⚡ Halving <span>Mechanism</span></h2>
+                <p class="section-subtitle">
+                    Like Bitcoin, MCT rewards halve over time to control inflation and create scarcity.
+                </p>
+            </div>
+            
+            <div class="card mb-4">
+                <pre class="code-block"><code>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        MCT HALVING SCHEDULE                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   BASE REWARD: 0.001 MCT per 1,000 messages relayed                     │
+│   HALVING TRIGGER: Every 100,000 MCT minted as rewards                  │
+│                                                                          │
+│   ┌──────────┬───────────────────┬─────────────────────────────────┐    │
+│   │ Halving  │ Total Minted      │ Reward per 1,000 Messages       │    │
+│   ├──────────┼───────────────────┼─────────────────────────────────┤    │
+│   │ 0 (now)  │ 0 - 100K MCT      │ 0.001 MCT                       │    │
+│   │ 1st      │ 100K - 200K MCT   │ 0.0005 MCT                      │    │
+│   │ 2nd      │ 200K - 300K MCT   │ 0.00025 MCT                     │    │
+│   │ 3rd      │ 300K - 400K MCT   │ 0.000125 MCT                    │    │
+│   │ 4th      │ 400K - 500K MCT   │ 0.0000625 MCT                   │    │
+│   │ 5th      │ 500K - 600K MCT   │ 0.00003125 MCT                  │    │
+│   │ ...      │ ...               │ (keeps halving)                 │    │
+│   │ 10th+    │ 1M+ MCT           │ 0.00001 MCT (minimum floor)     │    │
+│   └──────────┴───────────────────┴─────────────────────────────────┘    │
+│                                                                          │
+│   ANTI-INFLATION PROTECTIONS:                                           │
+│   ─────────────────────────────                                         │
+│   • Daily Cap: Max 100 MCT minted per day                               │
+│   • Halving: Reward cuts in half every 100K MCT                         │
+│   • Max Supply: Hard cap at 1,000,000 MCT                               │
+│   • Minimum Floor: Never goes below 0.00001 MCT                         │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                </code></pre>
+            </div>
+            
+            <div class="grid grid-3">
+                <div class="card text-center">
+                    <div class="stat-value">100K</div>
+                    <div class="stat-label">MCT per Halving</div>
+                </div>
+                <div class="card text-center">
+                    <div class="stat-value">10</div>
+                    <div class="stat-label">Max Halvings</div>
+                </div>
+                <div class="card text-center">
+                    <div class="stat-value">0.00001</div>
+                    <div class="stat-label">Minimum Reward</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Fee Structure -->
+    <section class="section" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>📊 Fee <span>Structure</span></h2>
+            </div>
+            
+            <div class="card mb-4">
+                <h3 class="card-title">Transfer Fee Flow</h3>
+                <pre class="code-block"><code>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          TRANSFER FEE FLOW                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   USER SENDS 1000 MCT                                                   │
+│         │                                                                │
+│         ▼                                                                │
+│   ┌─────────────────────────────────────────────────────────────────┐   │
+│   │              0.1% FEE (10 basis points)                          │   │
+│   │                                                                  │   │
+│   │   1000 MCT × 0.001 = 1 MCT fee                                  │   │
+│   │                                                                  │   │
+│   │   Recipient receives: 999 MCT                                   │   │
+│   │   Fee Pool receives:  1 MCT                                     │   │
+│   └─────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│   FEE POOL → Distributed to Relay Nodes (tier-weighted)                 │
+│                                                                          │
+│   ┌────────────┬────────────┬────────────┬────────────┐                 │
+│   │  Bronze    │  Silver    │   Gold     │  Platinum  │                 │
+│   │   1.0x     │   1.5x     │   2.0x     │    3.0x    │                 │
+│   └────────────┴────────────┴────────────┴────────────┘                 │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                </code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Governance -->
+    <section class="section" id="governance">
+        <div class="container">
+            <div class="section-title">
+                <h2>🗳️ <span>Governance</span></h2>
+                <p class="section-subtitle">
+                    MCT holders can propose and vote on changes to the protocol.
+                </p>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-icon">📋</div>
+                    <h3 class="card-title">Proposal System</h3>
+                    <ul class="tier-benefits">
+                        <li>Anyone can create proposals</li>
+                        <li>7-day voting period</li>
+                        <li>90% approval required</li>
+                        <li>1 MCT = 1 Vote</li>
+                        <li>Proposals can modify max supply</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">⚙️</div>
+                    <h3 class="card-title">Governable Parameters</h3>
+                    <ul class="tier-benefits">
+                        <li>Max token supply</li>
+                        <li>Daily mint cap</li>
+                        <li>Transfer fee percentage</li>
+                        <li>Relay stake requirements</li>
+                        <li>Tier thresholds</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Add to Wallet -->
+    <section class="section" style="background: var(--gradient-primary);">
+        <div class="container text-center">
+            <h2 style="color: white; margin-bottom: 16px;">Add MCT to Your Wallet</h2>
+            <p style="color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 32px;">
+                Import MCT token to MetaMask, RamaPay, or any ERC-20 compatible wallet.
+            </p>
+            
+            <div class="card" style="display: inline-block; text-align: left; max-width: 500px;">
+                <div style="margin-bottom: 16px;">
+                    <strong>Token Contract:</strong>
+                    <div class="contract-address mt-1">
+                        <code style="font-size: 0.75rem;">0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE</code>
+                        <button onclick="copyAddress('0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE')">📋</button>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <strong>Symbol:</strong> MCT
+                    </div>
+                    <div>
+                        <strong>Decimals:</strong> 18
+                    </div>
+                    <div>
+                        <strong>Network:</strong> Ramestta
+                    </div>
+                    <div>
+                        <strong>Chain ID:</strong> 1370
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="/" class="logo">
+                        <div class="logo-icon">💬</div>
+                        <span>MumbleChat</span>
+                    </a>
+                    <p>Native decentralized messaging protocol on Ramestta blockchain.</p>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Protocol</h4>
+                    <ul class="footer-links">
+                        <li><a href="/protocol">How It Works</a></li>
+                        <li><a href="/protocol#encryption">Encryption</a></li>
+                        <li><a href="/protocol#identity">Identity</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Token</h4>
+                    <ul class="footer-links">
+                        <li><a href="/token">MCT Tokenomics</a></li>
+                        <li><a href="/token#halving">Halving</a></li>
+                        <li><a href="/token#rewards">Rewards</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Resources</h4>
+                    <ul class="footer-links">
+                        <li><a href="/download">Download</a></li>
+                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="https://ramascan.com" target="_blank">RamaScan</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <span>© 2026 MumbleChat Protocol. Built on Ramestta.</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function copyAddress(address) {
+            navigator.clipboard.writeText(address).then(() => {
+                alert('Address copied to clipboard!');
+            });
+        }
+    </script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocol - MumbleChat Native Decentralized Messaging</title>
+    <meta name="description" content="Learn how MumbleChat Protocol works: X25519 encryption, on-chain identity, P2P relay network, and message delivery.">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <div class="logo-icon">💬</div>
+                <span>MumbleChat</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/protocol" class="active">Protocol</a></li>
+                <li><a href="/token">MCT Token</a></li>
+                <li><a href="/relay-nodes">Relay Nodes</a></li>
+                <li><a href="/download">Download</a></li>
+                <li><a href="/docs">Docs</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="/download" class="btn btn-primary">Download App</a>
+                <button class="mobile-menu-btn">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" style="min-height: 60vh;">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>📖</span>
+                <span>Protocol Documentation</span>
+            </div>
+            <h1 class="hero-title">How <span>MumbleChat Protocol</span> Works</h1>
+            <p class="hero-subtitle">
+                A deep dive into the native decentralized messaging protocol built on Ramestta blockchain. 
+                No third-party dependencies. Pure P2P communication.
+            </p>
+        </div>
+    </section>
+
+    <!-- Architecture Overview -->
+    <section class="section" id="architecture">
+        <div class="container">
+            <div class="section-title">
+                <h2>Protocol <span>Architecture</span></h2>
+            </div>
+            
+            <div class="card mb-4">
+                <pre class="code-block"><code>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     MUMBLECHAT PROTOCOL STACK                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐               │
+│   │   RamaPay   │     │   Chrome    │     │   Other     │   CLIENTS    │
+│   │   Android   │     │  Extension  │     │   Clients   │               │
+│   └──────┬──────┘     └──────┬──────┘     └──────┬──────┘               │
+│          │                   │                   │                       │
+│          └───────────────────┼───────────────────┘                       │
+│                              ▼                                           │
+│   ┌──────────────────────────────────────────────────────────────┐      │
+│   │                    MumbleChat Core SDK                        │      │
+│   │  ┌────────────┐  ┌────────────┐  ┌────────────┐              │      │
+│   │  │   Crypto   │  │  Protocol  │  │  Network   │              │      │
+│   │  │   Module   │  │  Handler   │  │  Manager   │              │      │
+│   │  └────────────┘  └────────────┘  └────────────┘              │      │
+│   └──────────────────────────────────────────────────────────────┘      │
+│                              │                                           │
+│          ┌───────────────────┼───────────────────┐                       │
+│          ▼                   ▼                   ▼                       │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐               │
+│   │  P2P Layer  │     │   Relay     │     │  Ramestta   │   NETWORK    │
+│   │   (DHT)     │◄───►│   Nodes     │◄───►│  Blockchain │               │
+│   └─────────────┘     └─────────────┘     └─────────────┘               │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                </code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Identity Section -->
+    <section class="section" id="identity" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>🔑 On-Chain <span>Identity</span></h2>
+                <p class="section-subtitle">
+                    Your wallet address is your identity. Public keys stored immutably on blockchain.
+                </p>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <h3 class="card-title">Registration Flow</h3>
+                    <pre class="code-block"><code><span class="comment">// 1. Generate X25519 keypair on device</span>
+<span class="keyword">val</span> keyPair = X25519.generateKeyPair()
+
+<span class="comment">// 2. Store public key on-chain</span>
+registry.register(
+    publicKeyX: keyPair.publicKey,
+    displayName: <span class="string">"alice.rama"</span>
+)
+
+<span class="comment">// 3. Identity now discoverable</span>
+<span class="comment">// Anyone can lookup your public key by wallet address</span>
+                    </code></pre>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Identity Struct (Solidity)</h3>
+                    <pre class="code-block"><code><span class="keyword">struct</span> Identity {
+    bytes32 publicKeyX;      <span class="comment">// X25519 public key</span>
+    bytes32 publicKeyY;      <span class="comment">// Reserved</span>
+    uint256 registeredAt;    <span class="comment">// Timestamp</span>
+    uint256 lastUpdated;     <span class="comment">// Key rotation</span>
+    bool isActive;           <span class="comment">// Active status</span>
+    string displayName;      <span class="comment">// Optional name</span>
+}
+                    </code></pre>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <h3 class="card-title">Key Features</h3>
+                <div class="grid grid-3 mt-3">
+                    <div>
+                        <h4>🔐 Self-Sovereign</h4>
+                        <p class="card-text">You own your identity. No platform can ban or censor you.</p>
+                    </div>
+                    <div>
+                        <h4>🔄 Key Rotation</h4>
+                        <p class="card-text">Update your public key anytime via updatePublicKey().</p>
+                    </div>
+                    <div>
+                        <h4>🔍 Discoverable</h4>
+                        <p class="card-text">Anyone can lookup your public key by wallet address.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Encryption Section -->
+    <section class="section" id="encryption">
+        <div class="container">
+            <div class="section-title">
+                <h2>🔐 End-to-End <span>Encryption</span></h2>
+                <p class="section-subtitle">
+                    X25519 ECDH key exchange + AES-256-GCM encryption. Military-grade security.
+                </p>
+            </div>
+            
+            <div class="card mb-4">
+                <h3 class="card-title">Encryption Flow</h3>
+                <pre class="code-block"><code>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        ENCRYPTION PROCESS                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  SENDER (Alice)                              RECIPIENT (Bob)            │
+│  ──────────────                              ──────────────             │
+│                                                                          │
+│  1. Lookup Bob's public key from blockchain                             │
+│     bobPubKey = registry.getPublicKey(bobAddress)                       │
+│                                                                          │
+│  2. Generate ephemeral keypair                                          │
+│     ephemeralKey = X25519.generateKeyPair()                             │
+│                                                                          │
+│  3. Derive shared secret (ECDH)                                         │
+│     sharedSecret = X25519.agree(ephemeralKey.private, bobPubKey)        │
+│                                                                          │
+│  4. Derive AES key using HKDF                                           │
+│     aesKey = HKDF(sharedSecret, salt, info)                             │
+│                                                                          │
+│  5. Encrypt message with AES-256-GCM                                    │
+│     ciphertext = AES_GCM.encrypt(aesKey, nonce, plaintext)              │
+│                                                                          │
+│  6. Package: [ephemeralPubKey | nonce | ciphertext | authTag]           │
+│                                                                          │
+│  7. Send to relay node or directly to Bob                               │
+│                                                                          │
+│  ─────────────────────────────────────────────────────────────────────  │
+│                                                                          │
+│  Bob receives and:                                                       │
+│  1. Uses his private key + ephemeral public key to derive same secret   │
+│  2. Decrypts message with AES-256-GCM                                   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                </code></pre>
+            </div>
+            
+            <div class="grid grid-3">
+                <div class="card">
+                    <div class="card-icon">🔑</div>
+                    <h3 class="card-title">X25519 ECDH</h3>
+                    <p class="card-text">
+                        Elliptic-curve Diffie-Hellman for secure key exchange. 
+                        Each message uses a unique ephemeral key for forward secrecy.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">🛡️</div>
+                    <h3 class="card-title">AES-256-GCM</h3>
+                    <p class="card-text">
+                        Authenticated encryption with 256-bit key. 
+                        Provides confidentiality AND integrity verification.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">🔒</div>
+                    <h3 class="card-title">Forward Secrecy</h3>
+                    <p class="card-text">
+                        Ephemeral keys ensure past messages stay secure 
+                        even if long-term keys are compromised.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Messaging Section -->
+    <section class="section" id="messaging" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>📨 Message <span>Protocol</span></h2>
+                <p class="section-subtitle">
+                    How messages are structured, routed, and delivered in the MumbleChat network.
+                </p>
+            </div>
+            
+            <div class="card mb-4">
+                <h3 class="card-title">Message Structure</h3>
+                <pre class="code-block"><code><span class="keyword">data class</span> MumbleChatMessage(
+    <span class="keyword">val</span> version: Int = <span class="number">1</span>,                    <span class="comment">// Protocol version</span>
+    <span class="keyword">val</span> type: MessageType,                   <span class="comment">// TEXT, FILE, PAYMENT</span>
+    <span class="keyword">val</span> senderKeyHash: ByteArray,            <span class="comment">// keccak256(sender)[:8]</span>
+    <span class="keyword">val</span> recipientKeyHash: ByteArray,         <span class="comment">// keccak256(recipient)[:8]</span>
+    <span class="keyword">val</span> ephemeralPubKey: ByteArray,          <span class="comment">// 32 bytes</span>
+    <span class="keyword">val</span> nonce: ByteArray,                    <span class="comment">// 12 bytes</span>
+    <span class="keyword">val</span> ciphertext: ByteArray,               <span class="comment">// Encrypted content</span>
+    <span class="keyword">val</span> authTag: ByteArray,                  <span class="comment">// 16 bytes</span>
+    <span class="keyword">val</span> timestamp: Long,                     <span class="comment">// Unix millis</span>
+    <span class="keyword">val</span> signature: ByteArray                 <span class="comment">// ECDSA signature</span>
+)
+                </code></pre>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <h3 class="card-title">Direct Delivery (P2P)</h3>
+                    <p class="card-text mb-3">When recipient is online, messages go directly peer-to-peer.</p>
+                    <pre class="code-block"><code><span class="comment">// 1. Discover peer via DHT</span>
+peerInfo = dht.findPeer(recipientAddress)
+
+<span class="comment">// 2. Establish libp2p connection</span>
+conn = network.dial(peerInfo.multiaddr)
+
+<span class="comment">// 3. Send encrypted message</span>
+conn.send(encryptedMessage)
+
+<span class="comment">// 4. Receive ACK</span>
+ack = conn.receive()
+                    </code></pre>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Relay Delivery (Offline)</h3>
+                    <p class="card-text mb-3">When recipient is offline, relay nodes store messages.</p>
+                    <pre class="code-block"><code><span class="comment">// 1. Peer not found online</span>
+<span class="keyword">if</span> (dht.findPeer(recipient) == <span class="keyword">null</span>) {
+
+    <span class="comment">// 2. Find relay nodes for recipient</span>
+    relays = dht.findRelays(recipientKeyHash)
+    
+    <span class="comment">// 3. Send to multiple relays</span>
+    relays.forEach { relay ->
+        relay.store(encryptedMessage, ttl = 7.days)
+    }
+}
+                    </code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Relay Network Section -->
+    <section class="section" id="relay">
+        <div class="container">
+            <div class="section-title">
+                <h2>🌐 Relay <span>Network</span></h2>
+                <p class="section-subtitle">
+                    Decentralized nodes that store encrypted messages for offline users and earn MCT rewards.
+                </p>
+            </div>
+            
+            <div class="card mb-4">
+                <pre class="code-block"><code>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     RELAY NODE ARCHITECTURE                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   SENDER                  RELAY NETWORK                   RECIPIENT     │
+│   ──────                  ─────────────                   ─────────     │
+│                                                                          │
+│   [Alice] ─────────────►  ┌─────────────┐                               │
+│      │    Encrypted       │   Relay A   │  Store for Bob                │
+│      │    Message         │  (Gold Tier)│◄──────────────►  [Bob]        │
+│      │                    └─────────────┘       │         (offline)     │
+│      │                                          │                        │
+│      │                    ┌─────────────┐       │                        │
+│      └──────────────────► │   Relay B   │       │                        │
+│           Redundancy      │(Silver Tier)│◄──────┘         [Bob]         │
+│                           └─────────────┘                 (online)      │
+│                                  │                           ▲          │
+│                                  │      Deliver when         │          │
+│                                  └───────Bob online──────────┘          │
+│                                                                          │
+│   RELAY STORAGE:                                                        │
+│   ───────────────                                                       │
+│   • recipientKeyHash: First 8 bytes of keccak256(address)               │
+│   • encryptedBlob: Opaque to relay (can't read content)                 │
+│   • expiresAt: TTL (default 7 days)                                     │
+│   • size: For storage tracking                                          │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                </code></pre>
+            </div>
+            
+            <div class="text-center mt-4">
+                <a href="/relay-nodes" class="btn btn-primary btn-lg">
+                    Learn More About Relay Nodes →
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="/" class="logo">
+                        <div class="logo-icon">💬</div>
+                        <span>MumbleChat</span>
+                    </a>
+                    <p>Native decentralized messaging protocol on Ramestta blockchain.</p>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Protocol</h4>
+                    <ul class="footer-links">
+                        <li><a href="/protocol">How It Works</a></li>
+                        <li><a href="/protocol#encryption">Encryption</a></li>
+                        <li><a href="/protocol#identity">Identity</a></li>
+                        <li><a href="/protocol#messaging">Messaging</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Token</h4>
+                    <ul class="footer-links">
+                        <li><a href="/token">MCT Tokenomics</a></li>
+                        <li><a href="/token#halving">Halving</a></li>
+                        <li><a href="/token#rewards">Rewards</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Resources</h4>
+                    <ul class="footer-links">
+                        <li><a href="/download">Download</a></li>
+                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="https://ramascan.com" target="_blank">RamaScan</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <span>© 2026 MumbleChat Protocol. Built on Ramestta.</span>
+            </div>
+        </div>
+    </footer>
+    <script src="js/app.js"></script>
+</body>
+</html>

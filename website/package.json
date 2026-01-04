@@ -1,0 +1,21 @@
+{
+  "name": "mumblechat-website",
+  "version": "2.0.0",
+  "description": "MumbleChat Protocol - Native Decentralized Messaging on Ramestta",
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "build": "echo 'Static site - no build needed'",
+    "preview": "npx serve . -p 3000"
+  },
+  "keywords": [
+    "mumblechat",
+    "ramestta",
+    "blockchain",
+    "messaging",
+    "decentralized",
+    "mct-token",
+    "relay-nodes"
+  ],
+  "author": "MumbleChat Team",
+  "license": "MIT"
+}

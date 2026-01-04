@@ -162,21 +162,26 @@ class MumbleChatBlockchainService @Inject constructor(
     }
     
     /**
-     * Get relay node status with user-friendly values.
+     * Get relay node status with user-friendly values (V2 with tier info).
      * Returns null if user is not a relay node.
      */
     suspend fun getRelayNode(address: String): RelayNodeStatus? = withContext(Dispatchers.IO) {
         try {
+            // V2: Use getRelayNode function that returns all tier fields
             val function = Function(
-                "relayNodes",
+                "getRelayNode",
                 listOf(Address(address)),
                 listOf(
                     object : TypeReference<Utf8String>() {},  // endpoint
                     object : TypeReference<Uint256>() {},      // stakedAmount
-                    object : TypeReference<Uint256>() {},      // registeredAt
                     object : TypeReference<Uint256>() {},      // messagesRelayed
                     object : TypeReference<Uint256>() {},      // rewardsEarned
-                    object : TypeReference<Bool>() {}          // isActive
+                    object : TypeReference<Bool>() {},         // isActive
+                    object : TypeReference<Uint256>() {},      // dailyUptimeSeconds
+                    object : TypeReference<Uint256>() {},      // storageMB
+                    object : TypeReference<Uint256>() {},      // tier (enum as uint8)
+                    object : TypeReference<Uint256>() {},      // rewardMultiplier
+                    object : TypeReference<Bool>() {}          // isOnline
                 )
             )
             
@@ -200,25 +205,263 @@ class MumbleChatBlockchainService @Inject constructor(
                 function.outputParameters
             )
             
-            if (output.size < 6) {
+            if (output.size < 10) {
+                Timber.w("$TAG: getRelayNode returned ${output.size} fields, expected 10")
                 return@withContext null
             }
             
-            val isActive = (output[5] as Bool).value
+            val isActive = (output[4] as Bool).value
             val stakedAmount = (output[1] as Uint256).value
-            val rewardsEarned = (output[4] as Uint256).value
+            val rewardsEarned = (output[3] as Uint256).value
+            val dailyUptimeSeconds = (output[5] as Uint256).value.toLong()
+            val storageMB = (output[6] as Uint256).value.toInt()
+            val tier = (output[7] as Uint256).value.toInt()
+            val rewardMultiplier = (output[8] as Uint256).value.toDouble() / 100.0  // Basis points to decimal
+            val isOnline = (output[9] as Bool).value
             
             RelayNodeStatus(
                 endpoint = (output[0] as Utf8String).value,
                 stakedAmount = stakedAmount.toDouble() / 1e18,
-                registeredAt = (output[2] as Uint256).value.toLong(),
-                messagesRelayed = (output[3] as Uint256).value.toLong(),
+                registeredAt = 0, // Not returned by getRelayNode
+                messagesRelayed = (output[2] as Uint256).value.toLong(),
                 rewardsEarned = rewardsEarned.toDouble() / 1e18,
-                isActive = isActive
+                isActive = isActive,
+                dailyUptimeSeconds = dailyUptimeSeconds,
+                storageMB = storageMB,
+                tier = tier,
+                rewardMultiplier = rewardMultiplier,
+                isOnline = isOnline
             )
         } catch (e: Exception) {
             Timber.e(e, "$TAG: Failed to get relay node for $address")
             null
+        }
+    }
+    
+    // ============ V3.1 Daily Pool Functions ============
+    
+    /**
+     * Data class for today's pool info
+     */
+    data class TodayPoolInfo(
+        val dayId: Long,
+        val totalRelays: Long,
+        val totalWeightedRelays: Long,
+        val poolAmount: Double,
+        val numContributors: Int
+    )
+    
+    /**
+     * Data class for node's daily stats
+     */
+    data class MyTodayStats(
+        val relayCount: Long,
+        val weightedRelayCount: Long,
+        val estimatedReward: Double
+    )
+    
+    /**
+     * Get today's pool info from the contract.
+     */
+    suspend fun getTodayPoolInfo(): TodayPoolInfo? = withContext(Dispatchers.IO) {
+        try {
+            val function = Function(
+                "getTodayPoolInfo",
+                emptyList(),
+                listOf(
+                    object : TypeReference<Uint256>() {},  // dayId
+                    object : TypeReference<Uint256>() {},  // totalRelays
+                    object : TypeReference<Uint256>() {},  // totalWeightedRelays
+                    object : TypeReference<Uint256>() {},  // poolAmount
+                    object : TypeReference<Uint256>() {}   // numContributors
+                )
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            val response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                    null,
+                    MumbleChatContracts.REGISTRY_PROXY,
+                    encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (response.hasError()) {
+                Timber.e("$TAG: getTodayPoolInfo error: ${response.error.message}")
+                return@withContext null
+            }
+            
+            val output = FunctionReturnDecoder.decode(
+                response.value,
+                function.outputParameters
+            )
+            
+            if (output.size < 5) {
+                return@withContext null
+            }
+            
+            TodayPoolInfo(
+                dayId = (output[0] as Uint256).value.toLong(),
+                totalRelays = (output[1] as Uint256).value.toLong(),
+                totalWeightedRelays = (output[2] as Uint256).value.toLong(),
+                poolAmount = (output[3] as Uint256).value.toDouble() / 1e18,
+                numContributors = (output[4] as Uint256).value.toInt()
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to get today pool info")
+            null
+        }
+    }
+    
+    /**
+     * Get claimable reward for a node for a specific day.
+     */
+    suspend fun getClaimableReward(address: String, dayId: Long): Double = withContext(Dispatchers.IO) {
+        try {
+            val function = Function(
+                "getClaimableReward",
+                listOf(Address(address), Uint256(dayId)),
+                listOf(object : TypeReference<Uint256>() {})
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            val response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                    null,
+                    MumbleChatContracts.REGISTRY_PROXY,
+                    encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (response.hasError()) {
+                Timber.e("$TAG: getClaimableReward error: ${response.error.message}")
+                return@withContext 0.0
+            }
+            
+            val output = FunctionReturnDecoder.decode(
+                response.value,
+                function.outputParameters
+            )
+            
+            if (output.isEmpty()) {
+                return@withContext 0.0
+            }
+            
+            (output[0] as Uint256).value.toDouble() / 1e18
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to get claimable reward")
+            0.0
+        }
+    }
+    
+    /**
+     * Get my stats for today.
+     */
+    suspend fun getMyTodayStats(address: String): MyTodayStats? = withContext(Dispatchers.IO) {
+        try {
+            // This function uses msg.sender, so we need to call via the address
+            // For view-only, we'll reconstruct from nodeDailyStats mapping
+            val today = System.currentTimeMillis() / 1000 / 86400
+            
+            val function = Function(
+                "nodeDailyStats",
+                listOf(Address(address), Uint256(today)),
+                listOf(
+                    object : TypeReference<Uint256>() {},  // relayCount
+                    object : TypeReference<Uint256>() {},  // weightedRelayCount
+                    object : TypeReference<Bool>() {}      // claimed
+                )
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            val response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                    null,
+                    MumbleChatContracts.REGISTRY_PROXY,
+                    encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (response.hasError()) {
+                Timber.e("$TAG: getMyTodayStats error: ${response.error.message}")
+                return@withContext null
+            }
+            
+            val output = FunctionReturnDecoder.decode(
+                response.value,
+                function.outputParameters
+            )
+            
+            if (output.size < 3) {
+                return@withContext null
+            }
+            
+            val relayCount = (output[0] as Uint256).value.toLong()
+            val weightedRelayCount = (output[1] as Uint256).value.toLong()
+            
+            // Calculate estimated reward
+            val poolInfo = getTodayPoolInfo()
+            val estimatedReward = if (poolInfo != null && poolInfo.totalWeightedRelays > 0) {
+                val totalActualEarned = poolInfo.totalWeightedRelays * 0.001 / 100 // 0.001 MCT per relay, weighted by basis points
+                val effectivePool = minOf(poolInfo.poolAmount, totalActualEarned)
+                (weightedRelayCount.toDouble() * effectivePool) / poolInfo.totalWeightedRelays
+            } else {
+                0.0
+            }
+            
+            MyTodayStats(
+                relayCount = relayCount,
+                weightedRelayCount = weightedRelayCount,
+                estimatedReward = estimatedReward
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to get my today stats")
+            null
+        }
+    }
+    
+    /**
+     * Get the fee pool balance from MCT token.
+     */
+    suspend fun getFeePoolBalance(): Double = withContext(Dispatchers.IO) {
+        try {
+            val function = Function(
+                "feePoolBalance",
+                emptyList(),
+                listOf(object : TypeReference<Uint256>() {})
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            val response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                    null,
+                    MumbleChatContracts.MCT_TOKEN_PROXY,
+                    encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (response.hasError()) {
+                Timber.e("$TAG: getFeePoolBalance error: ${response.error.message}")
+                return@withContext 0.0
+            }
+            
+            val output = FunctionReturnDecoder.decode(
+                response.value,
+                function.outputParameters
+            )
+            
+            if (output.isEmpty()) {
+                return@withContext 0.0
+            }
+            
+            (output[0] as Uint256).value.toDouble() / 1e18
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to get fee pool balance")
+            0.0
         }
     }
     

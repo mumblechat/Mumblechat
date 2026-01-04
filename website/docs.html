@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - MumbleChat Protocol Developer Docs</title>
+    <meta name="description" content="MumbleChat Protocol documentation. Smart contract APIs, integration guides, and developer resources.">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <div class="logo-icon">💬</div>
+                <span>MumbleChat</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/protocol">Protocol</a></li>
+                <li><a href="/token">MCT Token</a></li>
+                <li><a href="/relay-nodes">Relay Nodes</a></li>
+                <li><a href="/download">Download</a></li>
+                <li><a href="/docs" class="active">Docs</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="/download" class="btn btn-primary">Download App</a>
+                <button class="mobile-menu-btn">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" style="min-height: 50vh;">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>📚</span>
+                <span>Developer Resources</span>
+            </div>
+            <h1 class="hero-title"><span>Documentation</span></h1>
+            <p class="hero-subtitle">
+                Smart contract APIs, integration guides, and everything you need to build on MumbleChat Protocol.
+            </p>
+        </div>
+    </section>
+
+    <!-- Quick Links -->
+    <section class="section">
+        <div class="container">
+            <div class="grid grid-4">
+                <a href="#contracts" class="card card-link">
+                    <div class="card-icon">📜</div>
+                    <h3 class="card-title">Smart Contracts</h3>
+                    <p class="card-text">Contract addresses and ABIs</p>
+                </a>
+                
+                <a href="#api" class="card card-link">
+                    <div class="card-icon">🔌</div>
+                    <h3 class="card-title">API Reference</h3>
+                    <p class="card-text">Contract function reference</p>
+                </a>
+                
+                <a href="#integration" class="card card-link">
+                    <div class="card-icon">🔧</div>
+                    <h3 class="card-title">Integration</h3>
+                    <p class="card-text">Build apps with MumbleChat</p>
+                </a>
+                
+                <a href="#resources" class="card card-link">
+                    <div class="card-icon">🔗</div>
+                    <h3 class="card-title">Resources</h3>
+                    <p class="card-text">Links and tools</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Smart Contracts -->
+    <section class="section" id="contracts" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>📜 Smart <span>Contracts</span></h2>
+                <p class="section-subtitle">
+                    Deployed on Ramestta Mainnet (Chain ID: 1370)
+                </p>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-icon">🪙</div>
+                    <h3 class="card-title">MCT Token (MCTToken V3)</h3>
+                    <p class="card-text">ERC-20 utility token with halving and fee pool.</p>
+                    
+                    <div class="contract-info">
+                        <div class="contract-address">
+                            <strong>Address:</strong>
+                            <code>0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE</code>
+                        </div>
+                        <div class="contract-links">
+                            <a href="https://ramascan.com/address/0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE" 
+                               target="_blank" class="btn btn-small">
+                                View on RamaScan
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 24px;">Key Functions</h4>
+                    <div class="code-block">
+<pre><code>// Standard ERC-20
+function balanceOf(address) view returns (uint256)
+function transfer(address to, uint256 amount) returns (bool)
+function approve(address spender, uint256 amount) returns (bool)
+
+// MCT-specific
+function mintForRelay(address relay, uint256 messages)
+function claimFeePoolReward()
+function currentRate() view returns (uint256)
+function halvingLevel() view returns (uint256)
+function feePool() view returns (uint256)</code></pre>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">📋</div>
+                    <h3 class="card-title">MumbleChatRegistry V3.2</h3>
+                    <p class="card-text">Identity, relay nodes, and messaging registry.</p>
+                    
+                    <div class="contract-info">
+                        <div class="contract-address">
+                            <strong>Address:</strong>
+                            <code>0x4f8D4955F370881B05b68D2344345E749d8632e3</code>
+                        </div>
+                        <div class="contract-links">
+                            <a href="https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3" 
+                               target="_blank" class="btn btn-small">
+                                View on RamaScan
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 24px;">Key Functions</h4>
+                    <div class="code-block">
+<pre><code>// Identity
+function register(string username, bytes32 pubKey)
+function isRegistered(address) view returns (bool)
+function getPublicKey(address) view returns (bytes32)
+
+// Relay Nodes
+function registerAsRelay(uint256 storageGB) payable
+function deactivateRelay()
+function recordUptime()
+function getTier(address) view returns (Tier)
+
+// Messaging
+function sendMessage(address to, bytes ciphertext)
+function getMessages(address) view returns (Message[])</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API Reference -->
+    <section class="section" id="api">
+        <div class="container">
+            <div class="section-title">
+                <h2>🔌 API <span>Reference</span></h2>
+            </div>
+            
+            <!-- Identity API -->
+            <div class="card mb-4">
+                <h3>👤 Identity Functions</h3>
+                
+                <div class="api-section">
+                    <h4 class="api-title">register(string username, bytes32 publicKey)</h4>
+                    <p class="api-desc">Register a new identity on-chain with your X25519 public key.</p>
+                    
+                    <div class="grid grid-2">
+                        <div>
+                            <strong>Parameters:</strong>
+                            <ul class="api-params">
+                                <li><code>username</code> - Display name (3-32 chars)</li>
+                                <li><code>publicKey</code> - 32-byte X25519 public key</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <strong>Returns:</strong> <code>void</code><br>
+                            <strong>Gas:</strong> ~80,000
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-title">getPublicKey(address user) view returns (bytes32)</h4>
+                    <p class="api-desc">Get the public key for a registered user. Used for key exchange.</p>
+                    
+                    <div class="grid grid-2">
+                        <div>
+                            <strong>Parameters:</strong>
+                            <ul class="api-params">
+                                <li><code>user</code> - User's wallet address</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <strong>Returns:</strong> <code>bytes32</code> - Public key<br>
+                            <strong>Gas:</strong> Free (view)
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-title">updatePublicKey(bytes32 newPublicKey)</h4>
+                    <p class="api-desc">Update your public key (key rotation).</p>
+                </div>
+            </div>
+            
+            <!-- Relay API -->
+            <div class="card mb-4">
+                <h3>🌐 Relay Node Functions</h3>
+                
+                <div class="api-section">
+                    <h4 class="api-title">registerAsRelay(uint256 storageGB) payable</h4>
+                    <p class="api-desc">Register as a relay node. Requires 100 MCT stake (sent with transaction).</p>
+                    
+                    <div class="grid grid-2">
+                        <div>
+                            <strong>Parameters:</strong>
+                            <ul class="api-params">
+                                <li><code>storageGB</code> - Storage capacity in GB (1-8+)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <strong>Value:</strong> 100 MCT (approve first)<br>
+                            <strong>Gas:</strong> ~120,000
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-title">recordUptime()</h4>
+                    <p class="api-desc">Heartbeat function. Call every 5 minutes to record uptime.</p>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-title">deactivateRelay()</h4>
+                    <p class="api-desc">Stop being a relay node. Returns staked MCT.</p>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-title">getTier(address relay) view returns (Tier)</h4>
+                    <p class="api-desc">Get relay's tier (Bronze=0, Silver=1, Gold=2, Platinum=3).</p>
+                </div>
+            </div>
+            
+            <!-- Messaging API -->
+            <div class="card mb-4">
+                <h3>💬 Messaging Functions</h3>
+                
+                <div class="api-section">
+                    <h4 class="api-title">sendMessage(address to, bytes ciphertext)</h4>
+                    <p class="api-desc">Send an encrypted message to a recipient.</p>
+                    
+                    <div class="grid grid-2">
+                        <div>
+                            <strong>Parameters:</strong>
+                            <ul class="api-params">
+                                <li><code>to</code> - Recipient wallet address</li>
+                                <li><code>ciphertext</code> - AES-256-GCM encrypted message</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <strong>Returns:</strong> <code>uint256</code> - Message ID<br>
+                            <strong>Gas:</strong> ~50,000 + calldata
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-title">getMessages(address user) view returns (Message[])</h4>
+                    <p class="api-desc">Get all messages for a user (encrypted).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Integration Guide -->
+    <section class="section" id="integration" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>🔧 <span>Integration</span> Guide</h2>
+            </div>
+            
+            <div class="card mb-4">
+                <h3>JavaScript/Web3 Example</h3>
+                <div class="code-block">
+<pre><code class="language-javascript">import { ethers } from 'ethers';
+
+// Connect to Ramestta
+const provider = new ethers.JsonRpcProvider('https://blockchain.ramestta.com');
+const signer = new ethers.Wallet(PRIVATE_KEY, provider);
+
+// Contract addresses
+const REGISTRY = '0x4f8D4955F370881B05b68D2344345E749d8632e3';
+const MCT = '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE';
+
+// Load contract (simplified ABI)
+const registryABI = [
+  'function register(string username, bytes32 publicKey)',
+  'function getPublicKey(address user) view returns (bytes32)',
+  'function isRegistered(address user) view returns (bool)'
+];
+const registry = new ethers.Contract(REGISTRY, registryABI, signer);
+
+// Check if registered
+const isReg = await registry.isRegistered(myAddress);
+console.log('Registered:', isReg);
+
+// Register identity
+if (!isReg) {
+  const { publicKey, privateKey } = generateX25519KeyPair();
+  await registry.register('MyUsername', publicKey);
+}
+
+// Get recipient's public key for encryption
+const recipientPubKey = await registry.getPublicKey(recipientAddress);
+
+// Derive shared secret using X25519 ECDH
+const sharedSecret = x25519.scalarMult(myPrivateKey, recipientPubKey);
+
+// Encrypt message with AES-256-GCM
+const ciphertext = encryptAES256GCM(message, sharedSecret);
+
+// Send encrypted message on-chain
+await registry.sendMessage(recipientAddress, ciphertext);</code></pre>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Network Configuration</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <td><strong>Network Name</strong></td>
+                            <td>Ramestta Mainnet</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Chain ID</strong></td>
+                            <td>1370</td>
+                        </tr>
+                        <tr>
+                            <td><strong>RPC URL</strong></td>
+                            <td><code>https://blockchain.ramestta.com</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Block Explorer</strong></td>
+                            <td><a href="https://ramascan.com" target="_blank">https://ramascan.com</a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Currency Symbol</strong></td>
+                            <td>RAMA</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Currency Decimals</strong></td>
+                            <td>18</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Encryption Spec -->
+    <section class="section" id="encryption">
+        <div class="container">
+            <div class="section-title">
+                <h2>🔐 Encryption <span>Specification</span></h2>
+            </div>
+            
+            <div class="card">
+                <pre class="code-block"><code>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    MUMBLECHAT ENCRYPTION FLOW                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   1. KEY GENERATION (per user)                                          │
+│      ├── Algorithm: X25519 (Curve25519 ECDH)                            │
+│      ├── Private Key: 32 bytes random                                   │
+│      └── Public Key: 32 bytes (stored on-chain)                         │
+│                                                                          │
+│   2. KEY EXCHANGE (per conversation)                                    │
+│      ├── Alice gets Bob's public key from contract                      │
+│      ├── Perform X25519 ECDH: shared = X25519(alice_priv, bob_pub)     │
+│      ├── Derive encryption key: key = HKDF-SHA256(shared, salt)        │
+│      └── Same shared secret on both sides (symmetric)                   │
+│                                                                          │
+│   3. MESSAGE ENCRYPTION                                                 │
+│      ├── Algorithm: AES-256-GCM                                         │
+│      ├── Key: derived shared secret (256 bits)                          │
+│      ├── Nonce: 12 bytes random (unique per message)                    │
+│      ├── Plaintext: UTF-8 message                                       │
+│      └── Output: nonce || ciphertext || authTag                         │
+│                                                                          │
+│   4. MESSAGE FORMAT (on-chain)                                          │
+│      ├── Bytes 0-11: Nonce (12 bytes)                                   │
+│      ├── Bytes 12-N: Ciphertext (variable)                              │
+│      └── Bytes N-N+16: Authentication Tag (16 bytes)                    │
+│                                                                          │
+│   5. DECRYPTION (recipient)                                             │
+│      ├── Extract nonce, ciphertext, authTag                             │
+│      ├── Derive same shared secret via ECDH                             │
+│      ├── AES-256-GCM decrypt with authTag verification                  │
+│      └── Return plaintext or throw if tampered                          │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                </code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Resources -->
+    <section class="section" id="resources" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>🔗 <span>Resources</span></h2>
+            </div>
+            
+            <div class="grid grid-3">
+                <a href="https://github.com/AhmedSalem2/RamaPay" target="_blank" class="card card-link">
+                    <div class="card-icon">📦</div>
+                    <h3 class="card-title">GitHub Repo</h3>
+                    <p class="card-text">Source code for RamaPay wallet and MumbleChat.</p>
+                </a>
+                
+                <a href="https://ramascan.com" target="_blank" class="card card-link">
+                    <div class="card-icon">🔍</div>
+                    <h3 class="card-title">RamaScan</h3>
+                    <p class="card-text">Ramestta blockchain explorer.</p>
+                </a>
+                
+                <a href="https://ramestta.com" target="_blank" class="card card-link">
+                    <div class="card-icon">🌐</div>
+                    <h3 class="card-title">Ramestta</h3>
+                    <p class="card-text">Ramestta blockchain official site.</p>
+                </a>
+                
+                <a href="https://ramascan.com/address/0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE" 
+                   target="_blank" class="card card-link">
+                    <div class="card-icon">🪙</div>
+                    <h3 class="card-title">MCT on RamaScan</h3>
+                    <p class="card-text">View MCT token contract on explorer.</p>
+                </a>
+                
+                <a href="https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3" 
+                   target="_blank" class="card card-link">
+                    <div class="card-icon">📋</div>
+                    <h3 class="card-title">Registry on RamaScan</h3>
+                    <p class="card-text">View MumbleChatRegistry contract.</p>
+                </a>
+                
+                <a href="/download" class="card card-link">
+                    <div class="card-icon">⬇️</div>
+                    <h3 class="card-title">Download RamaPay</h3>
+                    <p class="card-text">Get the Android wallet with MumbleChat.</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ABIs -->
+    <section class="section" id="abis">
+        <div class="container">
+            <div class="section-title">
+                <h2>📄 Contract <span>ABIs</span></h2>
+                <p class="section-subtitle">
+                    Full ABI JSON files for contract integration.
+                </p>
+            </div>
+            
+            <div class="grid grid-2 abi-grid">
+                <div class="card abi-card">
+                    <h3>MCTToken ABI (Simplified)</h3>
+                    <div class="code-block abi-code">
+<pre><code>[
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function transferFrom(address from, address to, uint256 amount) returns (bool)",
+  "function mintForRelay(address relay, uint256 messageCount)",
+  "function claimFeePoolReward()",
+  "function currentRate() view returns (uint256)",
+  "function halvingLevel() view returns (uint256)",
+  "function totalMinted() view returns (uint256)",
+  "function feePool() view returns (uint256)",
+  "function lastClaimBlock(address) view returns (uint256)",
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+  "event Approval(address indexed owner, address indexed spender, uint256 value)",
+  "event FeeCollected(uint256 amount)",
+  "event RewardClaimed(address indexed user, uint256 amount)"
+]</code></pre>
+                    </div>
+                </div>
+                
+                <div class="card abi-card">
+                    <h3>MumbleChatRegistry ABI (Simplified)</h3>
+                    <div class="code-block abi-code">
+<pre><code>[
+  "function register(string username, bytes32 publicKey)",
+  "function updatePublicKey(bytes32 newPublicKey)",
+  "function updateUsername(string newUsername)",
+  "function isRegistered(address user) view returns (bool)",
+  "function getPublicKey(address user) view returns (bytes32)",
+  "function getUsername(address user) view returns (string)",
+  "function registerAsRelay(uint256 storageGB)",
+  "function deactivateRelay()",
+  "function recordUptime()",
+  "function getTier(address relay) view returns (uint8)",
+  "function isActiveRelay(address relay) view returns (bool)",
+  "function getRelayInfo(address relay) view returns (tuple)",
+  "function getActiveRelays() view returns (address[])",
+  "function sendMessage(address to, bytes ciphertext) returns (uint256)",
+  "function getMessages(address user) view returns (tuple[])",
+  "function markMessageRead(uint256 messageId)",
+  "event UserRegistered(address indexed user, string username)",
+  "event RelayRegistered(address indexed relay, uint256 storageGB)",
+  "event RelayDeactivated(address indexed relay)",
+  "event MessageSent(address indexed from, address indexed to, uint256 id)",
+  "event TierUpdated(address indexed relay, uint8 newTier)"
+]</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="/" class="logo">
+                        <div class="logo-icon">💬</div>
+                        <span>MumbleChat</span>
+                    </a>
+                    <p>Native decentralized messaging protocol on Ramestta blockchain.</p>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Protocol</h4>
+                    <ul class="footer-links">
+                        <li><a href="/protocol">How It Works</a></li>
+                        <li><a href="/protocol#encryption">Encryption</a></li>
+                        <li><a href="/protocol#identity">Identity</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Token</h4>
+                    <ul class="footer-links">
+                        <li><a href="/token">MCT Tokenomics</a></li>
+                        <li><a href="/token#halving">Halving</a></li>
+                        <li><a href="/token#rewards">Rewards</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Resources</h4>
+                    <ul class="footer-links">
+                        <li><a href="/download">Download</a></li>
+                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="https://ramascan.com" target="_blank">RamaScan</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <span>© 2026 MumbleChat Protocol. Built on Ramestta.</span>
+            </div>
+        </div>
+    </footer>
+
+    <style>
+        .card-link {
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .card-link:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
+        }
+        
+        .contract-info {
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--bg-dark);
+            border-radius: 12px;
+        }
+        
+        .contract-address {
+            margin-bottom: 16px;
+            word-break: break-all;
+        }
+        
+        .contract-address code {
+            display: block;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+        
+        .api-section {
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .api-section:last-child {
+            border-bottom: none;
+        }
+        
+        .api-title {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--primary);
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+        
+        .api-desc {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+        
+        .api-params {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+        
+        .api-params li {
+            margin-bottom: 4px;
+        }
+        
+        .mb-4 {
+            margin-bottom: 24px;
+        }
+        
+        /* ABI Grid Styles */
+        .abi-grid {
+            align-items: stretch;
+        }
+        
+        .abi-card {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .abi-card h3 {
+            flex-shrink: 0;
+        }
+        
+        .abi-code {
+            flex: 1;
+            max-height: 350px;
+            overflow: auto;
+            display: block;
+            justify-content: flex-start;
+        }
+        
+        .abi-code pre {
+            margin: 0;
+        }
+        
+        .abi-code code {
+            font-size: 0.75rem;
+            line-height: 1.5;
+            white-space: pre;
+            word-break: break-all;
+        }
+        
+        @media (max-width: 1024px) {
+            .abi-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .abi-code {
+                max-height: 250px;
+            }
+            
+            .abi-code code {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+    <script src="js/app.js"></script>
+</body>
+</html>

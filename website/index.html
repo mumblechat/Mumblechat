@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MumbleChat Protocol - Native Decentralized Messaging on Ramestta</title>
+    <meta name="description" content="MumbleChat Protocol: The first truly decentralized, native messaging protocol on Ramestta blockchain. End-to-end encrypted, relay node rewards, MCT tokenomics.">
+    <meta name="keywords" content="MumbleChat, Ramestta, decentralized messaging, blockchain chat, MCT token, relay nodes, encrypted messaging">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="MumbleChat Protocol - Native Decentralized Messaging">
+    <meta property="og:description" content="End-to-end encrypted messaging with MCT token rewards for relay nodes. Built natively on Ramestta blockchain.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mumblechat.com">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MumbleChat">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <div class="logo-icon">💬</div>
+                <span>MumbleChat</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="/" class="active">Home</a></li>
+                <li><a href="/protocol">Protocol</a></li>
+                <li><a href="/token">MCT Token</a></li>
+                <li><a href="/relay-nodes">Relay Nodes</a></li>
+                <li><a href="/download">Download</a></li>
+                <li><a href="/docs">Docs</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="/download" class="btn btn-primary">
+                    Download App
+                </a>
+                <button class="mobile-menu-btn">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content animate-fade-in">
+            <div class="hero-badge">
+                <span>🚀</span>
+                <span>V2.0 - Native Protocol • No XMTP</span>
+            </div>
+            
+            <h1 class="hero-title">
+                Truly Decentralized<br>
+                <span>Messaging Protocol</span>
+            </h1>
+            
+            <p class="hero-subtitle">
+                MumbleChat Protocol: Native, end-to-end encrypted messaging on Ramestta blockchain. 
+                Earn MCT tokens as a relay node. No middlemen. No centralized servers. Just pure P2P communication.
+            </p>
+            
+            <div class="hero-actions">
+                <a href="/download" class="btn btn-primary btn-lg">
+                    📱 Download RamaPay
+                </a>
+                <a href="/protocol" class="btn btn-secondary btn-lg">
+                    📖 How It Works
+                </a>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-value">1,000,000</div>
+                    <div class="stat-label">Max MCT Supply</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">0.1%</div>
+                    <div class="stat-label">Transfer Fee Pool</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">4 Tiers</div>
+                    <div class="stat-label">Relay Node Rewards</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">On-Chain Identity</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Native Section -->
+    <section class="section" id="why-native">
+        <div class="container">
+            <div class="section-title">
+                <h2>Why <span>Native Protocol</span>?</h2>
+                <p class="section-subtitle">
+                    We rebuilt MumbleChat from scratch - no XMTP, no third-party dependencies. 
+                    100% native messaging on Ramestta blockchain.
+                </p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="card">
+                    <div class="card-icon">🔐</div>
+                    <h3 class="card-title">X25519 Encryption</h3>
+                    <p class="card-text">
+                        Military-grade end-to-end encryption using X25519 ECDH key exchange 
+                        and AES-256-GCM. Keys never leave your device.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">⛓️</div>
+                    <h3 class="card-title">On-Chain Identity</h3>
+                    <p class="card-text">
+                        Your wallet address IS your identity. Public keys stored on 
+                        MumbleChatRegistry smart contract. No emails. No phone numbers.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">🌐</div>
+                    <h3 class="card-title">P2P Relay Network</h3>
+                    <p class="card-text">
+                        Decentralized relay nodes store encrypted messages for offline users. 
+                        Earn MCT tokens for providing storage and uptime.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">💰</div>
+                    <h3 class="card-title">MCT Tokenomics</h3>
+                    <p class="card-text">
+                        Sustainable reward model with halving every 100K MCT minted. 
+                        0.1% transfer fee goes to relay node pool.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">📱</div>
+                    <h3 class="card-title">Native Android</h3>
+                    <p class="card-text">
+                        Built directly into RamaPay wallet. No WebView hacks. 
+                        True native performance with Kotlin/Jetpack.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">🛡️</div>
+                    <h3 class="card-title">Censorship Resistant</h3>
+                    <p class="card-text">
+                        No central server to shut down. Messages routed through 
+                        decentralized relay network. Your conversations, your rules.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="section" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>MumbleChat <span>V1 vs V2</span></h2>
+                <p class="section-subtitle">
+                    See what changed from the XMTP-based version to our new native protocol.
+                </p>
+            </div>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>V1 (XMTP)</th>
+                            <th>
+                                <div class="comparison-header">
+                                    V2 (Native)
+                                    <span class="comparison-badge">NEW</span>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Protocol</td>
+                            <td>XMTP (third-party)</td>
+                            <td>✅ Native MumbleChat Protocol</td>
+                        </tr>
+                        <tr>
+                            <td>Encryption</td>
+                            <td>Signal Protocol via XMTP</td>
+                            <td>✅ X25519 + AES-256-GCM (native)</td>
+                        </tr>
+                        <tr>
+                            <td>Identity Storage</td>
+                            <td>XMTP Network</td>
+                            <td>✅ On-chain (MumbleChatRegistry)</td>
+                        </tr>
+                        <tr>
+                            <td>Message Relay</td>
+                            <td>XMTP Nodes</td>
+                            <td>✅ Decentralized Relay Nodes</td>
+                        </tr>
+                        <tr>
+                            <td>Token Rewards</td>
+                            <td>❌ None</td>
+                            <td>✅ MCT Token (tier-based)</td>
+                        </tr>
+                        <tr>
+                            <td>Become Relay Node</td>
+                            <td>❌ Not possible</td>
+                            <td>✅ Stake 100 MCT, earn rewards</td>
+                        </tr>
+                        <tr>
+                            <td>Fee Pool</td>
+                            <td>❌ None</td>
+                            <td>✅ 0.1% of transfers</td>
+                        </tr>
+                        <tr>
+                            <td>Device Expiry</td>
+                            <td>90 days (XMTP)</td>
+                            <td>✅ No expiry (key rotation supported)</td>
+                        </tr>
+                        <tr>
+                            <td>Dependency</td>
+                            <td>Requires XMTP network</td>
+                            <td>✅ Self-sovereign (Ramestta only)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Stats -->
+    <section class="section">
+        <div class="container">
+            <div class="section-title">
+                <h2>Smart <span>Contracts</span></h2>
+                <p class="section-subtitle">
+                    Deployed and verified on Ramestta Mainnet (Chain ID: 1370)
+                </p>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-icon">🪙</div>
+                    <h3 class="card-title">MCT Token</h3>
+                    <p class="card-text">ERC-20 with fee pool, halving, and governance.</p>
+                    <div class="contract-address mt-3">
+                        <code>0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE</code>
+                        <button onclick="copyAddress('0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE')">📋</button>
+                    </div>
+                    <a href="https://ramascan.com/address/0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE" target="_blank" class="btn btn-secondary btn-sm mt-3">
+                        View on RamaScan →
+                    </a>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">📝</div>
+                    <h3 class="card-title">MumbleChatRegistry</h3>
+                    <p class="card-text">Identity + Relay Node + Tier System.</p>
+                    <div class="contract-address mt-3">
+                        <code>0x4f8D4955F370881B05b68D2344345E749d8632e3</code>
+                        <button onclick="copyAddress('0x4f8D4955F370881B05b68D2344345E749d8632e3')">📋</button>
+                    </div>
+                    <a href="https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3" target="_blank" class="btn btn-secondary btn-sm mt-3">
+                        View on RamaScan →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section" style="background: var(--gradient-primary);">
+        <div class="container text-center">
+            <h2 style="color: white; margin-bottom: 16px;">Ready to Experience True Decentralization?</h2>
+            <p style="color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 32px;">
+                Download RamaPay wallet, register your identity on-chain, and start 
+                messaging with full encryption and privacy.
+            </p>
+            <div class="hero-actions">
+                <a href="/download" class="btn btn-lg" style="background: white; color: var(--primary);">
+                    📱 Download Now
+                </a>
+                <a href="/relay-nodes" class="btn btn-lg" style="background: transparent; border: 2px solid white; color: white;">
+                    🌐 Become a Relay Node
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="/" class="logo">
+                        <div class="logo-icon">💬</div>
+                        <span>MumbleChat</span>
+                    </a>
+                    <p>Native decentralized messaging protocol on Ramestta blockchain. 
+                    End-to-end encrypted. Relay node rewards. True ownership.</p>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Protocol</h4>
+                    <ul class="footer-links">
+                        <li><a href="/protocol">How It Works</a></li>
+                        <li><a href="/protocol#encryption">Encryption</a></li>
+                        <li><a href="/protocol#identity">Identity</a></li>
+                        <li><a href="/protocol#messaging">Messaging</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Token</h4>
+                    <ul class="footer-links">
+                        <li><a href="/token">MCT Tokenomics</a></li>
+                        <li><a href="/token#halving">Halving</a></li>
+                        <li><a href="/token#rewards">Rewards</a></li>
+                        <li><a href="/token#governance">Governance</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Relay Nodes</h4>
+                    <ul class="footer-links">
+                        <li><a href="/relay-nodes">Become a Node</a></li>
+                        <li><a href="/relay-nodes#tiers">Tier System</a></li>
+                        <li><a href="/relay-nodes#earnings">Earnings</a></li>
+                        <li><a href="/relay-nodes#requirements">Requirements</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Resources</h4>
+                    <ul class="footer-links">
+                        <li><a href="/download">Download</a></li>
+                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="https://ramascan.com" target="_blank">RamaScan</a></li>
+                        <li><a href="https://ramestta.com" target="_blank">Ramestta</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <span>© 2026 MumbleChat Protocol. Built on Ramestta.</span>
+                <div class="footer-social">
+                    <a href="#" title="Twitter">𝕏</a>
+                    <a href="#" title="Discord">💬</a>
+                    <a href="#" title="Telegram">📱</a>
+                    <a href="#" title="GitHub">⌨️</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function copyAddress(address) {
+            navigator.clipboard.writeText(address).then(() => {
+                alert('Address copied to clipboard!');
+            });
+        }
+    </script>
+    <script src="js/app.js"></script>
+</body>
+</html>
