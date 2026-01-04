@@ -60,6 +60,86 @@
         </div>
     </section>
 
+    <!-- Live Network Stats -->
+    <section class="section" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%); padding: 48px 0;">
+        <div class="container">
+            <div class="section-title" style="margin-bottom: 32px;">
+                <h2>📊 Live <span>Network Stats</span></h2>
+            </div>
+            
+            <div class="grid grid-4">
+                <!-- Active Nodes -->
+                <div class="card text-center" style="border-top: 3px solid var(--success);">
+                    <div style="font-size: 42px; font-weight: 800; color: var(--success);" id="activeNodesCount">--</div>
+                    <div style="color: var(--text-muted); font-size: 14px;">Active Relay Nodes</div>
+                </div>
+                
+                <!-- Today's Relays -->
+                <div class="card text-center" style="border-top: 3px solid var(--primary);">
+                    <div style="font-size: 42px; font-weight: 800; color: var(--primary);" id="todayRelaysCount">--</div>
+                    <div style="color: var(--text-muted); font-size: 14px;">Messages Relayed Today</div>
+                </div>
+                
+                <!-- Fee Pool Balance -->
+                <div class="card text-center" style="border-top: 3px solid var(--warning);">
+                    <div style="font-size: 32px; font-weight: 800; color: var(--warning);" id="feePoolAmount">-- MCT</div>
+                    <div style="color: var(--text-muted); font-size: 14px;">Transaction Fee Pool</div>
+                </div>
+                
+                <!-- Daily Pool -->
+                <div class="card text-center" style="border-top: 3px solid var(--secondary);">
+                    <div style="font-size: 32px; font-weight: 800; color: var(--secondary);">100 MCT</div>
+                    <div style="color: var(--text-muted); font-size: 14px;">Daily Relay Pool</div>
+                </div>
+            </div>
+            
+            <!-- Pool Distribution Breakdown -->
+            <div class="card mt-4" style="background: var(--bg-dark);">
+                <div class="grid grid-2" style="gap: 32px;">
+                    <!-- Fee Pool Card -->
+                    <div>
+                        <h3 style="color: var(--warning); margin-bottom: 16px;">💰 Transaction Fee Pool</h3>
+                        <p class="card-text mb-3">0.1% of every MCT transfer goes to this pool. Distributed to active relay nodes based on tier multiplier.</p>
+                        <div style="background: rgba(251, 191, 36, 0.1); border-radius: 8px; padding: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Current Balance:</span>
+                                <strong id="feePoolDisplay" style="color: var(--warning);">-- MCT</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Source:</span>
+                                <strong>0.1% transfer fee</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Distribution:</span>
+                                <strong>Tier-weighted (1x-3x)</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Daily Pool Card -->
+                    <div>
+                        <h3 style="color: var(--secondary); margin-bottom: 16px;">⚡ Daily Relay Reward Pool</h3>
+                        <p class="card-text mb-3">100 MCT distributed daily to all relay nodes proportionally based on messages relayed × tier multiplier.</p>
+                        <div style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; padding: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Today's Pool:</span>
+                                <strong style="color: var(--secondary);">100 MCT</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Today's Relays:</span>
+                                <strong id="dailyRelaysDisplay">--</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Contributors:</span>
+                                <strong id="contributorsDisplay">-- nodes</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- How It Works -->
     <section class="section" id="how-it-works">
         <div class="container">
@@ -454,6 +534,92 @@
             </div>
         </div>
     </footer>
+    
+    <script>
+        // Contract addresses
+        const MCT_TOKEN = '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE';
+        const REGISTRY = '0x4f8D4955F370881B05b68D2344345E749d8632e3';
+        const RPC_URL = 'https://blockchain.ramestta.com';
+        
+        // Function selectors
+        function getFunctionSelector(name) {
+            const sigs = {
+                'feePoolBalance': '0x4a7d50ef',
+                'getTodayPoolInfo': '0xc8aff12f',
+                'totalRelayNodes': '0x8f7fb0a2'
+            };
+            return sigs[name] || '0x';
+        }
+        
+        // Make eth_call
+        async function ethCall(to, data) {
+            const response = await fetch(RPC_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'eth_call',
+                    params: [{ to, data }, 'latest']
+                })
+            });
+            const result = await response.json();
+            return result.result;
+        }
+        
+        // Format big number from hex (with 18 decimals)
+        function formatMCT(hexValue) {
+            if (!hexValue || hexValue === '0x') return '0.00';
+            const value = BigInt(hexValue);
+            const decimals = BigInt(10 ** 18);
+            const whole = value / decimals;
+            const fraction = (value % decimals) / BigInt(10 ** 16);
+            return `${whole.toLocaleString()}.${fraction.toString().padStart(2, '0')}`;
+        }
+        
+        // Parse uint256 from hex
+        function parseUint256(hexValue) {
+            if (!hexValue || hexValue === '0x') return 0n;
+            return BigInt(hexValue);
+        }
+        
+        // Load live stats
+        async function loadNetworkStats() {
+            try {
+                // Get fee pool balance
+                const feePoolHex = await ethCall(MCT_TOKEN, getFunctionSelector('feePoolBalance'));
+                const feePoolBalance = formatMCT(feePoolHex);
+                document.getElementById('feePoolAmount').textContent = `${feePoolBalance} MCT`;
+                document.getElementById('feePoolDisplay').textContent = `${feePoolBalance} MCT`;
+                
+                // Get total relay nodes
+                const totalNodesHex = await ethCall(REGISTRY, getFunctionSelector('totalRelayNodes'));
+                const totalNodes = parseUint256(totalNodesHex);
+                document.getElementById('activeNodesCount').textContent = totalNodes.toString();
+                
+                // Get today's pool info
+                const poolInfoHex = await ethCall(REGISTRY, getFunctionSelector('getTodayPoolInfo'));
+                if (poolInfoHex && poolInfoHex.length > 2) {
+                    const cleanHex = poolInfoHex.slice(2);
+                    const totalRelays = BigInt('0x' + cleanHex.slice(64, 128));
+                    const numContributors = BigInt('0x' + cleanHex.slice(256, 320));
+                    
+                    document.getElementById('todayRelaysCount').textContent = totalRelays.toLocaleString();
+                    document.getElementById('dailyRelaysDisplay').textContent = totalRelays.toLocaleString();
+                    document.getElementById('contributorsDisplay').textContent = `${numContributors} nodes`;
+                }
+                
+            } catch (error) {
+                console.error('Failed to load network stats:', error);
+            }
+        }
+        
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', loadNetworkStats);
+        
+        // Refresh every 30 seconds
+        setInterval(loadNetworkStats, 30000);
+    </script>
     <script src="js/app.js"></script>
 </body>
 </html>
