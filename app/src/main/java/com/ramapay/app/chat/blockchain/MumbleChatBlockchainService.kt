@@ -429,7 +429,7 @@ class MumbleChatBlockchainService @Inject constructor(
     suspend fun getFeePoolBalance(): Double = withContext(Dispatchers.IO) {
         try {
             val function = Function(
-                "feePoolBalance",
+                "feePool",  // Correct function name from Solidity contract
                 emptyList(),
                 listOf(object : TypeReference<Uint256>() {})
             )

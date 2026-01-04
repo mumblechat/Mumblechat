@@ -36,7 +36,7 @@ class RelayNodeActivity : AppCompatActivity() {
     private val viewModel: RelayNodeViewModel by viewModels()
     
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    private val decimalFormat = DecimalFormat("#,##0.00")
+    private val decimalFormat = DecimalFormat("#,##0.000000") // 6 decimal places for small MCT values
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
