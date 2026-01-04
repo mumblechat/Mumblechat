@@ -397,7 +397,7 @@
         // Function selectors
         function getFunctionSelector(name) {
             const sigs = {
-                'feePoolBalance': '0x4a7d50ef',
+                'feePool': '0xae2e933b',
                 'getTodayPoolInfo': '0xc8aff12f',
                 'totalRelayNodes': '0x8f7fb0a2'
             };
@@ -420,14 +420,14 @@
             return result.result;
         }
         
-        // Format big number from hex (with 18 decimals)
+        // Format big number from hex (with 18 decimals) - shows 6 decimal places
         function formatMCT(hexValue) {
-            if (!hexValue || hexValue === '0x') return '0.00';
+            if (!hexValue || hexValue === '0x') return '0.000000';
             const value = BigInt(hexValue);
             const decimals = BigInt(10 ** 18);
             const whole = value / decimals;
-            const fraction = (value % decimals) / BigInt(10 ** 16);
-            return `${whole.toLocaleString()}.${fraction.toString().padStart(2, '0')}`;
+            const fraction = (value % decimals) / BigInt(10 ** 12); // 6 decimal places
+            return `${whole.toLocaleString()}.${fraction.toString().padStart(6, '0')}`;
         }
         
         // Parse uint256 from hex
@@ -440,7 +440,7 @@
         async function loadHeroStats() {
             try {
                 // Get fee pool balance
-                const feePoolHex = await ethCall(MCT_TOKEN, getFunctionSelector('feePoolBalance'));
+                const feePoolHex = await ethCall(MCT_TOKEN, getFunctionSelector('feePool'));
                 const feePoolBalance = formatMCT(feePoolHex);
                 const feePoolEl = document.getElementById('feePool');
                 if (feePoolEl) feePoolEl.textContent = `${feePoolBalance} MCT`;

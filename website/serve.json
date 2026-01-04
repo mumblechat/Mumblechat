@@ -1,0 +1,22 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "**/*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/protocol", "destination": "/protocol.html" },
+    { "source": "/token", "destination": "/token.html" },
+    { "source": "/relay-nodes", "destination": "/relay-nodes.html" },
+    { "source": "/download", "destination": "/download.html" },
+    { "source": "/docs", "destination": "/docs.html" }
+  ]
+}

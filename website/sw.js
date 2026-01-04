@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mumblechat-v1';
+const CACHE_NAME = 'mumblechat-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -26,33 +26,24 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Fetch event
+// Fetch event - Network first, fallback to cache
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(response => {
-        // Return cached version or fetch from network
-        if (response) {
-          return response;
+        // Cache successful responses
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME)
+            .then(cache => {
+              cache.put(event.request, responseToCache);
+            });
         }
-        return fetch(event.request)
-          .then(response => {
-            // Don't cache non-success responses
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-            // Clone the response
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-            return response;
-          });
+        return response;
       })
       .catch(() => {
-        // Offline fallback
-        return caches.match('/index.html');
+        // Network failed, try cache
+        return caches.match(event.request);
       })
   );
 });

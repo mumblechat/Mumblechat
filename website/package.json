@@ -3,9 +3,10 @@
   "version": "2.0.0",
   "description": "MumbleChat Protocol - Native Decentralized Messaging on Ramestta",
   "scripts": {
-    "dev": "npx serve . -p 3000",
+    "dev": "npx serve . -p 3223",
+    "start": "npx serve . -p 3223",
     "build": "echo 'Static site - no build needed'",
-    "preview": "npx serve . -p 3000"
+    "preview": "npx serve . -p 3223"
   },
   "keywords": [
     "mumblechat",
