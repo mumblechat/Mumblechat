@@ -966,6 +966,113 @@ class MumbleChatBlockchainService @Inject constructor(
             emptyList()
         }
     }
+    
+    // ============ Transaction Confirmation Helpers ============
+    
+    /**
+     * Wait for a transaction to be confirmed with the specified number of block confirmations.
+     * 
+     * @param txHash The transaction hash to wait for
+     * @param requiredConfirmations Number of block confirmations required (default 2)
+     * @param maxWaitTimeMs Maximum time to wait in milliseconds (default 60 seconds)
+     * @param pollIntervalMs Interval between checks in milliseconds (default 2 seconds)
+     * @return TransactionConfirmation with status, or null if timeout
+     */
+    suspend fun waitForConfirmations(
+        txHash: String,
+        requiredConfirmations: Int = 2,
+        maxWaitTimeMs: Long = 60000,
+        pollIntervalMs: Long = 2000
+    ): TransactionConfirmation? = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        
+        Timber.d("$TAG: Waiting for $requiredConfirmations confirmations on tx: $txHash")
+        
+        while (System.currentTimeMillis() - startTime < maxWaitTimeMs) {
+            try {
+                // Get transaction receipt
+                val receipt = web3j.ethGetTransactionReceipt(txHash).send()
+                
+                if (receipt.transactionReceipt.isPresent) {
+                    val txReceipt = receipt.transactionReceipt.get()
+                    val txBlockNumber = txReceipt.blockNumber.toLong()
+                    
+                    // Get current block number
+                    val currentBlock = web3j.ethBlockNumber().send().blockNumber.toLong()
+                    val confirmations = (currentBlock - txBlockNumber + 1).toInt()
+                    
+                    Timber.d("$TAG: Tx $txHash at block $txBlockNumber, current block $currentBlock, confirmations: $confirmations")
+                    
+                    if (confirmations >= requiredConfirmations) {
+                        val status = txReceipt.status == "0x1"
+                        val gasUsed = txReceipt.gasUsed?.toLong() ?: 0L
+                        
+                        Timber.d("$TAG: Tx $txHash confirmed! Status: $status, Gas used: $gasUsed")
+                        
+                        return@withContext TransactionConfirmation(
+                            txHash = txHash,
+                            blockNumber = txBlockNumber,
+                            confirmations = confirmations,
+                            status = status,
+                            gasUsed = gasUsed
+                        )
+                    }
+                }
+                
+                // Wait before next check
+                kotlinx.coroutines.delay(pollIntervalMs)
+                
+            } catch (e: Exception) {
+                Timber.w(e, "$TAG: Error checking tx confirmation, retrying...")
+                kotlinx.coroutines.delay(pollIntervalMs)
+            }
+        }
+        
+        Timber.w("$TAG: Timeout waiting for tx $txHash confirmations")
+        null
+    }
+    
+    /**
+     * Check if a transaction has been mined (included in a block).
+     */
+    suspend fun isTransactionMined(txHash: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val receipt = web3j.ethGetTransactionReceipt(txHash).send()
+            receipt.transactionReceipt.isPresent
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Error checking if tx is mined")
+            false
+        }
+    }
+    
+    /**
+     * Get current block number.
+     */
+    suspend fun getCurrentBlockNumber(): Long = withContext(Dispatchers.IO) {
+        try {
+            web3j.ethBlockNumber().send().blockNumber.toLong()
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Error getting current block")
+            0L
+        }
+    }
+    
+    /**
+     * Get current gas price from the network.
+     * Returns a reasonable default if the call fails.
+     */
+    suspend fun getGasPrice(): BigInteger = withContext(Dispatchers.IO) {
+        try {
+            val gasPrice = web3j.ethGasPrice().send().gasPrice
+            Timber.d("$TAG: Current gas price: $gasPrice")
+            // Add 20% buffer to ensure transaction goes through
+            gasPrice.multiply(BigInteger.valueOf(120)).divide(BigInteger.valueOf(100))
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Error getting gas price, using default")
+            // Default gas price: 10 Gwei (should work for most cases)
+            BigInteger.valueOf(10_000_000_000L)
+        }
+    }
 }
 
 /**
@@ -978,6 +1085,17 @@ data class RelayNodeInfo(
     val messagesRelayed: Long,
     val rewardsEarned: BigInteger,
     val isActive: Boolean
+)
+
+/**
+ * Data class for transaction confirmation status.
+ */
+data class TransactionConfirmation(
+    val txHash: String,
+    val blockNumber: Long,
+    val confirmations: Int,
+    val status: Boolean,    // true = success, false = failed/reverted
+    val gasUsed: Long
 )
 
 /**

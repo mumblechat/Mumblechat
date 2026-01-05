@@ -19,22 +19,23 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
-            <a href="/" class="logo">
+            <a href="index.html" class="logo">
                 <div class="logo-icon">💬</div>
                 <span>MumbleChat</span>
             </a>
             
             <ul class="nav-links">
-                <li><a href="/">Home</a></li>
-                <li><a href="/protocol">Protocol</a></li>
-                <li><a href="/token">MCT Token</a></li>
-                <li><a href="/relay-nodes">Relay Nodes</a></li>
-                <li><a href="/download">Download</a></li>
-                <li><a href="/docs" class="active">Docs</a></li>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="protocol.html">Protocol</a></li>
+                <li><a href="token.html">MCT Token</a></li>
+                <li><a href="relay-nodes.html">Relay Nodes</a></li>
+                <li><a href="relay-node.html" style="color: #4bc0c8;">🚀 Run Node</a></li>
+                <li><a href="download.html">Download</a></li>
+                <li><a href="docs.html" class="active">Docs</a></li>
             </ul>
             
             <div class="nav-actions">
-                <a href="/download" class="btn btn-primary">Download App</a>
+                <a href="chat2.html" class="btn btn-primary">Chat Now</a>
                 <button class="mobile-menu-btn">☰</button>
             </div>
         </div>
@@ -45,11 +46,11 @@
         <div class="hero-content">
             <div class="hero-badge">
                 <span>📚</span>
-                <span>Developer Resources</span>
+                <span>MumbleChat V3.0 - 99% Complete</span>
             </div>
             <h1 class="hero-title"><span>Documentation</span></h1>
             <p class="hero-subtitle">
-                Smart contract APIs, integration guides, and everything you need to build on MumbleChat Protocol.
+                Smart contract APIs, P2P networking, Kademlia DHT, and everything you need to build on MumbleChat Protocol.
             </p>
         </div>
     </section>
@@ -57,7 +58,7 @@
     <!-- Quick Links -->
     <section class="section">
         <div class="container">
-            <div class="grid grid-4">
+            <div class="grid grid-5">
                 <a href="#contracts" class="card card-link">
                     <div class="card-icon">📜</div>
                     <h3 class="card-title">Smart Contracts</h3>
@@ -68,6 +69,12 @@
                     <div class="card-icon">🔌</div>
                     <h3 class="card-title">API Reference</h3>
                     <p class="card-text">Contract function reference</p>
+                </a>
+                
+                <a href="#p2p" class="card card-link">
+                    <div class="card-icon">🌐</div>
+                    <h3 class="card-title">P2P Network</h3>
+                    <p class="card-text">DHT, NAT, Security</p>
                 </a>
                 
                 <a href="#integration" class="card card-link">
@@ -427,6 +434,105 @@ await registry.sendMessage(recipientAddress, ciphertext);</code></pre>
         </div>
     </section>
 
+    <!-- P2P Architecture -->
+    <section class="section" id="p2p" style="background: var(--bg-card);">
+        <div class="container">
+            <div class="section-title">
+                <h2>🌐 P2P <span>Architecture</span></h2>
+                <p class="section-subtitle">
+                    Kademlia DHT, NAT traversal, and security features in V3
+                </p>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-icon">🔗</div>
+                    <h3 class="card-title">Kademlia DHT</h3>
+                    <p class="card-text">Distributed hash table for peer discovery without central servers.</p>
+                    <ul class="api-params" style="margin-top: 16px;">
+                        <li><strong>K-Bucket Size:</strong> 20 nodes per bucket</li>
+                        <li><strong>Lookup Concurrency:</strong> α = 3 parallel requests</li>
+                        <li><strong>Node ID:</strong> keccak256(walletAddress)[:20]</li>
+                        <li><strong>XOR Distance Metric:</strong> Standard Kademlia</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">🛡️</div>
+                    <h3 class="card-title">NAT Traversal</h3>
+                    <p class="card-text">STUN servers and UDP hole punching for direct P2P connections.</p>
+                    <ul class="api-params" style="margin-top: 16px;">
+                        <li><strong>STUN Servers:</strong> Google (19302), Cloudflare</li>
+                        <li><strong>Protocol:</strong> UDP hole punching</li>
+                        <li><strong>Fallback:</strong> Relay nodes for symmetric NAT</li>
+                        <li><strong>Detection:</strong> Full Cone, Restricted, Symmetric</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">🔒</div>
+                    <h3 class="card-title">Sybil Resistance</h3>
+                    <p class="card-text">Wallet signature verification prevents fake node attacks.</p>
+                    <ul class="api-params" style="margin-top: 16px;">
+                        <li><strong>Peer Verification:</strong> ECDSA wallet signature</li>
+                        <li><strong>Signature Expiry:</strong> 5 minutes max age</li>
+                        <li><strong>Message Format:</strong> "mumblechat:peer:{nodeId}:{timestamp}"</li>
+                        <li><strong>Trusted Sources:</strong> Blockchain peer resolver bypasses check</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">⚡</div>
+                    <h3 class="card-title">Rate Limiting</h3>
+                    <p class="card-text">Per-category rate limits prevent DoS and spam attacks.</p>
+                    <ul class="api-params" style="margin-top: 16px;">
+                        <li><strong>Peer Addition:</strong> 10 new peers/minute</li>
+                        <li><strong>Message Send:</strong> 100 messages/peer/minute</li>
+                        <li><strong>DHT Operations:</strong> 50 ops/minute</li>
+                        <li><strong>Relay Requests:</strong> 20 requests/minute</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <h3>Battery-Aware Notification Strategy</h3>
+                <div class="table-container" style="margin-top: 16px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Strategy</th>
+                                <th>Condition</th>
+                                <th>Behavior</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>PERSISTENT</strong></td>
+                                <td>Charging + WiFi</td>
+                                <td>Always-on WebSocket, act as relay</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ACTIVE</strong></td>
+                                <td>App in foreground</td>
+                                <td>Full P2P, 1-minute keepalive</td>
+                            </tr>
+                            <tr>
+                                <td><strong>LAZY</strong></td>
+                                <td>Battery saver / low battery</td>
+                                <td>15-minute polling, no relay</td>
+                            </tr>
+                            <tr>
+                                <td><strong>STORE_FORWARD</strong></td>
+                                <td>Background / doze mode</td>
+                                <td>Rely on relay nodes, sync on wake</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Resources -->
     <section class="section" id="resources" style="background: var(--bg-card);">
         <div class="container">
@@ -467,7 +573,7 @@ await registry.sendMessage(recipientAddress, ciphertext);</code></pre>
                     <p class="card-text">View MumbleChatRegistry contract.</p>
                 </a>
                 
-                <a href="/download" class="card card-link">
+                <a href="download.html" class="card card-link">
                     <div class="card-icon">⬇️</div>
                     <h3 class="card-title">Download RamaPay</h3>
                     <p class="card-text">Get the Android wallet with MumbleChat.</p>
@@ -552,7 +658,7 @@ await registry.sendMessage(recipientAddress, ciphertext);</code></pre>
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <a href="/" class="logo">
+                    <a href="index.html" class="logo">
                         <div class="logo-icon">💬</div>
                         <span>MumbleChat</span>
                     </a>
@@ -562,26 +668,26 @@ await registry.sendMessage(recipientAddress, ciphertext);</code></pre>
                 <div>
                     <h4 class="footer-title">Protocol</h4>
                     <ul class="footer-links">
-                        <li><a href="/protocol">How It Works</a></li>
-                        <li><a href="/protocol#encryption">Encryption</a></li>
-                        <li><a href="/protocol#identity">Identity</a></li>
+                        <li><a href="protocol.html">How It Works</a></li>
+                        <li><a href="protocol.html#encryption">Encryption</a></li>
+                        <li><a href="protocol.html#identity">Identity</a></li>
                     </ul>
                 </div>
                 
                 <div>
                     <h4 class="footer-title">Token</h4>
                     <ul class="footer-links">
-                        <li><a href="/token">MCT Tokenomics</a></li>
-                        <li><a href="/token#halving">Halving</a></li>
-                        <li><a href="/token#rewards">Rewards</a></li>
+                        <li><a href="token.html">MCT Tokenomics</a></li>
+                        <li><a href="token.html#halving">Halving</a></li>
+                        <li><a href="token.html#rewards">Rewards</a></li>
                     </ul>
                 </div>
                 
                 <div>
                     <h4 class="footer-title">Resources</h4>
                     <ul class="footer-links">
-                        <li><a href="/download">Download</a></li>
-                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="download.html">Download</a></li>
+                        <li><a href="docs.html">Documentation</a></li>
                         <li><a href="https://ramascan.com" target="_blank">RamaScan</a></li>
                     </ul>
                 </div>

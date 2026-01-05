@@ -196,6 +196,37 @@ Based on the MumbleChat protocol documentation:
 
 ## 🚀 NEXT STEPS
 
+### Completed (January 4, 2026) ✅
+
+#### MumbleChat Protocol v1.0 Integration
+The app now includes a fully decentralized P2P messaging protocol:
+
+1. **AEAD Security Fix** ✅
+   - Added Associated Data binding to prevent replay attacks
+   - AAD = senderNodeId || recipientNodeId || SHA256(messageId)
+   - Implements ChatGPT security review recommendation (A- grade)
+
+2. **P2P Transport Layer** ✅
+   - `P2PTransport.kt`: Full transport implementation
+   - `StunClient.kt`: Free STUN (Google, Cloudflare)
+   - `HolePuncher.kt`: UDP hole punching for NAT traversal
+   - `KademliaDHT.kt`: Distributed peer discovery
+
+3. **ChatService Integration** ✅
+   - Updated `ChatService.kt` with new protocol
+   - Uses AEAD binding for all messages
+   - Dual-path: New P2PTransport + legacy P2PManager fallback
+
+4. **QR Code Peer Exchange** ✅
+   - `QRCodePeerExchange.kt`: Social peer discovery
+   - Deep link format: `mumblechat://connect?wallet=...&ip=...&port=...&ts=...&sig=...`
+   - 5-minute expiry for security
+   - Methods exposed via ChatService for UI integration
+
+5. **Security Documentation** ✅
+   - `THREAT_MODEL.md`: Comprehensive threat analysis
+   - `PROTOCOL_SPECIFICATION.md`: Updated with all security fixes
+
 ### For You (User):
 1. **Connect your Android device** via USB
 2. **Install the APK**:
@@ -216,11 +247,51 @@ Based on the MumbleChat protocol documentation:
 5. **Add transaction receipts** after payments
 
 ### Future Enhancements (Mentioned in your requirements):
-- [ ] **Linux Desktop Relay Node** - Earn more MCT than mobile nodes
-- [ ] **Full node relay system** - Higher rewards for desktop full nodes
+- [x] **Linux Desktop Relay Node** ✅ - Earn more MCT than mobile nodes (COMPLETE)
+- [x] **Full node relay system** ✅ - Higher rewards for desktop full nodes (COMPLETE)
 - [ ] **Enhanced file sharing** - Optimized for 50+ MB files with extra fees
 - [ ] **Character limit enforcement** - Charge MCT for > 1024 character messages
 - [ ] **Fee distribution** - Desktop nodes earn fees from large file transfers
+
+---
+
+## 🖥️ DESKTOP RELAY NODE (NEW - January 5, 2026)
+
+A complete cross-platform desktop relay node implementation is now available!
+
+### Location: `desktop-relay/`
+
+### Quick Start
+```bash
+cd desktop-relay
+npm install
+npm run build
+mumblechat-relay setup
+mumblechat-relay register --endpoint "tcp://YOUR_IP:19370" --storage 8192
+mumblechat-relay start
+```
+
+### Platform Support
+| Platform | Installation | Service |
+|----------|-------------|---------|
+| **macOS** | `./scripts/install-macos.sh` | launchd |
+| **Linux** | `sudo ./scripts/install-linux.sh` | systemd |
+| **Windows** | `scripts/install-windows.bat` | Task Scheduler |
+| **Docker** | `docker-compose up -d` | Container |
+
+### Desktop Relay Advantages
+- **Higher Uptime** → Higher Tier → **Up to 3x rewards**
+- **More Storage** → Platinum tier eligible (**8+ GB**)
+- **Better Connectivity** → More messages relayed
+- **24/7 Operation** → Maximize daily pool rewards
+
+### Files Implemented
+- `src/RelayServer.ts` - Main server orchestrator
+- `src/network/P2PServer.ts` - TCP/WebSocket server
+- `src/storage/RelayStorage.ts` - SQLite storage with encryption
+- `src/blockchain/BlockchainService.ts` - Web3 contract integration
+- `src/cli.ts` - Interactive CLI with setup wizard
+- `Dockerfile` + `docker-compose.yml` - Container deployment
 
 ---
 

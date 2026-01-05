@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  mumblechat-relay:
+    build: .
+    container_name: mumblechat-relay
+    restart: unless-stopped
+    ports:
+      - "19370:19370"  # TCP P2P
+      - "19371:19371"  # WebSocket
+      - "19380:19380"  # Monitoring API
+    environment:
+      - RELAY_PRIVATE_KEY=${RELAY_PRIVATE_KEY}
+      - NODE_ENV=production
+    volumes:
+      - mumblechat-data:/app/data
+      - mumblechat-keystore:/app/keystore
+      - ./config.json:/app/config.json:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:19380/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+volumes:
+  mumblechat-data:
+  mumblechat-keystore:

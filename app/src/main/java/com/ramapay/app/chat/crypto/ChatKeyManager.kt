@@ -36,7 +36,8 @@ class ChatKeyManager @Inject constructor(
         val identityPublic: ByteArray,   // Ed25519 public (32 bytes)
         val sessionPrivate: ByteArray,   // X25519 private (32 bytes)
         val sessionPublic: ByteArray,    // X25519 public (32 bytes)
-        val backupKey: ByteArray         // AES-256 key (32 bytes)
+        val backupKey: ByteArray,        // AES-256 key (32 bytes)
+        val keyVersion: Int = 1          // Key rotation version
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -117,6 +118,68 @@ class ChatKeyManager @Inject constructor(
      */
     fun clearCache() {
         cachedKeys = null
+    }
+    
+    /**
+     * Rotate encryption keys for enhanced security.
+     * 
+     * This generates new keys by using a version-based derivation.
+     * The new keys must be published on-chain for contacts to use them.
+     * 
+     * @return New ChatKeyPair with incremented keyVersion
+     * @throws Exception if key derivation fails
+     */
+    suspend fun rotateKeys(): ChatKeyPair {
+        val walletAddress = walletBridge.getCurrentWalletAddress()
+            ?: throw Exception("No wallet connected")
+        
+        // Get current version
+        val currentKeys = cachedKeys ?: chatKeyStore.getKeys(walletAddress)
+        val currentVersion = currentKeys?.keyVersion ?: 0
+        val newVersion = currentVersion + 1
+        
+        Timber.i("Rotating keys from v$currentVersion to v$newVersion")
+        
+        // Sign a version-specific derivation message
+        val versionedMessage = "${ChatConfig.DERIVATION_MESSAGE}_v$newVersion"
+        val signature = walletBridge.signMessage(versionedMessage)
+            ?: throw Exception("Failed to sign key derivation message")
+        
+        // Hash signature to get new seed
+        val seed = Hash.sha3(signature)
+        
+        // Derive new keys using HKDF with version info
+        val identityPrivate = hkdfExpand(seed, "identity_v$newVersion", 32)
+        val sessionPrivate = hkdfExpand(seed, "session_v$newVersion", 32)
+        val backupKey = hkdfExpand(seed, "backup_v$newVersion", 32)
+        
+        // Generate public keys
+        val identityPublic = deriveEd25519PublicKey(identityPrivate)
+        val sessionPublic = deriveX25519PublicKey(sessionPrivate)
+        
+        val newKeys = ChatKeyPair(
+            identityPrivate = identityPrivate,
+            identityPublic = identityPublic,
+            sessionPrivate = sessionPrivate,
+            sessionPublic = sessionPublic,
+            backupKey = backupKey,
+            keyVersion = newVersion
+        )
+        
+        // Store new keys securely (will overwrite old keys)
+        chatKeyStore.storeKeys(walletAddress, newKeys)
+        cachedKeys = newKeys
+        
+        Timber.i("Key rotation complete: v$newVersion")
+        
+        return newKeys
+    }
+    
+    /**
+     * Get the current key version.
+     */
+    fun getCurrentKeyVersion(): Int {
+        return cachedKeys?.keyVersion ?: 1
     }
 
     /**

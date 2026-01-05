@@ -1,0 +1,35 @@
+{
+  "relay": {
+    "port": 19371,
+    "host": "0.0.0.0",
+    "maxConnections": 200,
+    "maxStorageGB": 8,
+    "messageTTLDays": 7,
+    "heartbeatIntervalMs": 300000
+  },
+  "blockchain": {
+    "rpcUrl": "http://localhost:8545",
+    "chainId": 1370,
+    "registryAddress": "0x4f8D4955F370881B05b68D2344345E749d8632e3",
+    "mctTokenAddress": "0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE"
+  },
+  "wallet": {
+    "privateKeyEnvVar": "RELAY_PRIVATE_KEY",
+    "keyStorePath": "./keystore"
+  },
+  "storage": {
+    "dbPath": "./data/messages.db",
+    "backupPath": "./data/backup"
+  },
+  "logging": {
+    "level": "info",
+    "file": "./logs/relay.log",
+    "maxSize": "100m",
+    "maxFiles": 5
+  },
+  "api": {
+    "enabled": true,
+    "port": 19380,
+    "apiKey": ""
+  }
+}

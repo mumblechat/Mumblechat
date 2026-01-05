@@ -1,20 +1,31 @@
 package com.ramapay.app.chat.viewmodel
 
+import android.app.Activity
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ramapay.app.chat.MumbleChatContracts
 import com.ramapay.app.chat.blockchain.RelayNodeStatus
+import com.ramapay.app.chat.blockchain.TransactionConfirmation
 import com.ramapay.app.chat.core.WalletBridge
+import com.ramapay.app.chat.nat.StunClient
 import com.ramapay.app.chat.registry.RegistrationManager
+import com.ramapay.app.chat.relay.RelayService
+import com.ramapay.app.entity.SignAuthenticationCallback
 import com.ramapay.app.entity.TransactionReturn
+import com.ramapay.app.entity.Wallet
 import com.ramapay.app.interact.CreateTransactionInteract
 import com.ramapay.app.service.KeyService
 import com.ramapay.app.service.TokensService
 import com.ramapay.app.service.TransactionSendHandlerInterface
 import com.ramapay.app.web3.entity.Address
 import com.ramapay.app.web3.entity.Web3Transaction
+import com.ramapay.hardware.SignatureFromKey
+import com.ramapay.hardware.SignatureReturnType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -24,6 +35,7 @@ import org.web3j.abi.datatypes.Function
 import org.web3j.abi.datatypes.Utf8String
 import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.abi.datatypes.Bool
+import org.web3j.utils.Numeric
 import timber.log.Timber
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -35,11 +47,13 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class RelayNodeViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val walletBridge: WalletBridge,
     private val registrationManager: RegistrationManager,
     private val tokensService: TokensService,
     private val keyService: KeyService,
-    private val createTransactionInteract: CreateTransactionInteract
+    private val createTransactionInteract: CreateTransactionInteract,
+    private val stunClient: StunClient
 ) : ViewModel(), TransactionSendHandlerInterface {
 
     private val _isLoading = MutableStateFlow(false)
@@ -76,8 +90,26 @@ class RelayNodeViewModel @Inject constructor(
 
     private val _claimableReward = MutableStateFlow(0.0)
     val claimableReward: StateFlow<Double> = _claimableReward
+    
+    // Transaction history for transparency
+    private val _transactionHistory = MutableStateFlow<List<TransactionRecord>>(emptyList())
+    val transactionHistory: StateFlow<List<TransactionRecord>> = _transactionHistory
+    
+    // Current transaction status message
+    private val _txStatusMessage = MutableStateFlow<String?>(null)
+    val txStatusMessage: StateFlow<String?> = _txStatusMessage
+    
+    // Authentication request for wallet signing
+    // The Activity observes this and triggers biometric/PIN authentication
+    private val _authenticationRequest = MutableStateFlow<AuthenticationRequest?>(null)
+    val authenticationRequest: StateFlow<AuthenticationRequest?> = _authenticationRequest
+    
+    // Pending transaction waiting for authentication
+    private var pendingAuthTransaction: Web3Transaction? = null
+    private var pendingAuthWallet: Wallet? = null
 
     private var pendingOperation: String? = null
+    private var pendingTxHash: String? = null
     
     // For two-step approve + register flow
     private var pendingStorageMB: Int = 50
@@ -99,6 +131,30 @@ class RelayNodeViewModel @Inject constructor(
         val violations: Int,
         val isBlacklisted: Boolean,
         val canOperate: Boolean
+    )
+    
+    // Transaction record for history
+    data class TransactionRecord(
+        val txHash: String,
+        val operation: String,
+        val status: TxStatus,
+        val timestamp: Long,
+        val confirmations: Int = 0,
+        val blockNumber: Long = 0
+    )
+    
+    enum class TxStatus {
+        PENDING,
+        CONFIRMING,
+        CONFIRMED,
+        FAILED
+    }
+    
+    // Authentication request for wallet signing
+    // Contains the operation name for display purposes
+    data class AuthenticationRequest(
+        val operationName: String,
+        val requestId: Long = System.currentTimeMillis()
     )
     
     // V3.1: Daily pool stats
@@ -200,17 +256,13 @@ class RelayNodeViewModel @Inject constructor(
 
     private suspend fun getMctBalance(walletAddress: String): Double {
         return try {
-            val token = tokensService.getToken(
-                MumbleChatContracts.CHAIN_ID,
-                MumbleChatContracts.MCT_TOKEN_PROXY
-            )
-            if (token != null) {
-                token.balance.divide(BigDecimal.TEN.pow(18)).toDouble()
-            } else {
-                0.0
-            }
+            // Directly fetch MCT balance from blockchain - no need to import token
+            val balanceWei = registrationManager.blockchainService.getMCTBalance(walletAddress)
+            val balanceDecimal = BigDecimal(balanceWei).divide(BigDecimal.TEN.pow(18))
+            Timber.d("MCT Balance for $walletAddress: $balanceDecimal MCT (raw: $balanceWei)")
+            balanceDecimal.toDouble()
         } catch (e: Exception) {
-            Timber.e(e, "Failed to get MCT balance")
+            Timber.e(e, "Failed to get MCT balance from blockchain")
             0.0
         }
     }
@@ -235,6 +287,79 @@ class RelayNodeViewModel @Inject constructor(
         // Real implementation would call claimableFeeReward() on MCT contract
         val baseShare = (status.messagesRelayed / 1000.0) * 0.0001 // Estimated
         _feePoolShare.value = baseShare * tierInfo.multiplier
+    }
+    
+    /**
+     * Get authentication for wallet transaction signing.
+     * This triggers biometric/PIN authentication for KEYSTORE and HDKEY wallets.
+     * Call this from the Activity with the Activity context.
+     */
+    fun getAuthorisation(activity: Activity, callback: SignAuthenticationCallback) {
+        val wallet = pendingAuthWallet
+        if (wallet == null) {
+            Timber.e("No pending wallet for authentication")
+            callback.gotAuthorisation(false)
+            return
+        }
+        
+        Timber.d("Getting authentication for wallet type: ${wallet.type}, hdIndex: ${wallet.hdKeyIndex}")
+        keyService.getAuthenticationForSignature(wallet, activity, callback)
+    }
+    
+    /**
+     * Called when authentication is successful, proceeds with the pending transaction.
+     */
+    fun onAuthenticationSuccess() {
+        val tx = pendingAuthTransaction
+        val wallet = pendingAuthWallet
+        
+        if (tx == null || wallet == null) {
+            Timber.e("No pending transaction after authentication")
+            _error.value = "Transaction was lost during authentication"
+            _isLoading.value = false
+            return
+        }
+        
+        Timber.d("Authentication successful, sending transaction for operation: $pendingOperation")
+        Timber.d("Wallet: ${wallet.address}, Type: ${wallet.type}, HDIndex: ${wallet.hdKeyIndex}")
+        
+        // Clear the authentication request
+        _authenticationRequest.value = null
+        
+        // Now actually send the transaction
+        createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this)
+    }
+    
+    /**
+     * Called when authentication fails or is cancelled.
+     */
+    fun onAuthenticationFailed() {
+        Timber.d("Authentication failed or cancelled")
+        _authenticationRequest.value = null
+        pendingAuthTransaction = null
+        pendingAuthWallet = null
+        pendingOperation = null
+        _isLoading.value = false
+        _error.value = "Authentication cancelled"
+    }
+    
+    /**
+     * Helper to request authentication before sending a transaction.
+     * This sets up the pending state and emits an authentication request.
+     */
+    private fun requestAuthAndSendTransaction(
+        tx: Web3Transaction,
+        wallet: Wallet,
+        operationName: String
+    ) {
+        pendingAuthTransaction = tx
+        pendingAuthWallet = wallet
+        
+        Timber.d("Requesting authentication for $operationName")
+        Timber.d("Wallet info - Address: ${wallet.address}, Type: ${wallet.type}, HDIndex: ${wallet.hdKeyIndex}")
+        
+        // Emit authentication request for the Activity to handle
+        _authenticationRequest.value = AuthenticationRequest(operationName)
     }
 
     fun activateAsRelay() {
@@ -265,9 +390,14 @@ class RelayNodeViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Store endpoint for later use after approval
-                pendingEndpoint = generateP2PEndpoint(wallet.address)
+                // Store endpoint for later use after approval (discovered via STUN)
+                pendingEndpoint = generateP2PEndpoint()
                 pendingStorageMB = 50 // Default storage
+                
+                // Fetch current gas price from network
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
                 // Step 1: Approve MCT spending (100 MCT = 100 * 10^18 wei)
                 val stakeAmount = BigInteger.valueOf(100).multiply(BigInteger.TEN.pow(18))
@@ -287,16 +417,16 @@ class RelayNodeViewModel @Inject constructor(
                     Address(wallet.address),
                     Address(MumbleChatContracts.MCT_TOKEN_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,  // Use fetched gas price
                     BigInteger.valueOf(100000), // Gas limit for approve
                     -1,
                     approveTxData
                 )
 
-                Timber.d("Sending MCT approve transaction to ${MumbleChatContracts.MCT_TOKEN_PROXY}")
+                Timber.d("Sending MCT approve transaction to ${MumbleChatContracts.MCT_TOKEN_PROXY}, gasPrice: $gasPrice")
                 
-                // Request signature and send
-                createTransactionInteract.requestSignature(approveTx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(approveTx, wallet, "Approve MCT for Staking")
 
             } catch (e: Exception) {
                 Timber.e(e, "Failed to activate as relay")
@@ -319,6 +449,11 @@ class RelayNodeViewModel @Inject constructor(
                     _isLoading.value = false
                     return@launch
                 }
+                
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
                 // Encode deactivateRelay function call
                 val function = Function(
@@ -333,14 +468,14 @@ class RelayNodeViewModel @Inject constructor(
                     Address(wallet.address),
                     Address(MumbleChatContracts.REGISTRY_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,
                     BigInteger.valueOf(200000),
                     -1,
                     txData
                 )
 
-                // Request signature and send
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(tx, wallet, "Deactivate Relay Node")
 
             } catch (e: Exception) {
                 Timber.e(e, "Failed to deactivate relay")
@@ -350,10 +485,54 @@ class RelayNodeViewModel @Inject constructor(
         }
     }
 
-    private fun generateP2PEndpoint(walletAddress: String): String {
-        // Generate a P2P multiaddr endpoint for this device
-        // In production, this would use the actual P2P library
-        return "/dns4/relay.mumblechat.io/tcp/4001/p2p/${walletAddress.lowercase()}"
+    private suspend fun generateP2PEndpoint(): String {
+        // Discover real public IP via STUN for cross-network relay discovery
+        return withContext(Dispatchers.IO) {
+            try {
+                val stunResult = stunClient.discoverPublicAddress()
+                if (stunResult != null) {
+                    // Register with real public IP:port so other devices can find us
+                    // Port 19372 is our relay service port
+                    "${stunResult.publicIp}:19372".also {
+                        Timber.d("Generated real P2P endpoint: $it")
+                    }
+                } else {
+                    Timber.w("STUN discovery failed, endpoint will be empty")
+                    ""
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to discover public address via STUN")
+                ""
+            }
+        }
+    }
+    
+    /**
+     * Manually encode registerAsRelay(string,uint256) to work around web3j encoding bug
+     * Function selector: 0xdf5d864d
+     */
+    private fun encodeRegisterAsRelay(endpoint: String, storageMB: Long): String {
+        val functionSelector = "df5d864d"
+        
+        // Encode parameters according to ABI:
+        // - offset to string data (always 0x40 = 64 for two params)
+        // - storageMB as uint256
+        // - string length
+        // - string data (padded to 32 bytes)
+        
+        val offsetToString = "0000000000000000000000000000000000000000000000000000000000000040"
+        val storageEncoded = String.format("%064x", storageMB)
+        
+        val endpointBytes = endpoint.toByteArray(Charsets.UTF_8)
+        val stringLength = String.format("%064x", endpointBytes.size)
+        
+        // Pad string data to multiple of 32 bytes
+        val paddedLength = ((endpointBytes.size + 31) / 32) * 32
+        val paddedBytes = ByteArray(paddedLength)
+        System.arraycopy(endpointBytes, 0, paddedBytes, 0, endpointBytes.size)
+        val stringData = Numeric.toHexStringNoPrefix(paddedBytes)
+        
+        return "0x$functionSelector$offsetToString$storageEncoded$stringLength$stringData"
     }
 
     // V2: Send heartbeat to update uptime
@@ -364,6 +543,11 @@ class RelayNodeViewModel @Inject constructor(
 
             try {
                 val wallet = walletBridge.getCurrentWallet() ?: return@launch
+                
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
                 val function = Function(
                     "heartbeat",
@@ -376,13 +560,14 @@ class RelayNodeViewModel @Inject constructor(
                     Address(wallet.address),
                     Address(MumbleChatContracts.REGISTRY_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,
                     BigInteger.valueOf(100000),
                     -1,
                     txData
                 )
 
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(tx, wallet, "Send Heartbeat")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to send heartbeat")
                 _error.value = "Heartbeat failed: ${e.message}"
@@ -399,6 +584,11 @@ class RelayNodeViewModel @Inject constructor(
 
             try {
                 val wallet = walletBridge.getCurrentWallet() ?: return@launch
+                
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
                 val function = Function(
                     "claimFeeReward",
@@ -411,13 +601,14 @@ class RelayNodeViewModel @Inject constructor(
                     Address(wallet.address),
                     Address(MumbleChatContracts.REGISTRY_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,
                     BigInteger.valueOf(150000),
                     -1,
                     txData
                 )
 
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(tx, wallet, "Claim Fee Reward")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to claim fee reward")
                 _error.value = "Claim failed: ${e.message}"
@@ -435,6 +626,11 @@ class RelayNodeViewModel @Inject constructor(
             try {
                 val wallet = walletBridge.getCurrentWallet() ?: return@launch
                 
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
+                
                 // Calculate yesterday's day ID (Unix timestamp / 86400)
                 val yesterdayDayId = (System.currentTimeMillis() / 1000 / 86400) - 1
 
@@ -449,13 +645,14 @@ class RelayNodeViewModel @Inject constructor(
                     Address(wallet.address),
                     Address(MumbleChatContracts.REGISTRY_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,
                     BigInteger.valueOf(200000),
                     -1,
                     txData
                 )
 
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(tx, wallet, "Claim Daily Reward")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to claim daily pool reward")
                 _error.value = "Claim failed: ${e.message}"
@@ -531,6 +728,11 @@ class RelayNodeViewModel @Inject constructor(
 
             try {
                 val wallet = walletBridge.getCurrentWallet() ?: return@launch
+                
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
                 val function = Function(
                     "updateStorage",
@@ -543,13 +745,14 @@ class RelayNodeViewModel @Inject constructor(
                     Address(wallet.address),
                     Address(MumbleChatContracts.REGISTRY_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,
                     BigInteger.valueOf(100000),
                     -1,
                     txData
                 )
 
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(tx, wallet, "Update Storage Capacity")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to update storage")
                 _error.value = "Update storage failed: ${e.message}"
@@ -585,9 +788,14 @@ class RelayNodeViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Store for later use after approval
-                pendingEndpoint = generateP2PEndpoint(wallet.address)
+                // Store for later use after approval (discovered via STUN)
+                pendingEndpoint = generateP2PEndpoint()
                 pendingStorageMB = storageMB
+                
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
                 // Step 1: Approve MCT spending (100 MCT = 100 * 10^18 wei)
                 val stakeAmount = BigInteger.valueOf(100).multiply(BigInteger.TEN.pow(18))
@@ -606,15 +814,16 @@ class RelayNodeViewModel @Inject constructor(
                     Address(wallet.address),
                     Address(MumbleChatContracts.MCT_TOKEN_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,
                     BigInteger.valueOf(100000),
                     -1,
                     approveTxData
                 )
 
-                Timber.d("Sending MCT approve transaction for $storageMB MB storage")
+                Timber.d("Sending MCT approve transaction for $storageMB MB storage, gasPrice: $gasPrice")
                 
-                createTransactionInteract.requestSignature(approveTx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(approveTx, wallet, "Approve MCT for Staking")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to activate as relay")
                 _error.value = "Failed to activate: ${e.message}"
@@ -637,6 +846,11 @@ class RelayNodeViewModel @Inject constructor(
 
             try {
                 val wallet = walletBridge.getCurrentWallet() ?: return@launch
+                
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
                 // Encode submitRelayProof function call
                 val function = Function(
@@ -656,13 +870,14 @@ class RelayNodeViewModel @Inject constructor(
                     Address(wallet.address),
                     Address(MumbleChatContracts.REGISTRY_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,
                     BigInteger.valueOf(200000),
                     -1,
                     txData
                 )
 
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(tx, wallet, "Submit Relay Proof")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to submit relay proof")
                 _error.value = "Submit proof failed: ${e.message}"
@@ -711,18 +926,24 @@ class RelayNodeViewModel @Inject constructor(
                     emptyList()
                 )
                 val txData = FunctionEncoder.encode(function)
+                
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
                 val tx = Web3Transaction(
                     Address(wallet.address),
                     Address(MumbleChatContracts.REGISTRY_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
+                    gasPrice,
                     BigInteger.valueOf(500000), // Higher gas for batch
                     -1,
                     txData
                 )
 
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(tx, wallet, "Submit Batch Relay Proofs")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to submit batch relay proofs")
                 _error.value = "Submit batch proof failed: ${e.message}"
@@ -739,75 +960,187 @@ class RelayNodeViewModel @Inject constructor(
         val timestamp: Long,
         val senderSignature: ByteArray
     )
+    
+    // Helper to add transaction to history
+    private fun addTxToHistory(txHash: String, operation: String, status: TxStatus) {
+        val record = TransactionRecord(
+            txHash = txHash,
+            operation = operation,
+            status = status,
+            timestamp = System.currentTimeMillis()
+        )
+        _transactionHistory.value = listOf(record) + _transactionHistory.value.take(9) // Keep last 10
+    }
+    
+    // Helper to update transaction status in history
+    private fun updateTxInHistory(txHash: String, status: TxStatus, confirmations: Int = 0, blockNumber: Long = 0) {
+        _transactionHistory.value = _transactionHistory.value.map { record ->
+            if (record.txHash == txHash) {
+                record.copy(status = status, confirmations = confirmations, blockNumber = blockNumber)
+            } else record
+        }
+    }
+    
+    // Get operation display name
+    private fun getOperationName(operation: String?): String = when (operation) {
+        "approve" -> "MCT Approval"
+        "activate" -> "Relay Node Registration"
+        "deactivate" -> "Relay Node Deactivation"
+        "heartbeat" -> "Heartbeat"
+        "claim_fee" -> "Fee Reward Claim"
+        "claim_daily" -> "Daily Pool Claim"
+        "update_storage" -> "Storage Update"
+        "submit_proof" -> "Relay Proof"
+        "submit_batch_proof" -> "Batch Relay Proofs"
+        else -> "Transaction"
+    }
 
     // TransactionSendHandlerInterface implementation
     override fun transactionFinalised(transactionReturn: TransactionReturn?) {
         viewModelScope.launch {
             val txHash = transactionReturn?.hash ?: "unknown"
-            Timber.d("Relay transaction finalized: $txHash, operation: $pendingOperation")
+            val operation = pendingOperation
+            Timber.d("Relay transaction submitted: $txHash, operation: $operation")
             
-            when (pendingOperation) {
+            // Add to history as pending
+            addTxToHistory(txHash, getOperationName(operation), TxStatus.PENDING)
+            pendingTxHash = txHash
+            
+            when (operation) {
                 "approve" -> {
-                    // Approve succeeded, now send the registerAsRelay transaction
-                    _success.value = "MCT approved! Registering as relay node..."
-                    pendingOperation = "activate"
-                    sendRegisterAsRelayTx()
+                    // Wait for approval confirmation before proceeding
+                    _txStatusMessage.value = "⏳ Waiting for approval confirmation (2 blocks)..."
+                    
+                    val confirmation = waitForTxConfirmation(txHash, 2)
+                    
+                    if (confirmation != null && confirmation.status) {
+                        updateTxInHistory(txHash, TxStatus.CONFIRMED, confirmation.confirmations, confirmation.blockNumber)
+                        _txStatusMessage.value = "✅ Approval confirmed! Registering as relay node..."
+                        
+                        // Small delay to ensure blockchain state is updated
+                        delay(1000)
+                        
+                        // Proceed to registration
+                        pendingOperation = "activate"
+                        sendRegisterAsRelayTx()
+                    } else {
+                        updateTxInHistory(txHash, TxStatus.FAILED)
+                        _isLoading.value = false
+                        _txStatusMessage.value = null
+                        _error.value = "Approval transaction failed or timed out"
+                        pendingOperation = null
+                    }
                 }
                 "activate" -> {
-                    _isLoading.value = false
-                    _success.value = "Successfully activated as relay node!"
-                    pendingOperation = null
-                    loadRelayStatus() // Refresh status
+                    _txStatusMessage.value = "⏳ Waiting for registration confirmation (2 blocks)..."
+                    
+                    val confirmation = waitForTxConfirmation(txHash, 2)
+                    
+                    if (confirmation != null && confirmation.status) {
+                        updateTxInHistory(txHash, TxStatus.CONFIRMED, confirmation.confirmations, confirmation.blockNumber)
+                        _isLoading.value = false
+                        _txStatusMessage.value = null
+                        _success.value = "🎉 Successfully activated as relay node!\nTx: ${txHash.take(10)}...${txHash.takeLast(6)}\nBlock: ${confirmation.blockNumber}"
+                        pendingOperation = null
+                        loadRelayStatus() // Refresh status
+                        
+                        // Start the RelayService foreground service
+                        try {
+                            RelayService.start(context, pendingStorageMB.toLong())
+                            Timber.d("RelayService started with storage: ${pendingStorageMB}MB")
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to start RelayService")
+                        }
+                    } else {
+                        updateTxInHistory(txHash, TxStatus.FAILED)
+                        _isLoading.value = false
+                        _txStatusMessage.value = null
+                        _error.value = "Registration failed. Please try again."
+                        pendingOperation = null
+                    }
                 }
                 "deactivate" -> {
+                    _txStatusMessage.value = "⏳ Waiting for deactivation confirmation..."
+                    
+                    val confirmation = waitForTxConfirmation(txHash, 2)
+                    
+                    if (confirmation != null && confirmation.status) {
+                        updateTxInHistory(txHash, TxStatus.CONFIRMED, confirmation.confirmations, confirmation.blockNumber)
+                        _success.value = "✅ Relay node deactivated. Stake returned.\nTx: ${txHash.take(10)}..."
+                        // Reload status to reflect deactivation
+                        loadRelayStatus()
+                        
+                        // Stop the RelayService foreground service
+                        try {
+                            RelayService.stop(context)
+                            Timber.d("RelayService stopped")
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to stop RelayService")
+                        }
+                    } else {
+                        updateTxInHistory(txHash, TxStatus.FAILED)
+                        _error.value = "Deactivation failed"
+                    }
                     _isLoading.value = false
-                    _success.value = "Relay node deactivated. Stake returned."
+                    _txStatusMessage.value = null
                     pendingOperation = null
                 }
                 "heartbeat" -> {
-                    _isLoading.value = false
-                    _success.value = "Heartbeat sent! Uptime updated."
-                    pendingOperation = null
-                    loadRelayStatus() // Refresh tier info
+                    handleSimpleConfirmation(txHash, "Heartbeat sent! Uptime updated.")
+                    loadRelayStatus()
                 }
                 "claim_fee" -> {
-                    _isLoading.value = false
-                    _success.value = "Fee rewards claimed!"
-                    pendingOperation = null
-                    loadRelayStatus() // Refresh balance
+                    handleSimpleConfirmation(txHash, "Fee rewards claimed!")
+                    loadRelayStatus()
                 }
                 "claim_daily" -> {
-                    _isLoading.value = false
-                    _success.value = "Daily pool reward claimed!"
-                    _claimableReward.value = 0.0 // Reset claimable
-                    pendingOperation = null
-                    loadRelayStatus() // Refresh balance
-                    loadDailyPoolStats() // Refresh stats
+                    handleSimpleConfirmation(txHash, "Daily pool reward claimed!")
+                    _claimableReward.value = 0.0
+                    loadRelayStatus()
+                    loadDailyPoolStats()
                 }
                 "update_storage" -> {
-                    _isLoading.value = false
-                    _success.value = "Storage capacity updated!"
-                    pendingOperation = null
-                    loadRelayStatus() // Refresh tier info
+                    handleSimpleConfirmation(txHash, "Storage capacity updated!")
+                    loadRelayStatus()
                 }
-                "submit_proof" -> {
-                    _isLoading.value = false
-                    _success.value = "Relay proof submitted! Reward earned."
-                    pendingOperation = null
-                    loadRelayStatus() // Refresh stats
-                }
-                "submit_batch_proof" -> {
-                    _isLoading.value = false
-                    _success.value = "Batch relay proofs submitted! Rewards earned."
-                    pendingOperation = null
-                    loadRelayStatus() // Refresh stats
+                "submit_proof", "submit_batch_proof" -> {
+                    handleSimpleConfirmation(txHash, "Relay proofs submitted!")
+                    loadRelayStatus()
                 }
                 else -> {
-                    _isLoading.value = false
-                    _success.value = "Transaction successful!"
-                    pendingOperation = null
+                    handleSimpleConfirmation(txHash, "Transaction successful!")
                 }
             }
+        }
+    }
+    
+    // Helper for simple confirmations
+    private suspend fun handleSimpleConfirmation(txHash: String, successMessage: String) {
+        _txStatusMessage.value = "⏳ Waiting for confirmation..."
+        
+        val confirmation = waitForTxConfirmation(txHash, 2)
+        
+        if (confirmation != null && confirmation.status) {
+            updateTxInHistory(txHash, TxStatus.CONFIRMED, confirmation.confirmations, confirmation.blockNumber)
+            _success.value = "$successMessage\nTx: ${txHash.take(10)}..."
+        } else {
+            updateTxInHistory(txHash, TxStatus.FAILED)
+            _error.value = "Transaction failed"
+        }
+        _isLoading.value = false
+        _txStatusMessage.value = null
+        pendingOperation = null
+    }
+    
+    // Wait for transaction confirmation
+    private suspend fun waitForTxConfirmation(txHash: String, requiredConfirmations: Int): TransactionConfirmation? {
+        return withContext(Dispatchers.IO) {
+            registrationManager.blockchainService.waitForConfirmations(
+                txHash = txHash,
+                requiredConfirmations = requiredConfirmations,
+                maxWaitTimeMs = 90000, // 90 seconds max
+                pollIntervalMs = 2000   // Check every 2 seconds
+            )
         }
     }
     
@@ -826,26 +1159,28 @@ class RelayNodeViewModel @Inject constructor(
                 }
 
                 Timber.d("Sending registerAsRelay with endpoint=$pendingEndpoint, storage=$pendingStorageMB")
+                
+                // Fetch current gas price
+                val gasPrice = withContext(Dispatchers.IO) {
+                    registrationManager.blockchainService.getGasPrice()
+                }
 
-                // V2: registerAsRelay with storage parameter
-                val function = Function(
-                    "registerAsRelay",
-                    listOf(Utf8String(pendingEndpoint), Uint256(pendingStorageMB.toLong())),
-                    emptyList()
-                )
-                val txData = FunctionEncoder.encode(function)
+                // Use manual ABI encoding to avoid web3j Utf8String bug
+                val txData = encodeRegisterAsRelay(pendingEndpoint, pendingStorageMB.toLong())
+                Timber.d("Manual encoded txData: $txData")
 
                 val tx = Web3Transaction(
                     Address(wallet.address),
                     Address(MumbleChatContracts.REGISTRY_PROXY),
                     BigInteger.ZERO,
-                    BigInteger.ZERO,
-                    BigInteger.valueOf(300000), // Higher gas for stake transfer
+                    gasPrice,
+                    BigInteger.valueOf(500000), // Higher gas for stake transfer
                     -1,
                     txData
                 )
 
-                createTransactionInteract.requestSignature(tx, wallet, MumbleChatContracts.CHAIN_ID, this@RelayNodeViewModel)
+                // Request authentication first, then send transaction
+                requestAuthAndSendTransaction(tx, wallet, "Register as Relay Node")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to send registerAsRelay")
                 _error.value = "Failed to register: ${e.message}"

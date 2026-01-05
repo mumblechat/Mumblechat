@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MumbleChat Relay Node Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6C63FF;
+            --primary-dark: #5B54E6;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --bg-dark: #0F172A;
+            --bg-card: #1E293B;
+            --bg-card-hover: #334155;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --border: #334155;
+            --gradient: linear-gradient(135deg, #6C63FF 0%, #9D4EDD 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .logo span {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 400;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 20px;
+            color: var(--success);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-badge.offline {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.offline .status-dot {
+            background: var(--danger);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Content */
+        .main {
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-value.highlight {
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            color: var(--success);
+            margin-top: 4px;
+        }
+
+        /* Section Cards */
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-content {
+            padding: 24px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .btn-secondary {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* Wallet Section */
+        .wallet-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .wallet-info {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .wallet-address {
+            background: var(--bg-dark);
+            padding: 16px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .address-text {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(108, 99, 255, 0.1);
+        }
+
+        .balance-card {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .balance-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .balance-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .balance-usd {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Registration Section */
+        .registration-status {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .reg-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .reg-item {
+            background: var(--bg-dark);
+            padding: 16px;
+            border-radius: 10px;
+        }
+
+        .reg-item-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .reg-item-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Activity Log */
+        .activity-log {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .activity-icon.msg {
+            background: rgba(108, 99, 255, 0.15);
+            color: var(--primary);
+        }
+
+        .activity-icon.peer {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .activity-icon.reward {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-text {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Rewards Section */
+        .rewards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .reward-card {
+            background: var(--bg-dark);
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .reward-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin: 0 auto 16px;
+        }
+
+        .reward-title {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .reward-value {
+            font-size: 32px;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .reward-unit {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Transaction Pool */
+        .tx-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tx-table th,
+        .tx-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tx-table th {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tx-table td {
+            font-size: 14px;
+        }
+
+        .tx-hash {
+            font-family: 'Monaco', 'Consolas', monospace;
+            color: var(--primary);
+        }
+
+        .tx-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .tx-status.pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .tx-status.confirmed {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        /* Connection Form */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+        }
+
+        /* Tier Badge */
+        .tier-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .tier-badge.bronze {
+            background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+            color: white;
+        }
+
+        .tier-badge.silver {
+            background: linear-gradient(135deg, #C0C0C0 0%, #808080 100%);
+            color: white;
+        }
+
+        .tier-badge.gold {
+            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
+            color: #333;
+        }
+
+        .tier-badge.diamond {
+            background: linear-gradient(135deg, #B9F2FF 0%, #00CED1 100%);
+            color: #333;
+        }
+
+        /* QR Code */
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            max-width: 200px;
+        }
+
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            font-size: 20px;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 2000;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">📡</div>
+            <div>
+                <h1>MumbleChat Relay</h1>
+                <span>Desktop Node Dashboard</span>
+            </div>
+        </div>
+        <div class="status-badge" id="statusBadge">
+            <div class="status-dot"></div>
+            <span id="statusText">Connecting...</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">📊 Messages Relayed</div>
+                <div class="stat-value highlight" id="messagesRelayed">0</div>
+                <div class="stat-change" id="messagesChange">+0 today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">👥 Connected Peers</div>
+                <div class="stat-value" id="connectedPeers">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">⏱️ Uptime</div>
+                <div class="stat-value" id="uptime">0h 0m</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">🏆 Tier</div>
+                <div class="stat-value">
+                    <span class="tier-badge bronze" id="tierBadge">🥉 Bronze</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">📈 Uptime Score</div>
+                <div class="stat-value" id="uptimeScore">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">🔄 Pending Messages</div>
+                <div class="stat-value" id="pendingMessages">0</div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="two-col">
+            <div>
+                <!-- Wallet Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">💳 Wallet</div>
+                    </div>
+                    <div class="section-content">
+                        <div class="wallet-info">
+                            <div>
+                                <div class="form-label">Relay Address</div>
+                                <div class="wallet-address">
+                                    <span class="address-text" id="walletAddress">Not connected</span>
+                                    <button class="copy-btn" onclick="copyAddress()">📋</button>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="balance-card">
+                                    <div class="balance-label">RAMA Balance</div>
+                                    <div class="balance-value" id="ramaBalance">0.0</div>
+                                </div>
+                                <div class="balance-card">
+                                    <div class="balance-label">MCT Balance</div>
+                                    <div class="balance-value" id="mctBalance">0.0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registration Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">📝 Node Registration</div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="registerBtn" onclick="showRegisterModal()">
+                                Register Node
+                            </button>
+                            <button class="btn btn-danger" id="unregisterBtn" onclick="unregisterNode()" style="display: none;">
+                                Unregister
+                            </button>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                        <div class="registration-status">
+                            <div class="reg-info">
+                                <div class="reg-item">
+                                    <div class="reg-item-label">Registration Status</div>
+                                    <div class="reg-item-value" id="regStatus">Not Registered</div>
+                                </div>
+                                <div class="reg-item">
+                                    <div class="reg-item-label">Staked MCT</div>
+                                    <div class="reg-item-value" id="stakedMct">0 MCT</div>
+                                </div>
+                                <div class="reg-item">
+                                    <div class="reg-item-label">Relay Endpoint</div>
+                                    <div class="reg-item-value" id="relayEndpoint">-</div>
+                                </div>
+                                <div class="reg-item">
+                                    <div class="reg-item-label">Next Payout</div>
+                                    <div class="reg-item-value" id="nextPayout">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rewards Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">🎁 Rewards</div>
+                        <button class="btn btn-success" onclick="claimRewards()">
+                            Claim Rewards
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="rewards-grid">
+                            <div class="reward-card">
+                                <div class="reward-icon">💎</div>
+                                <div class="reward-title">Total Earned</div>
+                                <div class="reward-value" id="totalEarned">0</div>
+                                <div class="reward-unit">MCT</div>
+                            </div>
+                            <div class="reward-card">
+                                <div class="reward-icon">📅</div>
+                                <div class="reward-title">Today's Rewards</div>
+                                <div class="reward-value" id="dailyRewards">0</div>
+                                <div class="reward-unit">MCT</div>
+                            </div>
+                            <div class="reward-card">
+                                <div class="reward-icon">⏳</div>
+                                <div class="reward-title">Pending Claim</div>
+                                <div class="reward-value" id="pendingRewards">0</div>
+                                <div class="reward-unit">MCT</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <!-- Activity Log -->
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">📋 Activity Log</div>
+                    </div>
+                    <div class="section-content">
+                        <div class="activity-log" id="activityLog">
+                            <div class="empty-state">
+                                <div class="empty-icon">📭</div>
+                                <p>No activity yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connection Settings -->
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">⚙️ Settings</div>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-group">
+                            <label class="form-label">TCP Port</label>
+                            <input type="text" class="form-input" id="tcpPort" value="8443" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">WebSocket Port</label>
+                            <input type="text" class="form-input" id="wsPort" value="8444" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Network</label>
+                            <input type="text" class="form-input" value="Ramestta Mainnet (1370)" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Pool -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">📦 Transaction Pool</div>
+                <button class="btn btn-secondary" onclick="refreshTxPool()">
+                    🔄 Refresh
+                </button>
+            </div>
+            <div class="section-content">
+                <div class="table-container" style="overflow-x: auto;">
+                    <table class="tx-table">
+                        <thead>
+                            <tr>
+                                <th>Hash</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="txPoolBody">
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <p>No transactions</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Register Modal -->
+    <div class="modal-overlay" id="registerModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Register Relay Node</div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Stake MCT tokens to register your relay node on the blockchain. 
+                    Higher stakes = higher tier = more rewards!
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Stake Amount (MCT)</label>
+                    <input type="number" class="form-input" id="stakeAmount" placeholder="Minimum: 100 MCT" value="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Relay Endpoint</label>
+                    <input type="text" class="form-input" id="relayEndpointInput" placeholder="e.g., wss://relay.yourdomain.com">
+                </div>
+                <div style="background: var(--bg-dark); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+                    <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 8px;">Tier Benefits</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
+                        <div>🥉 Bronze: 100+ MCT</div>
+                        <div>🥈 Silver: 1,000+ MCT</div>
+                        <div>🥇 Gold: 10,000+ MCT</div>
+                        <div>💎 Diamond: 100,000+ MCT</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="registerNode()" style="width: 100%;">
+                    Register & Stake
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            wsUrl: 'ws://localhost:8444',
+            apiUrl: 'http://localhost:8445',
+            rpcUrl: 'https://blockchain.ramestta.com',
+            mctToken: '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE',
+            registry: '0x4f8D4955F370881B05b68D2344345E749d8632e3'
+        };
+
+        // State
+        let state = {
+            connected: false,
+            walletAddress: null,
+            ramaBalance: '0',
+            mctBalance: '0',
+            messagesRelayed: 0,
+            connectedPeers: 0,
+            uptime: 0,
+            tier: 'bronze',
+            registered: false,
+            stakedAmount: 0,
+            totalEarned: 0,
+            dailyRewards: 0,
+            pendingRewards: 0,
+            activities: [],
+            transactions: []
+        };
+
+        let ws = null;
+        let uptimeInterval = null;
+        let startTime = Date.now();
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            connectToRelay();
+            startUptimeTimer();
+            loadStoredData();
+        });
+
+        // WebSocket Connection
+        function connectToRelay() {
+            ws = new WebSocket(CONFIG.wsUrl);
+            
+            ws.onopen = () => {
+                state.connected = true;
+                updateConnectionStatus(true);
+                addActivity('peer', 'Connected to relay server');
+                
+                // Request status
+                ws.send(JSON.stringify({ type: 'getStatus' }));
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (e) {
+                    console.error('Failed to parse message:', e);
+                }
+            };
+            
+            ws.onclose = () => {
+                state.connected = false;
+                updateConnectionStatus(false);
+                addActivity('peer', 'Disconnected from relay server');
+                
+                // Reconnect after 5 seconds
+                setTimeout(connectToRelay, 5000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function handleMessage(data) {
+            switch (data.type) {
+                case 'status':
+                    updateFromStatus(data);
+                    break;
+                case 'message':
+                    state.messagesRelayed++;
+                    updateStats();
+                    addActivity('msg', `Message relayed: ${data.id?.slice(0, 8)}...`);
+                    break;
+                case 'peerConnected':
+                    state.connectedPeers++;
+                    updateStats();
+                    addActivity('peer', `New peer connected`);
+                    break;
+                case 'peerDisconnected':
+                    state.connectedPeers = Math.max(0, state.connectedPeers - 1);
+                    updateStats();
+                    addActivity('peer', `Peer disconnected`);
+                    break;
+                case 'reward':
+                    state.dailyRewards += parseFloat(data.amount || 0);
+                    state.pendingRewards += parseFloat(data.amount || 0);
+                    updateStats();
+                    addActivity('reward', `Earned ${data.amount} MCT`);
+                    break;
+            }
+        }
+
+        function updateFromStatus(data) {
+            if (data.wallet) {
+                state.walletAddress = data.wallet;
+                document.getElementById('walletAddress').textContent = 
+                    data.wallet.slice(0, 10) + '...' + data.wallet.slice(-8);
+            }
+            if (data.ramaBalance !== undefined) {
+                state.ramaBalance = parseFloat(data.ramaBalance).toFixed(4);
+                document.getElementById('ramaBalance').textContent = state.ramaBalance;
+            }
+            if (data.mctBalance !== undefined) {
+                state.mctBalance = parseFloat(data.mctBalance).toFixed(4);
+                document.getElementById('mctBalance').textContent = state.mctBalance;
+            }
+            if (data.peers !== undefined) {
+                state.connectedPeers = data.peers;
+            }
+            if (data.messages !== undefined) {
+                state.messagesRelayed = data.messages;
+            }
+            if (data.tier) {
+                state.tier = data.tier;
+                updateTierBadge();
+            }
+            updateStats();
+        }
+
+        function updateConnectionStatus(connected) {
+            const badge = document.getElementById('statusBadge');
+            const text = document.getElementById('statusText');
+            
+            if (connected) {
+                badge.classList.remove('offline');
+                text.textContent = 'Online';
+            } else {
+                badge.classList.add('offline');
+                text.textContent = 'Offline';
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('messagesRelayed').textContent = state.messagesRelayed.toLocaleString();
+            document.getElementById('connectedPeers').textContent = state.connectedPeers;
+            document.getElementById('pendingMessages').textContent = state.pendingRewards.toFixed(2);
+            document.getElementById('totalEarned').textContent = state.totalEarned.toFixed(2);
+            document.getElementById('dailyRewards').textContent = state.dailyRewards.toFixed(2);
+            document.getElementById('pendingRewards').textContent = state.pendingRewards.toFixed(2);
+            
+            saveStoredData();
+        }
+
+        function startUptimeTimer() {
+            uptimeInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const hours = Math.floor(elapsed / (1000 * 60 * 60));
+                const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60));
+                document.getElementById('uptime').textContent = `${hours}h ${minutes}m`;
+                
+                // Update uptime score (mock calculation)
+                const score = Math.min(100, Math.floor(elapsed / (1000 * 60 * 60 * 24) * 10) + 50);
+                document.getElementById('uptimeScore').textContent = `${score}%`;
+            }, 1000);
+        }
+
+        function updateTierBadge() {
+            const badge = document.getElementById('tierBadge');
+            badge.className = 'tier-badge ' + state.tier;
+            
+            const icons = {
+                bronze: '🥉 Bronze',
+                silver: '🥈 Silver',
+                gold: '🥇 Gold',
+                diamond: '💎 Diamond'
+            };
+            badge.textContent = icons[state.tier] || icons.bronze;
+        }
+
+        // Activity Log
+        function addActivity(type, text) {
+            const activity = {
+                type,
+                text,
+                time: new Date()
+            };
+            
+            state.activities.unshift(activity);
+            if (state.activities.length > 50) {
+                state.activities.pop();
+            }
+            
+            renderActivities();
+        }
+
+        function renderActivities() {
+            const container = document.getElementById('activityLog');
+            
+            if (state.activities.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <p>No activity yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = state.activities.map(act => `
+                <div class="activity-item">
+                    <div class="activity-icon ${act.type}">
+                        ${act.type === 'msg' ? '📨' : act.type === 'peer' ? '👤' : '💰'}
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">${act.text}</div>
+                        <div class="activity-time">${formatTime(act.time)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function formatTime(date) {
+            const now = new Date();
+            const diff = now - new Date(date);
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+            return new Date(date).toLocaleDateString();
+        }
+
+        // Modal Functions
+        function showRegisterModal() {
+            document.getElementById('registerModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('registerModal').classList.remove('active');
+        }
+
+        // Registration
+        async function registerNode() {
+            const stakeAmount = document.getElementById('stakeAmount').value;
+            const endpoint = document.getElementById('relayEndpointInput').value;
+            
+            if (!stakeAmount || stakeAmount < 100) {
+                showToast('Minimum stake is 100 MCT', 'error');
+                return;
+            }
+            
+            if (!endpoint) {
+                showToast('Please enter your relay endpoint', 'error');
+                return;
+            }
+            
+            showToast('Registration requires RAMA for gas. Please fund your wallet first.', 'warning');
+            closeModal();
+            
+            // Mock update
+            state.registered = true;
+            state.stakedAmount = parseInt(stakeAmount);
+            document.getElementById('regStatus').textContent = 'Registered';
+            document.getElementById('stakedMct').textContent = stakeAmount + ' MCT';
+            document.getElementById('relayEndpoint').textContent = endpoint;
+            document.getElementById('registerBtn').style.display = 'none';
+            document.getElementById('unregisterBtn').style.display = 'inline-flex';
+            
+            // Update tier based on stake
+            if (stakeAmount >= 100000) state.tier = 'diamond';
+            else if (stakeAmount >= 10000) state.tier = 'gold';
+            else if (stakeAmount >= 1000) state.tier = 'silver';
+            else state.tier = 'bronze';
+            
+            updateTierBadge();
+            addActivity('reward', `Node registered with ${stakeAmount} MCT stake`);
+        }
+
+        async function unregisterNode() {
+            if (!confirm('Are you sure you want to unregister? Your stake will be returned.')) {
+                return;
+            }
+            
+            showToast('Unregistration requires RAMA for gas', 'warning');
+            
+            // Mock update
+            state.registered = false;
+            document.getElementById('regStatus').textContent = 'Not Registered';
+            document.getElementById('stakedMct').textContent = '0 MCT';
+            document.getElementById('relayEndpoint').textContent = '-';
+            document.getElementById('registerBtn').style.display = 'inline-flex';
+            document.getElementById('unregisterBtn').style.display = 'none';
+            
+            addActivity('peer', 'Node unregistered');
+        }
+
+        async function claimRewards() {
+            if (state.pendingRewards <= 0) {
+                showToast('No rewards to claim', 'info');
+                return;
+            }
+            
+            showToast('Claiming requires RAMA for gas', 'warning');
+            
+            // Mock claim
+            state.totalEarned += state.pendingRewards;
+            const claimed = state.pendingRewards;
+            state.pendingRewards = 0;
+            
+            updateStats();
+            addActivity('reward', `Claimed ${claimed.toFixed(2)} MCT`);
+        }
+
+        // Utility Functions
+        function copyAddress() {
+            if (state.walletAddress) {
+                navigator.clipboard.writeText(state.walletAddress);
+                showToast('Address copied!', 'success');
+            }
+        }
+
+        function refreshTxPool() {
+            showToast('Transaction pool refreshed', 'info');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            toast.innerHTML = `
+                <span>${icons[type] || icons.info}</span>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Local Storage
+        function saveStoredData() {
+            const data = {
+                messagesRelayed: state.messagesRelayed,
+                totalEarned: state.totalEarned,
+                dailyRewards: state.dailyRewards,
+                activities: state.activities.slice(0, 20)
+            };
+            localStorage.setItem('relayDashboard', JSON.stringify(data));
+        }
+
+        function loadStoredData() {
+            try {
+                const data = JSON.parse(localStorage.getItem('relayDashboard') || '{}');
+                if (data.messagesRelayed) state.messagesRelayed = data.messagesRelayed;
+                if (data.totalEarned) state.totalEarned = data.totalEarned;
+                if (data.activities) state.activities = data.activities;
+                updateStats();
+                renderActivities();
+            } catch (e) {
+                console.error('Failed to load stored data:', e);
+            }
+        }
+
+        // Click outside modal to close
+        document.getElementById('registerModal').addEventListener('click', (e) => {
+            if (e.target.id === 'registerModal') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+{
+  "name": "mumblechat-relay",
+  "version": "1.0.0",
+  "description": "MumbleChat Protocol Desktop Relay Node - Cross-platform relay server for Mac, Linux, and Windows",
+  "main": "dist/index.js",
+  "bin": {
+    "mumblechat-relay": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "start": "node dist/index.js",
+    "dev": "npx ts-node src/index.ts",
+    "cli": "npx ts-node src/cli.ts",
+    "test": "jest",
+    "clean": "rimraf dist",
+    "install:global": "npm run build && npm link",
+    "pkg:mac": "pkg . --targets node18-macos-x64,node18-macos-arm64 --output dist/mumblechat-relay-mac",
+    "pkg:linux": "pkg . --targets node18-linux-x64,node18-linux-arm64 --output dist/mumblechat-relay-linux",
+    "pkg:win": "pkg . --targets node18-win-x64 --output dist/mumblechat-relay-win.exe",
+    "pkg:all": "npm run pkg:mac && npm run pkg:linux && npm run pkg:win",
+    "service:install:linux": "sudo cp scripts/mumblechat-relay.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable mumblechat-relay",
+    "service:install:mac": "cp scripts/com.mumblechat.relay.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.mumblechat.relay.plist"
+  },
+  "keywords": [
+    "mumblechat",
+    "relay",
+    "p2p",
+    "decentralized",
+    "ramestta",
+    "blockchain",
+    "messaging"
+  ],
+  "author": "MumbleChat Protocol",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "dotenv": "^16.4.1",
+    "ethers": "^6.10.0",
+    "express": "^4.18.2",
+    "ora": "^5.4.1",
+    "qrcode-terminal": "^0.12.0",
+    "winston": "^3.11.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.16",
+    "@types/ws": "^8.5.10",
+    "jest": "^29.7.0",
+    "pkg": "^5.8.1",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "pkg": {
+    "scripts": "dist/**/*.js",
+    "assets": [
+      "config.example.json"
+    ],
+    "targets": [
+      "node18-macos-x64",
+      "node18-macos-arm64",
+      "node18-linux-x64",
+      "node18-linux-arm64",
+      "node18-win-x64"
+    ],
+    "outputPath": "dist/bin"
+  }
+}

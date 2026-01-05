@@ -1380,9 +1380,31 @@ public class HomeActivity extends BaseNavigationActivity implements View.OnClick
             case IMPORT_SCRIPT:
                 viewModel.importScriptFile(this, startIntent);
                 break;
+            case MUMBLECHAT_PEER:
+                // Handle MumbleChat P2P peer exchange deep link
+                handleMumbleChatPeerLink(request.data);
+                break;
             case INVALID_LINK:
                 break;
         }
+    }
+    
+    /**
+     * Handle MumbleChat P2P peer exchange deep links.
+     * Format: mumblechat://connect?wallet=...&ip=...&port=...&ts=...&sig=...
+     */
+    private void handleMumbleChatPeerLink(String deepLinkUrl)
+    {
+        Timber.i("Processing MumbleChat peer link: " + deepLinkUrl);
+        
+        // Navigate to chat settings to process the peer exchange
+        Intent intent = new Intent(this, com.ramapay.app.chat.ui.ChatSettingsActivity.class);
+        intent.putExtra("mumblechat_peer_link", deepLinkUrl);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        
+        // Also switch to the chat tab
+        showPage(CHAT);
     }
 
     @Override

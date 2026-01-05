@@ -9,6 +9,7 @@ public enum DeepLinkType
     WALLET_API_DEEPLINK,
     LEGACY_MAGICLINK, //ERC875 token import
     IMPORT_SCRIPT,
+    MUMBLECHAT_PEER,  // MumbleChat P2P peer exchange deep link
     INVALID_LINK
 
 }

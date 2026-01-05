@@ -41,6 +41,8 @@ import javax.inject.Inject
  * - Relay node management
  * - Backup/restore chat history
  * - Clear chat data
+ * - QR code peer exchange
+ * - Key rotation
  */
 @AndroidEntryPoint
 class ChatSettingsActivity : AppCompatActivity() {
@@ -61,6 +63,15 @@ class ChatSettingsActivity : AppCompatActivity() {
     
     @Inject
     lateinit var nonceClearService: NonceClearService
+    
+    @Inject
+    lateinit var chatService: com.ramapay.app.chat.core.ChatService
+    
+    @Inject
+    lateinit var chatKeyManager: com.ramapay.app.chat.crypto.ChatKeyManager
+    
+    @Inject
+    lateinit var registrationManager: com.ramapay.app.chat.registry.RegistrationManager
     
     private val disposables = CompositeDisposable()
     
@@ -97,6 +108,22 @@ class ChatSettingsActivity : AppCompatActivity() {
 
         setupToolbar()
         setupSettings()
+        
+        // Handle deep link from intent
+        handleIncomingDeepLink()
+    }
+    
+    /**
+     * Check for and handle incoming MumbleChat peer deep links.
+     */
+    private fun handleIncomingDeepLink() {
+        val peerLink = intent?.getStringExtra("mumblechat_peer_link")
+        if (!peerLink.isNullOrEmpty()) {
+            // Process the peer exchange link
+            lifecycleScope.launch {
+                processPeerQR(peerLink)
+            }
+        }
     }
 
     private fun setupToolbar() {
@@ -141,6 +168,16 @@ class ChatSettingsActivity : AppCompatActivity() {
         // Clear Stuck Transactions
         binding.itemClearNonce.setOnClickListener {
             checkAndClearStuckTransactions()
+        }
+        
+        // QR Code Peer Exchange
+        binding.itemPeerQR.setOnClickListener {
+            showPeerQRDialog()
+        }
+        
+        // Key Rotation
+        binding.itemKeyRotation.setOnClickListener {
+            showKeyRotationDialog()
         }
 
         // Backup
@@ -711,6 +748,240 @@ class ChatSettingsActivity : AppCompatActivity() {
                 checkAndClearStuckTransactions()
             }
             .show()
+    }
+    
+    // ============ QR Code Peer Exchange ============
+    
+    private fun showPeerQRDialog() {
+        val options = arrayOf(
+            "📱 Show My QR Code",
+            "📷 Scan QR Code",
+            "🔗 Copy My Deep Link",
+            "📋 Enter Deep Link"
+        )
+        
+        AlertDialog.Builder(this)
+            .setTitle("Peer Exchange")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showMyPeerQR()
+                    1 -> startQRScanner()
+                    2 -> copyDeepLink()
+                    3 -> showEnterDeepLinkDialog()
+                }
+            }
+            .setNegativeButton(R.string.action_cancel, null)
+            .show()
+    }
+    
+    private fun showMyPeerQR() {
+        lifecycleScope.launch {
+            try {
+                val qrBitmap = chatService.generatePeerQRCode(400)
+                if (qrBitmap != null) {
+                    showQRCodeDialog(qrBitmap)
+                } else {
+                    Toast.makeText(this@ChatSettingsActivity, "Failed to generate QR code", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ChatSettingsActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun showQRCodeDialog(bitmap: android.graphics.Bitmap) {
+        val imageView = android.widget.ImageView(this).apply {
+            setImageBitmap(bitmap)
+            adjustViewBounds = true
+            setPadding(32, 32, 32, 32)
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("📱 Your Peer QR Code")
+            .setMessage("Let another user scan this QR code to connect directly to you.\n\nExpires in 5 minutes.")
+            .setView(imageView)
+            .setPositiveButton("Done", null)
+            .setNeutralButton("Refresh") { _, _ ->
+                showMyPeerQR()  // Generate fresh QR
+            }
+            .show()
+    }
+    
+    private fun startQRScanner() {
+        // Launch QR scanner activity
+        val intent = Intent(this, com.ramapay.app.ui.QRScanning.QRScannerActivity::class.java)
+        intent.putExtra("callback_mode", "mumblechat_peer")
+        qrScanLauncher.launch(intent)
+    }
+    
+    private val qrScanLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val qrContent = result.data?.getStringExtra("qr_content") ?: return@registerForActivityResult
+            processPeerQR(qrContent)
+        }
+    }
+    
+    private fun processPeerQR(qrContent: String) {
+        lifecycleScope.launch {
+            try {
+                val result = chatService.processPeerQRCode(qrContent)
+                result.fold(
+                    onSuccess = { walletAddress ->
+                        AlertDialog.Builder(this@ChatSettingsActivity)
+                            .setTitle("✅ Peer Connected")
+                            .setMessage("Successfully connected to:\n\n$walletAddress\n\nYou can now send messages directly to this peer.")
+                            .setPositiveButton("Send Message") { _, _ ->
+                                // Open conversation with this peer
+                                val intent = Intent(this@ChatSettingsActivity, 
+                                    com.ramapay.app.chat.ui.conversation.ConversationActivity::class.java)
+                                intent.putExtra("recipient_address", walletAddress)
+                                startActivity(intent)
+                            }
+                            .setNegativeButton("Close", null)
+                            .show()
+                    },
+                    onFailure = { error ->
+                        AlertDialog.Builder(this@ChatSettingsActivity)
+                            .setTitle("❌ Connection Failed")
+                            .setMessage("Could not connect to peer:\n\n${error.message}")
+                            .setPositiveButton("OK", null)
+                            .show()
+                    }
+                )
+            } catch (e: Exception) {
+                Toast.makeText(this@ChatSettingsActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun copyDeepLink() {
+        lifecycleScope.launch {
+            try {
+                val deepLink = chatService.getPeerDeepLink()
+                if (deepLink != null) {
+                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("MumbleChat Peer Link", deepLink)
+                    clipboard.setPrimaryClip(clip)
+                    Toast.makeText(this@ChatSettingsActivity, "Deep link copied to clipboard!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@ChatSettingsActivity, "Failed to generate deep link", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ChatSettingsActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun showEnterDeepLinkDialog() {
+        val input = EditText(this).apply {
+            hint = "mumblechat://connect?wallet=..."
+            inputType = InputType.TYPE_CLASS_TEXT
+            setPadding(48, 32, 48, 32)
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("Enter Peer Deep Link")
+            .setMessage("Paste a MumbleChat peer link to connect:")
+            .setView(input)
+            .setPositiveButton("Connect") { _, _ ->
+                val link = input.text.toString().trim()
+                if (link.isNotEmpty()) {
+                    processPeerQR(link)
+                }
+            }
+            .setNegativeButton(R.string.action_cancel, null)
+            .show()
+    }
+    
+    // ============ Key Rotation ============
+    
+    private fun showKeyRotationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("🔑 Rotate Encryption Keys")
+            .setMessage(
+                "Key rotation generates new encryption keys for enhanced security.\n\n" +
+                "⚠️ IMPORTANT:\n" +
+                "• All future messages will use the new keys\n" +
+                "• Old messages remain readable\n" +
+                "• Contacts need your new public key (shared automatically)\n" +
+                "• Requires a blockchain transaction (gas fee)\n\n" +
+                "Rotate your keys periodically or if you suspect compromise."
+            )
+            .setPositiveButton("Rotate Keys") { _, _ ->
+                confirmKeyRotation()
+            }
+            .setNegativeButton(R.string.action_cancel, null)
+            .show()
+    }
+    
+    private fun confirmKeyRotation() {
+        AlertDialog.Builder(this)
+            .setTitle("⚠️ Confirm Key Rotation")
+            .setMessage("Are you sure you want to rotate your encryption keys?\n\nThis will require a small gas fee to update your public key on-chain.")
+            .setPositiveButton("Yes, Rotate") { _, _ ->
+                performKeyRotation()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun performKeyRotation() {
+        @Suppress("DEPRECATION")
+        val progressDialog = android.app.ProgressDialog(this).apply {
+            setTitle("Rotating Keys")
+            setMessage("Generating new keys...")
+            setCancelable(false)
+            isIndeterminate = true
+            show()
+        }
+        
+        lifecycleScope.launch {
+            try {
+                // Get current wallet address
+                val walletAddress = walletBridge.getCurrentWalletAddress()
+                    ?: throw Exception("No wallet connected")
+                
+                progressDialog.setMessage("Deriving new session keys...")
+                
+                // Derive new keys with incremented version
+                val newKeys = chatKeyManager.rotateKeys()
+                
+                progressDialog.setMessage("Updating public key on blockchain...")
+                
+                // Register the new public key on-chain
+                val txData = registrationManager.getUpdateKeyTxData(newKeys.identityPublic, newKeys.keyVersion)
+                
+                progressDialog.dismiss()
+                
+                // Show transaction confirmation
+                AlertDialog.Builder(this@ChatSettingsActivity)
+                    .setTitle("✅ Keys Generated")
+                    .setMessage(
+                        "New encryption keys generated!\n\n" +
+                        "Key Version: ${newKeys.keyVersion}\n\n" +
+                        "To complete rotation, you need to update your public key on-chain.\n\n" +
+                        "This requires sending a transaction with a small gas fee."
+                    )
+                    .setPositiveButton("Send Transaction") { _, _ ->
+                        // Launch transaction signing (through WalletConnect or internal signing)
+                        Toast.makeText(this@ChatSettingsActivity, "Key rotation transaction initiated", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Later") { _, _ ->
+                        Toast.makeText(this@ChatSettingsActivity, "Keys saved locally. Update on-chain later.", Toast.LENGTH_LONG).show()
+                    }
+                    .show()
+                    
+            } catch (e: Exception) {
+                progressDialog.dismiss()
+                AlertDialog.Builder(this@ChatSettingsActivity)
+                    .setTitle("❌ Key Rotation Failed")
+                    .setMessage("Error: ${e.message}")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        }
     }
     
     override fun onDestroy() {

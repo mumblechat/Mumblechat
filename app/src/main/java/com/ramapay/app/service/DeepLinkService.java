@@ -24,6 +24,8 @@ public class DeepLinkService
     public static final String WC_COMMAND = "wc:";
     public static final String AW_PREFIX = "awallet://";
     public static final String RAMAPAY_PREFIX = "ramapay://";
+    public static final String MUMBLECHAT_PREFIX = "mumblechat://";
+    public static final String MUMBLECHAT_CONNECT_PREFIX = "mumblechat://connect";
     public static final String OPEN_URL_PREFIX = "openURL?q=";
 
     public static DeepLinkRequest parseIntent(String importData, Intent startIntent)
@@ -33,6 +35,12 @@ public class DeepLinkService
         if (TextUtils.isEmpty(importData))
         {
             return checkIntents(startIntent);
+        }
+        
+        // Handle MumbleChat P2P peer exchange links first
+        if (importData.startsWith(MUMBLECHAT_CONNECT_PREFIX) || importData.startsWith(MUMBLECHAT_PREFIX))
+        {
+            return new DeepLinkRequest(DeepLinkType.MUMBLECHAT_PEER, importData);
         }
 
         if (importData.startsWith(RAMAPAY_PREFIX)) //strip RAMAPAY_PREFIX

@@ -429,18 +429,32 @@ public class GasWidget2 extends LinearLayout implements Runnable, GasWidgetInter
         return gasPrice;
     }
 
+    // Minimum gas price for Ramestta network (7 gwei) - prevents 0 gas price transactions
+    private static final BigInteger RAMESTTA_MIN_GAS_PRICE = new BigInteger("7000000000"); // 7 gwei
+    private static final long RAMESTTA_CHAIN_ID = 1370L;
+
     @Override
     public BigInteger getGasPrice(BigInteger defaultPrice)
     {
+        BigInteger result;
         if (gasSpread != null && gasSpread.getSelectedGasFee(currentGasSpeedIndex) != null)
         {
             GasSpeed gs = gasSpread.getSelectedGasFee(currentGasSpeedIndex);
-            return gs.gasPrice.maxFeePerGas;
+            result = gs.gasPrice.maxFeePerGas;
         }
         else
         {
-            return defaultPrice;
+            result = defaultPrice;
         }
+        
+        // Ensure Ramestta transactions have a minimum gas price to prevent stuck transactions
+        if (token != null && token.tokenInfo.chainId == RAMESTTA_CHAIN_ID 
+            && (result == null || result.compareTo(RAMESTTA_MIN_GAS_PRICE) < 0))
+        {
+            return RAMESTTA_MIN_GAS_PRICE;
+        }
+        
+        return result;
     }
 
     @Override

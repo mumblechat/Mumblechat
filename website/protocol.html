@@ -19,22 +19,23 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
-            <a href="/" class="logo">
+            <a href="index.html" class="logo">
                 <div class="logo-icon">💬</div>
                 <span>MumbleChat</span>
             </a>
             
             <ul class="nav-links">
-                <li><a href="/">Home</a></li>
-                <li><a href="/protocol" class="active">Protocol</a></li>
-                <li><a href="/token">MCT Token</a></li>
-                <li><a href="/relay-nodes">Relay Nodes</a></li>
-                <li><a href="/download">Download</a></li>
-                <li><a href="/docs">Docs</a></li>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="protocol.html" class="active">Protocol</a></li>
+                <li><a href="token.html">MCT Token</a></li>
+                <li><a href="relay-nodes.html">Relay Nodes</a></li>
+                <li><a href="relay-node.html" style="color: #4bc0c8;">🚀 Run Node</a></li>
+                <li><a href="download.html">Download</a></li>
+                <li><a href="docs.html">Docs</a></li>
             </ul>
             
             <div class="nav-actions">
-                <a href="/download" class="btn btn-primary">Download App</a>
+                <a href="chat2.html" class="btn btn-primary">Chat Now</a>
                 <button class="mobile-menu-btn">☰</button>
             </div>
         </div>
@@ -45,12 +46,12 @@
         <div class="hero-content">
             <div class="hero-badge">
                 <span>📖</span>
-                <span>Protocol Documentation</span>
+                <span>Protocol V3.0 - 99% Complete</span>
             </div>
             <h1 class="hero-title">How <span>MumbleChat Protocol</span> Works</h1>
             <p class="hero-subtitle">
-                A deep dive into the native decentralized messaging protocol built on Ramestta blockchain. 
-                No third-party dependencies. Pure P2P communication.
+                Native decentralized messaging on Ramestta. Kademlia DHT routing, STUN/UDP hole punching, 
+                X25519+AES-256-GCM encryption, Sybil-resistant peer discovery. Zero central servers.
             </p>
         </div>
     </section>
@@ -65,7 +66,7 @@
             <div class="card mb-4">
                 <pre class="code-block"><code>
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                     MUMBLECHAT PROTOCOL STACK                            │
+│                   MUMBLECHAT PROTOCOL V3.0 STACK                         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐               │
@@ -76,18 +77,26 @@
 │          └───────────────────┼───────────────────┘                       │
 │                              ▼                                           │
 │   ┌──────────────────────────────────────────────────────────────┐      │
-│   │                    MumbleChat Core SDK                        │      │
+│   │                    MumbleChat Core Layer                      │      │
 │   │  ┌────────────┐  ┌────────────┐  ┌────────────┐              │      │
-│   │  │   Crypto   │  │  Protocol  │  │  Network   │              │      │
-│   │  │   Module   │  │  Handler   │  │  Manager   │              │      │
+│   │  │  Crypto    │  │ MessageCodec│ │ ChatService│              │      │
+│   │  │X25519+GCM  │  │ Binary Wire │  │ Orchestrator│            │      │
+│   │  └────────────┘  └────────────┘  └────────────┘              │      │
+│   └──────────────────────────────────────────────────────────────┘      │
+│                              │                                           │
+│   ┌──────────────────────────────────────────────────────────────┐      │
+│   │                    P2P Transport Layer                        │      │
+│   │  ┌────────────┐  ┌────────────┐  ┌────────────┐              │      │
+│   │  │ KademliaDHT│  │ STUN/NAT   │  │ Rate       │  SECURITY   │      │
+│   │  │ +Sybil Res.│  │ Traversal  │  │ Limiter    │              │      │
 │   │  └────────────┘  └────────────┘  └────────────┘              │      │
 │   └──────────────────────────────────────────────────────────────┘      │
 │                              │                                           │
 │          ┌───────────────────┼───────────────────┐                       │
 │          ▼                   ▼                   ▼                       │
 │   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐               │
-│   │  P2P Layer  │     │   Relay     │     │  Ramestta   │   NETWORK    │
-│   │   (DHT)     │◄───►│   Nodes     │◄───►│  Blockchain │               │
+│   │ UDP Direct  │     │   Relay     │     │  Ramestta   │   NETWORK    │
+│   │ (Hole Punch)│◄───►│   Nodes     │◄───►│  Blockchain │               │
 │   └─────────────┘     └─────────────┘     └─────────────┘               │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -346,7 +355,7 @@ ack = conn.receive()
             </div>
             
             <div class="text-center mt-4">
-                <a href="/relay-nodes" class="btn btn-primary btn-lg">
+                <a href="relay-nodes.html" class="btn btn-primary btn-lg">
                     Learn More About Relay Nodes →
                 </a>
             </div>
@@ -358,7 +367,7 @@ ack = conn.receive()
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <a href="/" class="logo">
+                    <a href="index.html" class="logo">
                         <div class="logo-icon">💬</div>
                         <span>MumbleChat</span>
                     </a>
@@ -368,27 +377,27 @@ ack = conn.receive()
                 <div>
                     <h4 class="footer-title">Protocol</h4>
                     <ul class="footer-links">
-                        <li><a href="/protocol">How It Works</a></li>
-                        <li><a href="/protocol#encryption">Encryption</a></li>
-                        <li><a href="/protocol#identity">Identity</a></li>
-                        <li><a href="/protocol#messaging">Messaging</a></li>
+                        <li><a href="protocol.html">How It Works</a></li>
+                        <li><a href="protocol.html#encryption">Encryption</a></li>
+                        <li><a href="protocol.html#identity">Identity</a></li>
+                        <li><a href="protocol.html#messaging">Messaging</a></li>
                     </ul>
                 </div>
                 
                 <div>
                     <h4 class="footer-title">Token</h4>
                     <ul class="footer-links">
-                        <li><a href="/token">MCT Tokenomics</a></li>
-                        <li><a href="/token#halving">Halving</a></li>
-                        <li><a href="/token#rewards">Rewards</a></li>
+                        <li><a href="token.html">MCT Tokenomics</a></li>
+                        <li><a href="token.html#halving">Halving</a></li>
+                        <li><a href="token.html#rewards">Rewards</a></li>
                     </ul>
                 </div>
                 
                 <div>
                     <h4 class="footer-title">Resources</h4>
                     <ul class="footer-links">
-                        <li><a href="/download">Download</a></li>
-                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="download.html">Download</a></li>
+                        <li><a href="docs.html">Documentation</a></li>
                         <li><a href="https://ramascan.com" target="_blank">RamaScan</a></li>
                     </ul>
                 </div>

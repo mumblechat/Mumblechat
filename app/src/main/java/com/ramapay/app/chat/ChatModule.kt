@@ -18,8 +18,19 @@ import com.ramapay.app.chat.data.repository.ConversationRepository
 import com.ramapay.app.chat.data.repository.GroupRepository
 import com.ramapay.app.chat.data.repository.MessageRepository
 import com.ramapay.app.chat.file.FileTransferManager
+import com.ramapay.app.chat.nat.HolePuncher
+import com.ramapay.app.chat.nat.StunClient
 import com.ramapay.app.chat.network.P2PManager
+import com.ramapay.app.chat.p2p.BlockchainPeerResolver
+import com.ramapay.app.chat.p2p.BootstrapManager
+import com.ramapay.app.chat.p2p.KademliaDHT
+import com.ramapay.app.chat.p2p.P2PTransport
+import com.ramapay.app.chat.p2p.PeerCache
+import com.ramapay.app.chat.p2p.QRCodePeerExchange
+import com.ramapay.app.chat.protocol.MessageCodec
 import com.ramapay.app.chat.registry.RegistrationManager
+import com.ramapay.app.chat.relay.RelayMessageService
+import com.ramapay.app.chat.relay.RelayStorage
 import com.ramapay.app.repository.WalletRepositoryType
 import com.ramapay.app.service.KeyService
 import dagger.Module
@@ -146,9 +157,10 @@ object ChatModule {
     fun provideP2PManager(
         @ApplicationContext context: Context,
         chatKeyStore: ChatKeyStore,
-        blockchainService: MumbleChatBlockchainService
+        blockchainService: MumbleChatBlockchainService,
+        relayMessageService: RelayMessageService
     ): P2PManager {
-        return P2PManager(context, chatKeyStore, blockchainService)
+        return P2PManager(context, chatKeyStore, blockchainService, relayMessageService)
     }
 
     @Provides
@@ -162,9 +174,121 @@ object ChatModule {
 
     @Provides
     @Singleton
+    fun provideRelayStorage(
+        @ApplicationContext context: Context
+    ): RelayStorage {
+        return RelayStorage(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRelayMessageService(
+        @ApplicationContext context: Context,
+        chatKeyStore: ChatKeyStore,
+        blockchainService: MumbleChatBlockchainService
+    ): RelayMessageService {
+        return RelayMessageService(context, chatKeyStore, blockchainService)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NEW P2P PROTOCOL COMPONENTS (MumbleChat Protocol v1.0)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @Provides
+    @Singleton
+    fun provideStunClient(): StunClient {
+        return StunClient()
+    }
+
+    @Provides
+    @Singleton
+    fun provideHolePuncher(stunClient: StunClient): HolePuncher {
+        return HolePuncher(stunClient)
+    }
+
+    @Provides
+    @Singleton
+    fun providePeerCache(@ApplicationContext context: Context): PeerCache {
+        return PeerCache(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBlockchainPeerResolver(
+        blockchainService: MumbleChatBlockchainService
+    ): BlockchainPeerResolver {
+        return BlockchainPeerResolver(blockchainService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBootstrapManager(
+        @ApplicationContext context: Context,
+        peerCache: PeerCache,
+        blockchainPeerResolver: BlockchainPeerResolver
+    ): BootstrapManager {
+        return BootstrapManager(context, peerCache, blockchainPeerResolver)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRateLimiter(): com.ramapay.app.chat.p2p.RateLimiter {
+        return com.ramapay.app.chat.p2p.RateLimiter()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationStrategyManager(
+        @ApplicationContext context: Context
+    ): com.ramapay.app.chat.notification.NotificationStrategyManager {
+        return com.ramapay.app.chat.notification.NotificationStrategyManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideKademliaDHT(
+        rateLimiter: com.ramapay.app.chat.p2p.RateLimiter
+    ): KademliaDHT {
+        return KademliaDHT(rateLimiter)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMessageCodec(): MessageCodec {
+        return MessageCodec()
+    }
+
+    @Provides
+    @Singleton
+    fun provideP2PTransport(
+        stunClient: StunClient,
+        holePuncher: HolePuncher,
+        bootstrapManager: BootstrapManager,
+        dht: KademliaDHT,
+        messageCodec: MessageCodec
+    ): P2PTransport {
+        return P2PTransport(stunClient, holePuncher, bootstrapManager, dht, messageCodec)
+    }
+
+    @Provides
+    @Singleton
+    fun provideQRCodePeerExchange(
+        stunClient: StunClient,
+        bootstrapManager: BootstrapManager
+    ): QRCodePeerExchange {
+        return QRCodePeerExchange(stunClient, bootstrapManager)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @Provides
+    @Singleton
     fun provideChatService(
         @ApplicationContext context: Context,
         p2pManager: P2PManager,
+        p2pTransport: P2PTransport,
+        qrCodePeerExchange: QRCodePeerExchange,
+        messageCodec: MessageCodec,
         messageRepository: MessageRepository,
         conversationRepository: ConversationRepository,
         groupRepository: GroupRepository,
@@ -178,6 +302,9 @@ object ChatModule {
         return ChatService(
             context,
             p2pManager,
+            p2pTransport,
+            qrCodePeerExchange,
+            messageCodec,
             messageRepository,
             conversationRepository,
             groupRepository,

@@ -262,4 +262,27 @@ class ConversationViewModel @Inject constructor(
             conversationRepository.updateLastMessage(id, null, null, null)
         }
     }
+    
+    /**
+     * Delete contact and all associated messages/conversation.
+     */
+    suspend fun deleteContact(peerAddress: String): Boolean {
+        return try {
+            conversationId?.let { id ->
+                // Delete all messages
+                messageRepository.deleteAllForConversation(id)
+                // Delete conversation
+                conversationRepository.delete(id)
+            }
+            // Delete contact entry
+            val contact = contactDao.getByAddress(currentWalletAddress, peerAddress)
+            contact?.id?.let { contactId ->
+                contactDao.delete(contactId)
+            }
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to delete contact: $peerAddress")
+            false
+        }
+    }
 }

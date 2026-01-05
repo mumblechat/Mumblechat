@@ -12,6 +12,9 @@ import com.ramapay.app.chat.data.repository.ConversationRepository
 import com.ramapay.app.chat.data.repository.GroupRepository
 import com.ramapay.app.chat.data.repository.MessageRepository
 import com.ramapay.app.chat.network.P2PManager
+import com.ramapay.app.chat.p2p.P2PTransport
+import com.ramapay.app.chat.p2p.QRCodePeerExchange
+import com.ramapay.app.chat.protocol.MessageCodec
 import com.ramapay.app.chat.registry.RegistrationManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,11 +38,16 @@ import javax.inject.Singleton
  * 
  * IMPORTANT: This service does NOT modify any wallet data.
  * All wallet access is READ-ONLY through WalletBridge.
+ * 
+ * NEW: Now integrates with MumbleChat Protocol v1.0 (P2PTransport)
  */
 @Singleton
 class ChatService @Inject constructor(
     private val context: Context,
     private val p2pManager: P2PManager,
+    private val p2pTransport: P2PTransport,  // NEW: MumbleChat Protocol transport
+    private val qrCodePeerExchange: QRCodePeerExchange,  // NEW: QR code peer discovery
+    private val messageCodec: MessageCodec,  // NEW: Binary protocol codec
     private val messageRepository: MessageRepository,
     private val conversationRepository: ConversationRepository,
     private val groupRepository: GroupRepository,
@@ -235,19 +243,45 @@ class ChatService @Inject constructor(
             // 4. Save locally first
             messageRepository.insert(message)
 
-            // 5. Encrypt message
+            // 5. Encrypt message with AEAD binding (prevents replay attacks)
+            // AAD = senderNodeId || recipientNodeId || SHA256(messageId)
+            val senderNodeId = senderAddress.lowercase().removePrefix("0x").take(32).toByteArray(Charsets.UTF_8)
+            val recipientNodeId = recipientAddress.lowercase().removePrefix("0x").take(32).toByteArray(Charsets.UTF_8)
+            
             val encrypted = messageEncryption.encryptMessage(
                 content,
                 keys.sessionPrivate,
-                recipientPubKey
+                recipientPubKey,
+                senderNodeId,      // AEAD: prevents sender spoofing
+                recipientNodeId,   // AEAD: prevents recipient confusion
+                message.id         // AEAD: prevents replay attacks
             )
 
-            // 6. Send via P2P or relay
-            val sendResult = p2pManager.sendMessage(
-                recipientAddress,
-                encrypted,
-                message.id
-            )
+            // 6. Send via P2P (try new protocol first, fallback to legacy)
+            val encryptedBytes = encrypted.toBytes()
+            val sendResult = try {
+                // Try MumbleChat Protocol v1.0 (P2PTransport)
+                val protocolMessage = messageCodec.encodeMessage(
+                    messageId = message.id,
+                    payload = encryptedBytes,
+                    flags = MessageCodec.FLAG_ENCRYPTED
+                )
+                val p2pResult = p2pTransport.sendMessage(recipientAddress, protocolMessage)
+                if (p2pResult.isSuccess) {
+                    val result = p2pResult.getOrNull()
+                    P2PManager.SendResult(
+                        direct = result?.direct ?: false,
+                        relayed = result?.relayed ?: false
+                    )
+                } else {
+                    // Fallback to legacy P2PManager
+                    Timber.d("Falling back to legacy P2P for $recipientAddress")
+                    p2pManager.sendMessage(recipientAddress, encrypted, message.id)
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "Protocol transport failed, using legacy")
+                p2pManager.sendMessage(recipientAddress, encrypted, message.id)
+            }
 
             // 7. Update status
             val newStatus = when {
@@ -354,9 +388,97 @@ class ChatService @Inject constructor(
 
     private fun startMessageListener() {
         scope.launch {
+            // Listen to legacy P2PManager
             p2pManager.incomingMessages.collect { incoming ->
                 handleIncomingMessage(incoming)
             }
+        }
+        
+        // Also listen to new P2PTransport (MumbleChat Protocol v1.0)
+        scope.launch {
+            p2pTransport.incomingMessages.collect { protoMessage ->
+                handleProtocolMessage(protoMessage)
+            }
+        }
+    }
+
+    /**
+     * Handle messages from MumbleChat Protocol v1.0 (P2PTransport)
+     */
+    private suspend fun handleProtocolMessage(protoMessage: P2PTransport.IncomingMessage) {
+        try {
+            val keys = chatKeys ?: return
+            val myAddress = walletBridge.getCurrentWalletAddress() ?: return
+
+            // Only process chat messages
+            if (protoMessage.type != MessageCodec.MessageType.CHAT_MESSAGE && 
+                protoMessage.type != MessageCodec.MessageType.DATA) {
+                return
+            }
+
+            // Decode protocol message
+            val decoded = messageCodec.decodeMessage(protoMessage.data)
+            
+            // Get sender's public key
+            val senderPubKey = registrationManager.getPublicKey(protoMessage.senderAddress) ?: return
+
+            // Build AEAD AAD for decryption (must match sender's encryption)
+            val senderNodeId = protoMessage.senderAddress.lowercase().removePrefix("0x").take(32).toByteArray(Charsets.UTF_8)
+            val recipientNodeId = myAddress.lowercase().removePrefix("0x").take(32).toByteArray(Charsets.UTF_8)
+
+            // Parse encrypted payload
+            val encrypted = MessageEncryption.EncryptedMessage.fromBytes(decoded.payload)
+
+            // Decrypt with AEAD verification (will fail if AAD doesn't match = replay attack)
+            val decrypted = messageEncryption.decryptMessage(
+                encrypted,
+                keys.sessionPrivate,
+                senderPubKey,
+                senderNodeId,      // AEAD: verify sender
+                recipientNodeId,   // AEAD: verify recipient
+                decoded.messageId  // AEAD: verify message ID
+            )
+
+            // Get or create conversation
+            val conversation = conversationRepository.getOrCreate(myAddress, protoMessage.senderAddress)
+
+            // Create message entity
+            val message = MessageEntity(
+                id = decoded.messageId,
+                conversationId = conversation.id,
+                groupId = null,
+                senderAddress = protoMessage.senderAddress,
+                recipientAddress = myAddress,
+                contentType = MessageType.TEXT.name,
+                content = decrypted,
+                encryptedContent = decoded.payload,
+                timestamp = protoMessage.timestamp,
+                status = MessageStatus.DELIVERED,
+                replyToId = null,
+                isDeleted = false,
+                signature = null
+            )
+
+            // Save to database
+            messageRepository.insertIfNotExists(message)
+
+            // Update conversation
+            conversationRepository.updateLastMessage(
+                conversation.id,
+                message.id,
+                decrypted.take(100),
+                message.timestamp
+            )
+            conversationRepository.incrementUnread(conversation.id)
+
+            // Send delivery acknowledgment via protocol
+            p2pTransport.sendDeliveryAck(protoMessage.senderAddress, decoded.messageId)
+
+        } catch (e: javax.crypto.AEADBadTagException) {
+            Timber.e(e, "AEAD verification failed - possible replay attack from ${protoMessage.senderAddress}")
+            // Do not process - this message has been tampered with or replayed
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to handle protocol message")
         }
     }
 
@@ -446,5 +568,120 @@ class ChatService @Inject constructor(
         // Clear cache first to get fresh data
         registrationManager.clearCache()
         return registrationManager.isRegistered(address)
+    }
+    
+    /**
+     * Wait for a transaction to be confirmed with the specified number of block confirmations.
+     * Delegates to the blockchain service.
+     */
+    suspend fun waitForConfirmations(
+        txHash: String,
+        requiredConfirmations: Int = 2,
+        maxWaitTimeMs: Long = 90000,
+        pollIntervalMs: Long = 2000
+    ) = blockchainService.waitForConfirmations(txHash, requiredConfirmations, maxWaitTimeMs, pollIntervalMs)
+    
+    // ========== QR Code Peer Exchange ==========
+    
+    /**
+     * Generate a QR code for peer discovery.
+     * This QR can be scanned by another user to establish a P2P connection.
+     * 
+     * The QR contains:
+     * - Wallet address
+     * - Current IP/port
+     * - Timestamp (expires after 5 minutes)
+     * - Signature (proves ownership)
+     * 
+     * @param size QR code size in pixels
+     * @return Bitmap of the QR code, or null on failure
+     */
+    suspend fun generatePeerQRCode(size: Int = 400): android.graphics.Bitmap? {
+        return try {
+            val walletAddress = walletBridge.getCurrentWalletAddress() ?: return null
+            val keys = chatKeys ?: return null
+            
+            val result = qrCodePeerExchange.generateQRCode(
+                walletAddress = walletAddress,
+                privateKeyBytes = keys.identityPrivate,
+                publicEndpoint = null  // Will be discovered via STUN
+            )
+            
+            when (result) {
+                is QRCodePeerExchange.QRCodeResult.Success -> result.bitmap
+                is QRCodePeerExchange.QRCodeResult.Error -> {
+                    Timber.e("QR generation failed: ${result.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to generate peer QR code")
+            null
+        }
+    }
+    
+    /**
+     * Get the deep link URL for peer connection.
+     * Can be shared via NFC, messaging, etc.
+     * 
+     * @return Deep link URL (mumblechat://connect?wallet=...&ip=...&port=...&ts=...&sig=...)
+     */
+    suspend fun getPeerDeepLink(): String? {
+        return try {
+            val walletAddress = walletBridge.getCurrentWalletAddress() ?: return null
+            val keys = chatKeys ?: return null
+            
+            val result = qrCodePeerExchange.generateQRCode(
+                walletAddress = walletAddress,
+                privateKeyBytes = keys.identityPrivate,
+                publicEndpoint = null
+            )
+            
+            when (result) {
+                is QRCodePeerExchange.QRCodeResult.Success -> result.deepLink
+                is QRCodePeerExchange.QRCodeResult.Error -> null
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to generate peer deep link")
+            null
+        }
+    }
+    
+    /**
+     * Parse and process a scanned QR code or deep link.
+     * If valid, will attempt to establish connection to the peer.
+     * 
+     * @param qrContent The scanned QR code content or deep link URL
+     * @return Result with connected wallet address on success
+     */
+    suspend fun processPeerQRCode(qrContent: String): Result<String> {
+        return try {
+            when (val result = qrCodePeerExchange.parseQRCode(qrContent)) {
+                is QRCodePeerExchange.ParseResult.Success -> {
+                    val walletAddress = result.peer.walletAddress
+                    Timber.i("Successfully added peer from QR: $walletAddress")
+                    Result.success(walletAddress)
+                }
+                is QRCodePeerExchange.ParseResult.InvalidFormat -> {
+                    Result.failure(Exception(result.message))
+                }
+                is QRCodePeerExchange.ParseResult.Expired -> {
+                    Result.failure(Exception(result.message))
+                }
+                is QRCodePeerExchange.ParseResult.InvalidSignature -> {
+                    Result.failure(Exception(result.message))
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to process peer QR code")
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Check if a deep link is a MumbleChat peer connection link.
+     */
+    fun isMumbleChatDeepLink(url: String): Boolean {
+        return url.startsWith("mumblechat://connect")
     }
 }

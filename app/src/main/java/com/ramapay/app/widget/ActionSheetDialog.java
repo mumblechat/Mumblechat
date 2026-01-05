@@ -506,6 +506,10 @@ public class ActionSheetDialog extends ActionSheet implements StandardFunctionIn
         }
     }
 
+    // Minimum gas price for Ramestta network (7 gwei) - prevents 0 gas price transactions
+    private static final BigInteger RAMESTTA_MIN_GAS_PRICE = new BigInteger("7000000000"); // 7 gwei
+    private static final long RAMESTTA_CHAIN_ID = 1370L;
+
     private void callGasUpdateAndRePushTx()
     {
         //fetch gas and then re-click
@@ -514,6 +518,14 @@ public class ActionSheetDialog extends ActionSheet implements StandardFunctionIn
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(gasPriceStandard -> {
                 gasToUse = gasPriceStandard;
+                
+                // Ensure Ramestta transactions have minimum gas price
+                if (token.tokenInfo.chainId == RAMESTTA_CHAIN_ID) {
+                    if (gasToUse.baseFee == null || gasToUse.baseFee.compareTo(RAMESTTA_MIN_GAS_PRICE) < 0) {
+                        gasToUse = new EIP1559FeeOracleResult(gasToUse.maxFeePerGas, gasToUse.priorityFee, RAMESTTA_MIN_GAS_PRICE);
+                    }
+                }
+                
                 if (use1559Transactions && gasToUse.maxFeePerGas.equals(BigInteger.ZERO) && gasToUse.priorityFee.equals(BigInteger.ZERO))
                 {
                     use1559Transactions = false;

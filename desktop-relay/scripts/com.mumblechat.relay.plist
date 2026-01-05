@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.mumblechat.relay</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/mumblechat-relay</string>
+        <string>start</string>
+        <string>--config</string>
+        <string>/usr/local/etc/mumblechat/config.json</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>/usr/local/var/mumblechat</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>NetworkState</key>
+        <true/>
+    </dict>
+    
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    
+    <key>StandardOutPath</key>
+    <string>/usr/local/var/log/mumblechat-relay.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/usr/local/var/log/mumblechat-relay.error.log</string>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+    
+    <key>LowPriorityIO</key>
+    <false/>
+    
+    <key>Nice</key>
+    <integer>0</integer>
+</dict>
+</plist>

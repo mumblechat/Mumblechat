@@ -56,4 +56,7 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE groupId = :groupId")
     suspend fun deleteAllForGroup(groupId: String)
+    
+    @Query("SELECT * FROM messages WHERE senderAddress = :senderAddress ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLastMessageFromSender(senderAddress: String): MessageEntity?
 }

@@ -262,24 +262,64 @@ class MumbleChatFragment : BaseFragment(),
     }
     
     private fun handleTransactionSuccess(result: com.ramapay.app.entity.TransactionReturn) {
-        Timber.d("$TAG: Transaction successful: ${result.hash}")
-        resultDialog?.dismiss()
+        Timber.d("$TAG: Transaction submitted: ${result.hash}")
         confirmationDialog?.dismiss()
         registerDialog?.dismiss()
         
-        // Show success with full transaction hash
         val txHash = result.hash ?: "Unknown"
-        val shortHash = if (txHash.length > 20) "${txHash.take(10)}...${txHash.takeLast(8)}" else txHash
         
-        // Complete registration
-        viewModel.completeRegistration()
+        // Show waiting for confirmation dialog
+        showWaitingForConfirmation(txHash)
         
-        showSuccessWithTxHash(
-            "Registration Successful!",
-            "Your MumbleChat identity is now active on the Ramestta blockchain.",
-            txHash
-        )
+        // Wait for blockchain confirmations before showing success
+        viewLifecycleOwner.lifecycleScope.launch {
+            val confirmed = viewModel.waitForRegistrationConfirmation(txHash, 2)
+            
+            resultDialog?.dismiss()
+            
+            if (confirmed) {
+                // Complete registration
+                viewModel.completeRegistration()
+                
+                showSuccessWithTxHash(
+                    "✅ Registration Confirmed!",
+                    "Your MumbleChat identity is now confirmed on the Ramestta blockchain (2 block confirmations).",
+                    txHash
+                )
+            } else {
+                // Check if still registered despite timeout
+                val isRegistered = viewModel.forceCheckRegistration(viewModel.currentWalletAddress ?: "")
+                if (isRegistered) {
+                    viewModel.completeRegistration()
+                    showSuccessWithTxHash(
+                        "✅ Registration Confirmed!",
+                        "Your MumbleChat identity is active on the blockchain.",
+                        txHash
+                    )
+                } else {
+                    showError(
+                        "Confirmation Timeout",
+                        "Transaction was sent but confirmation timed out. Please check your transaction:\n\n$txHash"
+                    )
+                }
+            }
+        }
+        
         viewModel.clearTransactionResult()
+    }
+    
+    private fun showWaitingForConfirmation(txHash: String) {
+        if (!isAdded) return
+        
+        resultDialog?.dismiss()
+        resultDialog = AWalletAlertDialog(requireContext())
+        resultDialog?.apply {
+            setTitle("⏳ Waiting for Confirmation")
+            setMessage("Transaction submitted!\n\nTx: ${txHash.take(10)}...${txHash.takeLast(6)}\n\nWaiting for 2 block confirmations...")
+            setProgressMode()
+            setCancelable(false)
+            show()
+        }
     }
     
     private fun showSuccessWithTxHash(title: String, message: String, txHash: String) {

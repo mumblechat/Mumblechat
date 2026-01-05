@@ -102,13 +102,21 @@ class RegistrationManager @Inject constructor(
 
     /**
      * Get update public key transaction data.
+     * Used for key rotation to update the on-chain public key.
+     * 
+     * @param newPublicKey The new public key (32 bytes)
+     * @param keyVersion Optional key version for tracking rotations
+     * @return Encoded transaction data for signing
      */
-    fun getUpdateKeyTxData(newPublicKey: ByteArray): String {
+    fun getUpdateKeyTxData(newPublicKey: ByteArray, keyVersion: Int = 1): String {
+        // Include version in the function if contract supports it
+        // For now, we just update the public key
         val function = Function(
             "updatePublicKey",
             listOf(Bytes32(newPublicKey.copyOf(32))),
             emptyList()
         )
+        Timber.i("Generating updatePublicKey tx data, keyVersion=$keyVersion")
         return FunctionEncoder.encode(function)
     }
     

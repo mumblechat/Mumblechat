@@ -12,6 +12,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.ramapay.app.C
 import com.ramapay.app.R
 import com.ramapay.app.chat.ui.conversation.ConversationActivity
 import com.ramapay.app.chat.ui.dialog.QRCodeDialog
@@ -121,6 +122,11 @@ class NewChatActivity : AppCompatActivity() {
             val pastedText = clipData.getItemAt(0).text?.toString()?.trim() ?: ""
             
             if (pastedText.isNotEmpty()) {
+                // Pre-set lastVerifiedAddress to prevent TextWatcher from triggering verification
+                if (isValidAddress(pastedText)) {
+                    lastVerifiedAddress = pastedText.lowercase()
+                }
+                
                 binding.editAddress.setText(pastedText)
                 binding.editAddress.setSelection(pastedText.length)
                 
@@ -347,17 +353,30 @@ class NewChatActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         
         if (requestCode == REQUEST_CODE_QR_SCAN && resultCode == RESULT_OK) {
-            val scannedAddress = data?.getStringExtra("address") ?: data?.getStringExtra("result")
-            scannedAddress?.let { address ->
-                // Clean the address (remove any prefixes)
-                val cleanAddress = if (address.startsWith("ethereum:")) {
-                    address.removePrefix("ethereum:").split("@").first()
-                } else {
-                    address
+            // QRScannerActivity uses C.EXTRA_QR_CODE key
+            val scannedData = data?.getStringExtra(C.EXTRA_QR_CODE) 
+                ?: data?.getStringExtra("address") 
+                ?: data?.getStringExtra("result")
+            
+            scannedData?.let { rawData ->
+                // Clean the address (remove any prefixes like "ethereum:" or EIP-681 format)
+                val cleanAddress = when {
+                    rawData.startsWith("ethereum:") -> {
+                        // EIP-681 format: ethereum:0x1234...@chainId/...
+                        rawData.removePrefix("ethereum:").split("@", "?", "/").first()
+                    }
+                    rawData.startsWith("0x") && rawData.length >= 42 -> {
+                        // Already a plain address, extract just the address part
+                        rawData.substring(0, 42)
+                    }
+                    else -> rawData
                 }
                 
                 if (isValidAddress(cleanAddress)) {
+                    // Set as last verified to prevent TextWatcher from re-verifying
+                    lastVerifiedAddress = cleanAddress.lowercase()
                     binding.editAddress.setText(cleanAddress)
+                    binding.editAddress.setSelection(cleanAddress.length)
                     verifyAddress(cleanAddress)
                 } else {
                     Toast.makeText(this, getString(R.string.invalid_wallet_address), Toast.LENGTH_SHORT).show()

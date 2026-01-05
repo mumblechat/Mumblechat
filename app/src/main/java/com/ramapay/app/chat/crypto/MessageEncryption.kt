@@ -71,15 +71,24 @@ class MessageEncryption @Inject constructor() {
     /**
      * Encrypt a message for direct messaging (1:1).
      * 
+     * SECURITY: Uses AEAD Associated Data (AAD) binding to prevent replay attacks.
+     * AAD binds the ciphertext to (senderNodeID + recipientNodeID + messageID).
+     * 
      * @param plaintext The message content
      * @param senderSessionPrivate Sender's X25519 private key
      * @param recipientSessionPublic Recipient's X25519 public key
+     * @param senderNodeId Sender's NodeID (SHA256 of wallet) - used in AAD
+     * @param recipientNodeId Recipient's NodeID - used in AAD
+     * @param messageId Unique message ID - used in AAD
      * @return Encrypted message
      */
     fun encryptMessage(
         plaintext: String,
         senderSessionPrivate: ByteArray,
-        recipientSessionPublic: ByteArray
+        recipientSessionPublic: ByteArray,
+        senderNodeId: ByteArray? = null,
+        recipientNodeId: ByteArray? = null,
+        messageId: String? = null
     ): EncryptedMessage {
         // Step 1: X25519 key exchange (simplified - use proper ECDH in production)
         val sharedSecret = computeSharedSecret(senderSessionPrivate, recipientSessionPublic)
@@ -91,11 +100,20 @@ class MessageEncryption @Inject constructor() {
         val nonce = ByteArray(NONCE_LENGTH)
         SecureRandom().nextBytes(nonce)
 
-        // Step 4: AES-256-GCM encrypt
+        // Step 4: Build AEAD Associated Data (prevents replay attacks)
+        // Binds ciphertext to sender + recipient + messageId
+        val aad = buildAssociatedData(senderNodeId, recipientNodeId, messageId)
+
+        // Step 5: AES-256-GCM encrypt with AAD
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val keySpec = SecretKeySpec(messageKey, "AES")
         val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, nonce)
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec)
+        
+        // Add AAD before encryption (CRITICAL for replay attack prevention)
+        if (aad.isNotEmpty()) {
+            cipher.updateAAD(aad)
+        }
 
         val plaintextBytes = plaintext.toByteArray(Charsets.UTF_8)
         val ciphertextWithTag = cipher.doFinal(plaintextBytes)
@@ -109,11 +127,21 @@ class MessageEncryption @Inject constructor() {
 
     /**
      * Decrypt a message from direct messaging.
+     * 
+     * SECURITY: Requires same AAD that was used during encryption.
+     * If AAD doesn't match, decryption will fail (replay attack detected).
+     * 
+     * @param senderNodeId Sender's NodeID - must match encryption AAD
+     * @param recipientNodeId Recipient's NodeID - must match encryption AAD  
+     * @param messageId Message ID - must match encryption AAD
      */
     fun decryptMessage(
         encrypted: EncryptedMessage,
         recipientSessionPrivate: ByteArray,
-        senderSessionPublic: ByteArray
+        senderSessionPublic: ByteArray,
+        senderNodeId: ByteArray? = null,
+        recipientNodeId: ByteArray? = null,
+        messageId: String? = null
     ): String {
         // Step 1: X25519 key exchange
         val sharedSecret = computeSharedSecret(recipientSessionPrivate, senderSessionPublic)
@@ -121,11 +149,19 @@ class MessageEncryption @Inject constructor() {
         // Step 2: Derive message key
         val messageKey = deriveMessageKey(sharedSecret)
 
-        // Step 3: AES-256-GCM decrypt
+        // Step 3: Build AEAD Associated Data (must match encryption)
+        val aad = buildAssociatedData(senderNodeId, recipientNodeId, messageId)
+
+        // Step 4: AES-256-GCM decrypt with AAD
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val keySpec = SecretKeySpec(messageKey, "AES")
         val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, encrypted.nonce)
         cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec)
+        
+        // Add AAD before decryption (MUST match what was used in encryption)
+        if (aad.isNotEmpty()) {
+            cipher.updateAAD(aad)
+        }
 
         // Combine ciphertext and auth tag for decryption
         val ciphertextWithTag = encrypted.ciphertext + encrypted.authTag
@@ -217,6 +253,31 @@ class MessageEncryption @Inject constructor() {
         // Use HKDF to derive a 32-byte key
         return Hash.sha3(sharedSecret + "message_key".toByteArray())
             .copyOfRange(0, KEY_LENGTH)
+    }
+
+    /**
+     * Build AEAD Associated Data from sender, recipient, and messageId.
+     * 
+     * This binds the ciphertext to the conversation context, preventing:
+     * - Replay attacks (reusing same ciphertext)
+     * - Message redirection (sending to different recipient)
+     * - Message injection (attacker inserting messages)
+     * 
+     * Format: senderNodeId (32) || recipientNodeId (32) || SHA256(messageId)
+     */
+    private fun buildAssociatedData(
+        senderNodeId: ByteArray?,
+        recipientNodeId: ByteArray?,
+        messageId: String?
+    ): ByteArray {
+        if (senderNodeId == null || recipientNodeId == null || messageId == null) {
+            return ByteArray(0)  // Backward compatibility
+        }
+        
+        val messageIdHash = Hash.sha3(messageId.toByteArray(Charsets.UTF_8))
+        
+        // AAD = sender || recipient || messageIdHash
+        return senderNodeId + recipientNodeId + messageIdHash
     }
 
     /**

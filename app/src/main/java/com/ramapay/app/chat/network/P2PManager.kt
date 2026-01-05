@@ -7,6 +7,7 @@ import com.ramapay.app.chat.core.ChatConfig
 import com.ramapay.app.chat.crypto.ChatKeyManager
 import com.ramapay.app.chat.crypto.ChatKeyStore
 import com.ramapay.app.chat.crypto.MessageEncryption
+import com.ramapay.app.chat.relay.RelayMessageService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -86,7 +87,8 @@ enum class ConnectionState {
 class P2PManager @Inject constructor(
     private val context: Context,
     private val chatKeyStore: ChatKeyStore,
-    private val blockchainService: MumbleChatBlockchainService
+    private val blockchainService: MumbleChatBlockchainService,
+    private val relayMessageService: RelayMessageService
 ) {
     companion object {
         // P2P Configuration
@@ -863,7 +865,24 @@ class P2PManager @Inject constructor(
             return SendResult(direct = false, relayed = true, relayId = relayResult)
         }
 
-        // Try 4: Store for later (recipient offline)
+        // Try 4: Send via RelayMessageService (internet relay nodes)
+        try {
+            val encryptedBytes = encrypted.toBytes()
+            val sent = relayMessageService.sendMessage(
+                recipientAddress = recipientAddress,
+                encryptedContent = encryptedBytes,
+                messageId = messageId,
+                contentType = "TEXT"
+            )
+            if (sent) {
+                Timber.d("Message $messageId sent via RelayMessageService")
+                return SendResult(direct = false, relayed = true, relayId = "relay_service")
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to send via RelayMessageService")
+        }
+
+        // Try 5: Store for later (recipient offline)
         storeForLater(recipientAddress, encrypted, messageId)
         return SendResult(direct = false, relayed = false)
     }
@@ -1379,6 +1398,71 @@ class P2PManager @Inject constructor(
 
     suspend fun getPeerPublicKey(address: String): ByteArray? {
         return connectedPeers[address]?.publicKey
+    }
+    
+    /**
+     * Get list of all online peer addresses.
+     * Used by RelayService to deliver stored messages.
+     */
+    fun getOnlinePeers(): List<String> {
+        return connectedPeers.values
+            .filter { it.isOnline }
+            .map { it.address }
+    }
+    
+    /**
+     * Deliver a stored message to a recipient.
+     * Used by RelayService for offline message delivery.
+     * 
+     * @param recipientAddress The recipient's wallet address
+     * @param messageId The message ID
+     * @param encryptedBlob The encrypted message blob
+     * @return true if delivery was successful
+     */
+    suspend fun deliverStoredMessage(
+        recipientAddress: String,
+        messageId: String,
+        encryptedBlob: ByteArray
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val peer = connectedPeers[recipientAddress]
+            if (peer == null || !peer.isOnline || peer.socket == null) {
+                return@withContext false
+            }
+            
+            // Parse blob back into encrypted message format
+            // Blob format: ciphertext + nonce (last 12 bytes)
+            if (encryptedBlob.size < 12) {
+                Timber.e("Invalid encrypted blob size")
+                return@withContext false
+            }
+            
+            val nonceSize = 12
+            val ciphertext = encryptedBlob.copyOfRange(0, encryptedBlob.size - nonceSize)
+            val nonce = encryptedBlob.copyOfRange(encryptedBlob.size - nonceSize, encryptedBlob.size)
+            
+            // Build relay forward message
+            val message = JSONObject().apply {
+                put("type", "RELAY_FORWARD")
+                put("id", messageId)
+                put("from", myWalletAddress)
+                put("to", recipientAddress)
+                put("encrypted", ciphertext.toHex())
+                put("nonce", nonce.toHex())
+                put("timestamp", System.currentTimeMillis())
+            }
+            
+            // Send to peer
+            val writer = PrintWriter(peer.socket!!.getOutputStream(), true)
+            writer.println(message.toString())
+            
+            Timber.d("Delivered stored message $messageId to $recipientAddress")
+            true
+            
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to deliver stored message $messageId")
+            false
+        }
     }
 
     // ============ Utility Functions ============

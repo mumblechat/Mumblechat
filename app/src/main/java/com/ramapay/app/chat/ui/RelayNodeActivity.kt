@@ -10,14 +10,23 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.ramapay.app.R
 import com.ramapay.app.chat.blockchain.RelayNodeStatus
+import com.ramapay.app.chat.core.WalletBridge
+import com.ramapay.app.chat.service.NonceClearService
 import com.ramapay.app.chat.viewmodel.RelayNodeViewModel
 import com.ramapay.app.databinding.ActivityRelayNodeBinding
+import com.ramapay.app.entity.SignAuthenticationCallback
+import com.ramapay.app.service.KeyService
 import com.ramapay.app.widget.AWalletAlertDialog
+import com.ramapay.hardware.SignatureFromKey
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.inject.Inject
 
 /**
  * Activity for managing relay node status.
@@ -35,6 +44,11 @@ class RelayNodeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRelayNodeBinding
     private val viewModel: RelayNodeViewModel by viewModels()
     
+    @Inject lateinit var nonceClearService: NonceClearService
+    @Inject lateinit var walletBridge: WalletBridge
+    @Inject lateinit var keyService: KeyService
+    
+    private val disposables = CompositeDisposable()
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     private val decimalFormat = DecimalFormat("#,##0.000000") // 6 decimal places for small MCT values
 
@@ -84,6 +98,11 @@ class RelayNodeActivity : AppCompatActivity() {
             showClaimDailyPoolConfirmation()
         }
         
+        // Clear stuck transactions button
+        binding.btnClearStuckTx.setOnClickListener {
+            checkAndClearStuckTransactions()
+        }
+        
         // V3.2: Setup earnings dashboard tabs
         setupEarningsTabs()
         
@@ -91,7 +110,11 @@ class RelayNodeActivity : AppCompatActivity() {
         binding.btnRefreshStats.setOnClickListener {
             viewModel.loadRelayStatus()
             viewModel.loadDailyPoolStats()
+            checkForStuckTransactions() // Also check for stuck txs on refresh
         }
+        
+        // Initial check for stuck transactions
+        checkForStuckTransactions()
     }
 
     private fun observeViewModel() {
@@ -165,6 +188,18 @@ class RelayNodeActivity : AppCompatActivity() {
             }
         }
         
+        // Observe transaction status message - show as overlay
+        lifecycleScope.launch {
+            viewModel.txStatusMessage.collect { message ->
+                if (message != null) {
+                    binding.textTxStatus.text = message
+                    binding.overlayTxStatus.visibility = View.VISIBLE
+                } else {
+                    binding.overlayTxStatus.visibility = View.GONE
+                }
+            }
+        }
+        
         // V3.1: Observe daily pool stats
         lifecycleScope.launch {
             viewModel.dailyPoolStats.collect { stats ->
@@ -178,6 +213,48 @@ class RelayNodeActivity : AppCompatActivity() {
                 updateClaimableRewardUI(claimable)
             }
         }
+        
+        // V4: Observe authentication requests for wallet signing
+        // This handles biometric/PIN authentication for HD and keystore wallets
+        lifecycleScope.launch {
+            viewModel.authenticationRequest.collect { request ->
+                request?.let { authRequest ->
+                    Timber.d("Authentication requested for: ${authRequest.operationName}")
+                    handleAuthenticationRequest(authRequest)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Handle authentication request from ViewModel.
+     * Triggers biometric/PIN authentication for KEYSTORE and HDKEY wallets.
+     */
+    private fun handleAuthenticationRequest(request: RelayNodeViewModel.AuthenticationRequest) {
+        val signCallback = object : SignAuthenticationCallback {
+            override fun gotAuthorisation(gotAuth: Boolean) {
+                Timber.d("Authentication result: $gotAuth")
+                if (gotAuth) {
+                    viewModel.onAuthenticationSuccess()
+                } else {
+                    viewModel.onAuthenticationFailed()
+                }
+            }
+
+            override fun cancelAuthentication() {
+                Timber.d("Authentication cancelled")
+                viewModel.onAuthenticationFailed()
+            }
+
+            override fun gotSignature(signature: SignatureFromKey) {
+                // For hardware wallets - the signature is returned directly
+                Timber.d("Got hardware wallet signature")
+                viewModel.onAuthenticationSuccess()
+            }
+        }
+
+        // Request authentication from the ViewModel (which uses KeyService)
+        viewModel.getAuthorisation(this, signCallback)
     }
 
     private fun updateUI(status: RelayNodeStatus?) {
@@ -610,5 +687,128 @@ class RelayNodeActivity : AppCompatActivity() {
         }
         
         dialog.show()
+    }
+    
+    // ============ Clear Stuck Transactions ============
+    
+    private fun checkForStuckTransactions() {
+        val walletAddress = walletBridge.getCurrentWalletAddress() ?: return
+        
+        disposables.add(
+            nonceClearService.checkNonceStatus(walletAddress)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ status ->
+                    binding.btnClearStuckTx.visibility = if (status.hasStuckTransactions) {
+                        binding.btnClearStuckTx.text = "🔧 Clear ${status.stuckCount} Stuck Transaction${if (status.stuckCount > 1) "s" else ""}"
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
+                }, { _ ->
+                    binding.btnClearStuckTx.visibility = View.GONE
+                })
+        )
+    }
+    
+    private fun checkAndClearStuckTransactions() {
+        val walletAddress = walletBridge.getCurrentWalletAddress()
+        if (walletAddress == null) {
+            Toast.makeText(this, "No wallet connected", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val progressDialog = AWalletAlertDialog(this).apply {
+            setTitle("Checking Transactions")
+            setMessage("Looking for stuck transactions...")
+            setProgressMode()
+            setCancelable(false)
+            show()
+        }
+        
+        disposables.add(
+            nonceClearService.checkNonceStatus(walletAddress)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ status ->
+                    progressDialog.dismiss()
+                    
+                    if (status.hasStuckTransactions) {
+                        showClearNonceDialog(status.stuckCount)
+                    } else {
+                        Toast.makeText(this, "✅ No stuck transactions found", Toast.LENGTH_SHORT).show()
+                        binding.btnClearStuckTx.visibility = View.GONE
+                    }
+                }, { error ->
+                    progressDialog.dismiss()
+                    Toast.makeText(this, "Error: ${error.message}", Toast.LENGTH_LONG).show()
+                })
+        )
+    }
+    
+    private fun showClearNonceDialog(stuckCount: Int) {
+        AlertDialog.Builder(this)
+            .setTitle("⚠️ Stuck Transactions Found")
+            .setMessage(
+                "Found $stuckCount stuck transaction${if (stuckCount > 1) "s" else ""}.\n\n" +
+                "These are pending transactions that haven't been confirmed by the network.\n\n" +
+                "Clearing them will:\n" +
+                "• Send $stuckCount small replacement transaction${if (stuckCount > 1) "s" else ""}\n" +
+                "• Use a higher gas price to replace stuck ones\n" +
+                "• Cost a small amount of RAMA for gas\n\n" +
+                "Do you want to proceed?"
+            )
+            .setPositiveButton("Clear Now") { _, _ ->
+                performNonceClear()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun performNonceClear() {
+        val wallet = walletBridge.getCurrentWallet()
+        if (wallet == null) {
+            Toast.makeText(this, "No wallet connected", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val progressDialog = AWalletAlertDialog(this).apply {
+            setTitle("Clearing Stuck Transactions")
+            setMessage("Sending replacement transactions...")
+            setProgressMode()
+            setCancelable(false)
+            show()
+        }
+        
+        disposables.add(
+            nonceClearService.clearStuckTransactions(wallet)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ result ->
+                    progressDialog.dismiss()
+                    
+                    if (result.success) {
+                        Toast.makeText(
+                            this,
+                            "✅ Cleared ${result.clearedCount} stuck transaction${if (result.clearedCount > 1) "s" else ""}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        binding.btnClearStuckTx.visibility = View.GONE
+                        // Refresh status after clearing
+                        viewModel.loadRelayStatus()
+                    } else {
+                        Toast.makeText(
+                            this,
+                            "Failed to clear: ${result.error}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }, { error ->
+                    progressDialog.dismiss()
+                    Toast.makeText(this, "Error: ${error.message}", Toast.LENGTH_LONG).show()
+                })
+        )
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        disposables.clear()
     }
 }

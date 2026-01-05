@@ -176,6 +176,10 @@ class ConversationActivity : AppCompatActivity() {
                 showClearHistoryConfirmation()
                 true
             }
+            R.id.action_delete_contact -> {
+                showDeleteContactConfirmation()
+                true
+            }
             R.id.action_export_chat -> {
                 exportChat()
                 true
@@ -255,6 +259,29 @@ class ConversationActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.clearChatHistory()
             Toast.makeText(this@ConversationActivity, R.string.chat_cleared, Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun showDeleteContactConfirmation() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.delete_contact)
+            .setMessage(R.string.delete_contact_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                deleteContact()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun deleteContact() {
+        lifecycleScope.launch {
+            val success = viewModel.deleteContact(peerAddress)
+            if (success) {
+                Toast.makeText(this@ConversationActivity, R.string.contact_deleted, Toast.LENGTH_SHORT).show()
+                finish()
+            } else {
+                Toast.makeText(this@ConversationActivity, "Failed to delete contact", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     

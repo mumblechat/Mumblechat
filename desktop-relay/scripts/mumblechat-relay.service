@@ -1,0 +1,47 @@
+[Unit]
+Description=MumbleChat Desktop Relay Node
+Documentation=https://github.com/ramestta/mumblechat-relay
+After=network.target
+
+[Service]
+Type=simple
+User=mumblechat
+Group=mumblechat
+WorkingDirectory=/opt/mumblechat-relay
+ExecStart=/usr/local/bin/mumblechat-relay start --config /etc/mumblechat/config.json
+ExecStop=/bin/kill -SIGTERM $MAINPID
+Restart=always
+RestartSec=10
+
+# Environment
+Environment=NODE_ENV=production
+EnvironmentFile=-/etc/mumblechat/relay.env
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+MemoryDenyWriteExecute=true
+LockPersonality=true
+
+# Resource limits
+LimitNOFILE=65535
+MemoryMax=2G
+CPUQuota=80%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mumblechat-relay
+
+[Install]
+WantedBy=multi-user.target

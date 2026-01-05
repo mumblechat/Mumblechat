@@ -327,6 +327,38 @@ class ChatViewModel @Inject constructor(
             }
         }
     }
+    
+    /**
+     * Wait for a registration transaction to be confirmed with block confirmations.
+     * 
+     * @param txHash The transaction hash to wait for
+     * @param requiredConfirmations Number of block confirmations to wait for
+     * @return true if confirmed successfully, false if timeout or failed
+     */
+    suspend fun waitForRegistrationConfirmation(txHash: String, requiredConfirmations: Int = 2): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val confirmation = chatService.waitForConfirmations(
+                    txHash = txHash,
+                    requiredConfirmations = requiredConfirmations,
+                    maxWaitTimeMs = 90000, // 90 seconds max
+                    pollIntervalMs = 2000   // Check every 2 seconds
+                )
+                
+                if (confirmation != null && confirmation.status) {
+                    Timber.d("Registration tx $txHash confirmed at block ${confirmation.blockNumber} with ${confirmation.confirmations} confirmations")
+                    _registrationState.value = RegistrationState.Registered
+                    true
+                } else {
+                    Timber.w("Registration tx $txHash failed or timed out")
+                    false
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error waiting for registration confirmation")
+                false
+            }
+        }
+    }
 
     /**
      * Complete registration after transaction is sent.

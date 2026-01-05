@@ -36,23 +36,24 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
-            <a href="/" class="logo">
+            <a href="index.html" class="logo">
                 <div class="logo-icon">💬</div>
                 <span>MumbleChat</span>
             </a>
             
             <ul class="nav-links">
-                <li><a href="/" class="active">Home</a></li>
-                <li><a href="/protocol">Protocol</a></li>
-                <li><a href="/token">MCT Token</a></li>
-                <li><a href="/relay-nodes">Relay Nodes</a></li>
-                <li><a href="/download">Download</a></li>
-                <li><a href="/docs">Docs</a></li>
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="protocol.html">Protocol</a></li>
+                <li><a href="token.html">MCT Token</a></li>
+                <li><a href="relay-nodes.html">Relay Nodes</a></li>
+                <li><a href="relay-node.html" style="color: #4bc0c8;">🚀 Run Node</a></li>
+                <li><a href="download.html">Download</a></li>
+                <li><a href="docs.html">Docs</a></li>
             </ul>
             
             <div class="nav-actions">
-                <a href="/download" class="btn btn-primary">
-                    Download App
+                <a href="chat2.html" class="btn btn-primary">
+                    Chat Now
                 </a>
                 <button class="mobile-menu-btn">☰</button>
             </div>
@@ -64,7 +65,7 @@
         <div class="hero-content animate-fade-in">
             <div class="hero-badge">
                 <span>🚀</span>
-                <span>V2.0 - Native Protocol • No XMTP</span>
+                <span>V3.0 - Native Protocol • 99% Complete</span>
             </div>
             
             <h1 class="hero-title">
@@ -73,15 +74,19 @@
             </h1>
             
             <p class="hero-subtitle">
-                MumbleChat Protocol: Native, end-to-end encrypted messaging on Ramestta blockchain. 
-                Earn MCT tokens as a relay node. No middlemen. No centralized servers. Just pure P2P communication.
+                MumbleChat Protocol: Native, end-to-end encrypted P2P messaging on Ramestta blockchain. 
+                Kademlia DHT routing, STUN/UDP hole punching, Sybil-resistant peer discovery. 
+                Earn MCT tokens as a relay node. Zero central servers.
             </p>
             
             <div class="hero-actions">
-                <a href="/download" class="btn btn-primary btn-lg">
+                <a href="download.html" class="btn btn-primary btn-lg">
                     📱 Download RamaPay
                 </a>
-                <a href="/protocol" class="btn btn-secondary btn-lg">
+                <a href="relay-node.html" class="btn btn-primary btn-lg" style="background: linear-gradient(135deg, #4bc0c8, #2dd4bf);">
+                    📡 Become a Relay Node
+                </a>
+                <a href="protocol.html" class="btn btn-secondary btn-lg">
                     📖 How It Works
                 </a>
             </div>
@@ -144,10 +149,10 @@
                 
                 <div class="card">
                     <div class="card-icon">🌐</div>
-                    <h3 class="card-title">P2P Relay Network</h3>
+                    <h3 class="card-title">Kademlia DHT + NAT Traversal</h3>
                     <p class="card-text">
-                        Decentralized relay nodes store encrypted messages for offline users. 
-                        Earn MCT tokens for providing storage and uptime.
+                        Full Kademlia DHT for peer discovery. STUN servers + UDP hole punching 
+                        for direct P2P connections. Relay nodes for offline message storage.
                     </p>
                 </div>
                 
@@ -171,10 +176,11 @@
                 
                 <div class="card">
                     <div class="card-icon">🛡️</div>
-                    <h3 class="card-title">Censorship Resistant</h3>
+                    <h3 class="card-title">Sybil & DoS Resistant</h3>
                     <p class="card-text">
-                        No central server to shut down. Messages routed through 
-                        decentralized relay network. Your conversations, your rules.
+                        Wallet signature verification prevents Sybil attacks. 
+                        Rate limiting protects against spam (100 msg/min per peer). 
+                        No central point of failure.
                     </p>
                 </div>
             </div>
@@ -185,9 +191,9 @@
     <section class="section" style="background: var(--bg-card);">
         <div class="container">
             <div class="section-title">
-                <h2>MumbleChat <span>V1 vs V2</span></h2>
+                <h2>MumbleChat <span>V1 → V2 → V3</span></h2>
                 <p class="section-subtitle">
-                    See what changed from the XMTP-based version to our new native protocol.
+                    Evolution from XMTP-based to fully native P2P protocol with Sybil resistance.
                 </p>
             </div>
             
@@ -197,10 +203,11 @@
                         <tr>
                             <th>Feature</th>
                             <th>V1 (XMTP)</th>
+                            <th>V2 (Native)</th>
                             <th>
                                 <div class="comparison-header">
-                                    V2 (Native)
-                                    <span class="comparison-badge">NEW</span>
+                                    V3 (P2P + Security)
+                                    <span class="comparison-badge">CURRENT</span>
                                 </div>
                             </th>
                         </tr>
@@ -209,47 +216,56 @@
                         <tr>
                             <td>Protocol</td>
                             <td>XMTP (third-party)</td>
-                            <td>✅ Native MumbleChat Protocol</td>
+                            <td>Native MumbleChat</td>
+                            <td>✅ Full P2P + Kademlia DHT</td>
                         </tr>
                         <tr>
                             <td>Encryption</td>
-                            <td>Signal Protocol via XMTP</td>
-                            <td>✅ X25519 + AES-256-GCM (native)</td>
+                            <td>Signal via XMTP</td>
+                            <td>X25519 + AES-256-GCM</td>
+                            <td>✅ + AEAD Binding (anti-replay)</td>
                         </tr>
                         <tr>
-                            <td>Identity Storage</td>
+                            <td>Peer Discovery</td>
                             <td>XMTP Network</td>
-                            <td>✅ On-chain (MumbleChatRegistry)</td>
+                            <td>Blockchain Lookup</td>
+                            <td>✅ Kademlia DHT + STUN</td>
                         </tr>
                         <tr>
-                            <td>Message Relay</td>
-                            <td>XMTP Nodes</td>
-                            <td>✅ Decentralized Relay Nodes</td>
+                            <td>NAT Traversal</td>
+                            <td>❌ None</td>
+                            <td>❌ None</td>
+                            <td>✅ UDP Hole Punching</td>
+                        </tr>
+                        <tr>
+                            <td>Sybil Protection</td>
+                            <td>❌ None</td>
+                            <td>❌ None</td>
+                            <td>✅ Wallet Signature Verification</td>
+                        </tr>
+                        <tr>
+                            <td>Rate Limiting</td>
+                            <td>❌ None</td>
+                            <td>❌ None</td>
+                            <td>✅ 100 msg/min per peer</td>
+                        </tr>
+                        <tr>
+                            <td>Battery Optimization</td>
+                            <td>❌ Always-on</td>
+                            <td>Basic</td>
+                            <td>✅ 4-mode Strategy Manager</td>
                         </tr>
                         <tr>
                             <td>Token Rewards</td>
                             <td>❌ None</td>
-                            <td>✅ MCT Token (tier-based)</td>
+                            <td>✅ MCT Token</td>
+                            <td>✅ MCT V3 + Daily Pool</td>
                         </tr>
                         <tr>
-                            <td>Become Relay Node</td>
-                            <td>❌ Not possible</td>
-                            <td>✅ Stake 100 MCT, earn rewards</td>
-                        </tr>
-                        <tr>
-                            <td>Fee Pool</td>
-                            <td>❌ None</td>
-                            <td>✅ 0.1% of transfers</td>
-                        </tr>
-                        <tr>
-                            <td>Device Expiry</td>
-                            <td>90 days (XMTP)</td>
-                            <td>✅ No expiry (key rotation supported)</td>
-                        </tr>
-                        <tr>
-                            <td>Dependency</td>
-                            <td>Requires XMTP network</td>
-                            <td>✅ Self-sovereign (Ramestta only)</td>
+                            <td>Implementation</td>
+                            <td>Deprecated</td>
+                            <td>Partial</td>
+                            <td>✅ 99% Complete</td>
                         </tr>
                     </tbody>
                 </table>
@@ -306,10 +322,10 @@
                 messaging with full encryption and privacy.
             </p>
             <div class="hero-actions">
-                <a href="/download" class="btn btn-lg" style="background: white; color: var(--primary);">
+                <a href="download.html" class="btn btn-lg" style="background: white; color: var(--primary);">
                     📱 Download Now
                 </a>
-                <a href="/relay-nodes" class="btn btn-lg" style="background: transparent; border: 2px solid white; color: white;">
+                <a href="relay-nodes.html" class="btn btn-lg" style="background: transparent; border: 2px solid white; color: white;">
                     🌐 Become a Relay Node
                 </a>
             </div>
@@ -321,7 +337,7 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <a href="/" class="logo">
+                    <a href="index.html" class="logo">
                         <div class="logo-icon">💬</div>
                         <span>MumbleChat</span>
                     </a>
@@ -332,38 +348,38 @@
                 <div>
                     <h4 class="footer-title">Protocol</h4>
                     <ul class="footer-links">
-                        <li><a href="/protocol">How It Works</a></li>
-                        <li><a href="/protocol#encryption">Encryption</a></li>
-                        <li><a href="/protocol#identity">Identity</a></li>
-                        <li><a href="/protocol#messaging">Messaging</a></li>
+                        <li><a href="protocol.html">How It Works</a></li>
+                        <li><a href="protocol.html#encryption">Encryption</a></li>
+                        <li><a href="protocol.html#identity">Identity</a></li>
+                        <li><a href="protocol.html#messaging">Messaging</a></li>
                     </ul>
                 </div>
                 
                 <div>
                     <h4 class="footer-title">Token</h4>
                     <ul class="footer-links">
-                        <li><a href="/token">MCT Tokenomics</a></li>
-                        <li><a href="/token#halving">Halving</a></li>
-                        <li><a href="/token#rewards">Rewards</a></li>
-                        <li><a href="/token#governance">Governance</a></li>
+                        <li><a href="token.html">MCT Tokenomics</a></li>
+                        <li><a href="token.html#halving">Halving</a></li>
+                        <li><a href="token.html#rewards">Rewards</a></li>
+                        <li><a href="token.html#governance">Governance</a></li>
                     </ul>
                 </div>
                 
                 <div>
                     <h4 class="footer-title">Relay Nodes</h4>
                     <ul class="footer-links">
-                        <li><a href="/relay-nodes">Become a Node</a></li>
-                        <li><a href="/relay-nodes#tiers">Tier System</a></li>
-                        <li><a href="/relay-nodes#earnings">Earnings</a></li>
-                        <li><a href="/relay-nodes#requirements">Requirements</a></li>
+                        <li><a href="relay-nodes.html">Become a Node</a></li>
+                        <li><a href="relay-nodes.html#tiers">Tier System</a></li>
+                        <li><a href="relay-nodes.html#earnings">Earnings</a></li>
+                        <li><a href="relay-nodes.html#requirements">Requirements</a></li>
                     </ul>
                 </div>
                 
                 <div>
                     <h4 class="footer-title">Resources</h4>
                     <ul class="footer-links">
-                        <li><a href="/download">Download</a></li>
-                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="download.html">Download</a></li>
+                        <li><a href="docs.html">Documentation</a></li>
                         <li><a href="https://ramascan.com" target="_blank">RamaScan</a></li>
                         <li><a href="https://ramestta.com" target="_blank">Ramestta</a></li>
                     </ul>
@@ -371,7 +387,7 @@
             </div>
             
             <div class="footer-bottom">
-                <span>© 2026 MumbleChat Protocol. Built on Ramestta.</span>
+                <span>© 2026 MumbleChat Protocol V3.0 (99% Complete). Built on Ramestta.</span>
                 <div class="footer-social">
                     <a href="#" title="Twitter">𝕏</a>
                     <a href="#" title="Discord">💬</a>

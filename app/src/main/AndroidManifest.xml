@@ -8,12 +8,17 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Required for MumbleChat P2P LAN discovery -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Note: this permission is used to display the active WalletConnect Notification. This is a courtesy to the user to inform them a WalletConnect channel is active -->
     <!-- This is pegged to class WalletConnectV2Service which has no data connection, the data connection is only active when the RamaPay app is open -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Required for MumbleChat Relay Service (Android 14+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
 
     <uses-feature
@@ -96,6 +101,14 @@
             </intent-filter>
             <intent-filter>
                 <data android:scheme="ramapay" />
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+            <!-- MumbleChat P2P Peer Exchange Deep Links -->
+            <intent-filter>
+                <data android:scheme="mumblechat" />
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
@@ -232,6 +245,12 @@
                 android:name=".chat.ui.RelayNodeActivity"
                 android:theme="@style/AppTheme.NoActionBar"
                 android:label="Relay Node" />
+
+        <!-- MumbleChat Relay Service - Foreground service for P2P relay operations -->
+        <service
+                android:name=".chat.relay.RelayService"
+                android:foregroundServiceType="dataSync"
+                android:exported="false" />
 
         <service
                 android:name=".service.RamaPayFirebaseMessagingService"

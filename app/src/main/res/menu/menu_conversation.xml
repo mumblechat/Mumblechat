@@ -34,6 +34,12 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_delete_contact"
+        android:icon="@drawable/ic_delete"
+        android:title="@string/delete_contact"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_export_chat"
         android:icon="@drawable/ic_share"
         android:title="@string/export_chat"

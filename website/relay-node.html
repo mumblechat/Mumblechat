@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MumbleChat Relay Node - Earn MCT Tokens</title>
+    <meta name="description" content="Run a MumbleChat relay node and earn MCT tokens. Browser or desktop node options available.">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Additional CSS variables for compatibility */
+        :root {
+            --text: var(--text-primary);
+            --bg-soft: var(--bg-card-hover);
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+            height: auto !important;
+            overflow: auto !important;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: auto !important;
+            overflow: auto !important;
+            overflow-x: hidden !important;
+        }
+        
+        .relay-dashboard {
+            background: var(--bg-dark);
+            padding: 20px;
+            width: 100%;
+            min-height: 100vh;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px currentColor; }
+            50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Setup Wizard Styles */
+        .setup-wizard {
+            background: linear-gradient(135deg, rgba(27, 140, 255, 0.1), rgba(75, 192, 200, 0.1));
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 30px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .wizard-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .wizard-header h2 {
+            font-size: 28px;
+            margin: 0 0 10px;
+            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .wizard-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .wizard-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 10%;
+            right: 10%;
+            height: 3px;
+            background: var(--border);
+            z-index: 0;
+        }
+        
+        .wizard-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+            flex: 1;
+        }
+        
+        .step-number {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--bg-soft);
+            border: 3px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .wizard-step.active .step-number {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        .wizard-step.completed .step-number {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+        
+        .step-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        
+        .wizard-step.active .step-label,
+        .wizard-step.completed .step-label {
+            color: var(--text);
+            font-weight: 600;
+        }
+        
+        .wizard-content {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            min-height: 200px;
+        }
+        
+        .os-detection {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .os-icon {
+            font-size: 80px;
+            margin-bottom: 16px;
+        }
+        
+        .os-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .os-status {
+            color: var(--success);
+            font-size: 14px;
+        }
+        
+        .install-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .install-option {
+            background: var(--bg-soft);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .install-option:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .install-option.selected {
+            border-color: var(--success);
+            background: rgba(51, 214, 159, 0.1);
+        }
+        
+        .install-option-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+        
+        .install-option-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .install-option-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .one-click-btn {
+            width: 100%;
+            padding: 18px 32px;
+            font-size: 18px;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
+            color: white;
+            cursor: pointer;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .one-click-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(27, 140, 255, 0.3);
+        }
+        
+        .one-click-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .one-click-btn .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Enhanced Console */
+        .console-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-top: 24px;
+            overflow: hidden;
+        }
+        
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-soft);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .console-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .console-title-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .console-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .console-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .console-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .console-output {
+            background: #0a0a0a;
+            border: none;
+            border-radius: 0;
+            padding: 16px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+            font-size: 12px;
+            color: #00ff00;
+            max-height: 400px;
+            min-height: 200px;
+            overflow-y: auto;
+            margin: 0;
+        }
+        
+        .console-line {
+            margin-bottom: 4px;
+            padding: 2px 0;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .console-timestamp {
+            color: #666;
+            flex-shrink: 0;
+        }
+        
+        .console-message {
+            word-break: break-word;
+        }
+        
+        .console-input-container {
+            display: flex;
+            border-top: 1px solid var(--border);
+            background: #0a0a0a;
+        }
+        
+        .console-prompt {
+            padding: 12px;
+            color: #00ff00;
+            font-family: monospace;
+            font-weight: 700;
+        }
+        
+        .console-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+            font-size: 12px;
+            padding: 12px 12px 12px 0;
+            outline: none;
+        }
+        
+        .console-input::placeholder {
+            color: #444;
+        }
+        
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 20px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-soft);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1b8cff, #4bc0c8);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+        
+        /* Mode Selector Tabs */
+        .mode-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 24px;
+            background: var(--bg-soft);
+            border-radius: 12px;
+            padding: 4px;
+        }
+        
+        .mode-tab {
+            flex: 1;
+            padding: 14px 20px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+        
+        .mode-tab:hover {
+            color: var(--text);
+        }
+        
+        .mode-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .mode-content {
+            display: none;
+        }
+        
+        .mode-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        /* Command Cards */
+        .command-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .command-card {
+            background: var(--bg-soft);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        
+        .command-card-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .command-code {
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .relay-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-bottom: 80px;
+            width: 100%;
+        }
+        
+        .relay-header {
+            text-align: center;
+            padding: 40px 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 40px;
+        }
+        
+        .relay-logo {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .relay-header h1 {
+            font-size: 36px;
+            margin: 0 0 12px;
+            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .relay-header p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .status-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .status-card-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+        
+        .status-card-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        
+        .status-card-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .node-status {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .node-status h2 {
+            margin: 0 0 24px;
+            font-size: 24px;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            background: var(--bg-soft);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--error);
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        .status-dot.active {
+            background: var(--success);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .info-value {
+            color: var(--text);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .tier-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        
+        .tier-card {
+            background: var(--bg-soft);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tier-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+        }
+        
+        .tier-card.selected {
+            border-color: var(--success);
+            background: rgba(51, 214, 159, 0.1);
+        }
+        
+        .tier-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .tier-storage {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        
+        .tier-rewards {
+            color: var(--success);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 24px;
+        }
+        
+        .btn-large {
+            flex: 1;
+            padding: 16px 32px;
+            font-size: 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
+            color: white;
+        }
+        
+        .btn-stop {
+            background: var(--error);
+            color: white;
+        }
+        
+        .btn-large:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .console-output {
+            background: #000;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #00ff00;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 24px;
+        }
+        
+        .console-line {
+            margin-bottom: 4px;
+        }
+        
+        .earnings-card {
+            background: linear-gradient(135deg, rgba(27, 140, 255, 0.1), rgba(75, 192, 200, 0.1));
+            border: 1px solid rgba(27, 140, 255, 0.3);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+        }
+        
+        .earnings-amount {
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        
+        .earnings-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .doc-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-top: 40px;
+        }
+        
+        .doc-section h2 {
+            margin: 0 0 20px;
+            font-size: 24px;
+        }
+        
+        .doc-section h3 {
+            margin: 24px 0 12px;
+            font-size: 18px;
+            color: var(--primary);
+        }
+        
+        .doc-section p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .doc-section ul {
+            margin: 12px 0;
+            padding-left: 24px;
+        }
+        
+        .doc-section li {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        
+        .code-block {
+            background: #000;
+            color: #00ff00;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation (same as main website) -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">💬</div>
+                <span>MumbleChat</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="protocol.html">Protocol</a></li>
+                <li><a href="token.html">MCT Token</a></li>
+                <li><a href="relay-nodes.html">Relay Nodes</a></li>
+                <li><a href="relay-node.html" class="active" style="color: #4bc0c8;">🚀 Run Node</a></li>
+                <li><a href="download.html">Download</a></li>
+                <li><a href="docs.html">Docs</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="chat2.html" class="btn btn-primary">Chat Now</a>
+                <button class="mobile-menu-btn">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="relay-dashboard" style="padding-top: 100px;">
+        <div class="relay-container">
+            <!-- Header -->
+            <div class="relay-header">
+                <div class="relay-logo">📡</div>
+                <h1>MumbleChat Relay Node</h1>
+                <p>Earn MCT tokens by running a relay node - Browser or Desktop</p>
+            </div>
+
+            <!-- Live Network Stats -->
+            <section class="section" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%); padding: 32px; border-radius: 16px; margin-bottom: 32px;">
+                <div class="section-title" style="margin-bottom: 24px;">
+                    <h2>📊 Live <span>Network Stats</span></h2>
+                </div>
+                
+                <div class="grid grid-4" style="gap: 16px;">
+                    <div class="card text-center" style="border-top: 3px solid var(--success); padding: 20px;">
+                        <div style="font-size: 32px; font-weight: 800; color: var(--success);" id="activeNodesCount">--</div>
+                        <div style="color: var(--text-muted); font-size: 13px;">Active Relay Nodes</div>
+                    </div>
+                    <div class="card text-center" style="border-top: 3px solid var(--primary); padding: 20px;">
+                        <div style="font-size: 32px; font-weight: 800; color: var(--primary);" id="todayRelaysCount">--</div>
+                        <div style="color: var(--text-muted); font-size: 13px;">Messages Today</div>
+                    </div>
+                    <div class="card text-center" style="border-top: 3px solid var(--warning); padding: 20px;">
+                        <div style="font-size: 24px; font-weight: 800; color: var(--warning);" id="feePoolAmount">-- MCT</div>
+                        <div style="color: var(--text-muted); font-size: 13px;">Fee Pool</div>
+                    </div>
+                    <div class="card text-center" style="border-top: 3px solid var(--secondary); padding: 20px;">
+                        <div style="font-size: 24px; font-weight: 800; color: var(--secondary);">100 MCT</div>
+                        <div style="color: var(--text-muted); font-size: 13px;">Daily Pool</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Mode Selector -->
+            <div class="mode-tabs">
+                <div class="mode-tab active" data-mode="wizard">🚀 Quick Setup Wizard</div>
+                <div class="mode-tab" data-mode="browser">🌐 Browser Node</div>
+                <div class="mode-tab" data-mode="desktop">💻 Desktop Node</div>
+            </div>
+
+            <!-- WIZARD MODE -->
+            <div class="mode-content active" id="wizardMode">
+                <div class="setup-wizard">
+                    <div class="wizard-header">
+                        <h2>⚡ One-Click Setup Wizard</h2>
+                        <p style="color: var(--text-secondary);">Automatically detect your OS and set up the relay node in minutes</p>
+                    </div>
+
+                    <!-- Wizard Steps -->
+                    <div class="wizard-steps">
+                        <div class="wizard-step active" data-step="1">
+                            <div class="step-number">1</div>
+                            <div class="step-label">Detect OS</div>
+                        </div>
+                        <div class="wizard-step" data-step="2">
+                            <div class="step-number">2</div>
+                            <div class="step-label">Connect Wallet</div>
+                        </div>
+                        <div class="wizard-step" data-step="3">
+                            <div class="step-number">3</div>
+                            <div class="step-label">Select Tier</div>
+                        </div>
+                        <div class="wizard-step" data-step="4">
+                            <div class="step-number">4</div>
+                            <div class="step-label">Install & Run</div>
+                        </div>
+                    </div>
+
+                    <!-- Wizard Content -->
+                    <div class="wizard-content" id="wizardContent">
+                        <!-- Step 1: OS Detection -->
+                        <div class="wizard-step-content" id="step1Content">
+                            <div class="os-detection">
+                                <div class="os-icon" id="detectedOSIcon">🔍</div>
+                                <div class="os-name" id="detectedOSName">Detecting...</div>
+                                <div class="os-status" id="detectedOSStatus">Analyzing your system...</div>
+                            </div>
+
+                            <div class="install-options" id="installOptions" style="display: none;">
+                                <div class="install-option selected" data-install="browser">
+                                    <div class="install-option-icon">🌐</div>
+                                    <div class="install-option-title">Browser Node</div>
+                                    <div class="install-option-desc">Run directly in this tab. Lower rewards but instant start.</div>
+                                </div>
+                                <div class="install-option" data-install="desktop">
+                                    <div class="install-option-icon">💻</div>
+                                    <div class="install-option-title">Desktop Node</div>
+                                    <div class="install-option-desc">5-10x more rewards. Runs 24/7 in background.</div>
+                                </div>
+                            </div>
+
+                            <button class="one-click-btn" id="wizardNextBtn" onclick="setupWizard.nextStep()">
+                                Continue →
+                            </button>
+                        </div>
+
+                        <!-- Step 2: Wallet Connection -->
+                        <div class="wizard-step-content" id="step2Content" style="display: none;">
+                            <div class="os-detection">
+                                <div class="os-icon">🔗</div>
+                                <div class="os-name">Connect Your Wallet</div>
+                                <div class="os-status">Required for earning MCT tokens</div>
+                            </div>
+
+                            <div style="text-align: center; margin-top: 20px;">
+                                <button class="one-click-btn" id="wizardConnectBtn" onclick="setupWizard.connectWallet()">
+                                    🦊 Connect MetaMask
+                                </button>
+                            </div>
+
+                            <div id="wizardWalletInfo" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-soft); border-radius: 12px;">
+                                <div class="info-row">
+                                    <span class="info-label">Wallet</span>
+                                    <span class="info-value" id="wizardWalletAddress">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">MCT Balance</span>
+                                    <span class="info-value" id="wizardMCTBalance">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Tier Selection -->
+                        <div class="wizard-step-content" id="step3Content" style="display: none;">
+                            <h3 style="text-align: center; margin-bottom: 20px;">💎 Select Your Tier</h3>
+                            <div class="tier-selector" id="wizardTierSelector">
+                                <div class="tier-card selected" data-tier="bronze">
+                                    <div class="tier-name">🥉 Bronze</div>
+                                    <div class="tier-storage">1 GB Storage</div>
+                                    <div class="tier-rewards">1.0x • 4h+/day</div>
+                                    <div style="font-size: 11px; color: var(--success); margin-top: 6px;">💰 100 MCT</div>
+                                </div>
+                                <div class="tier-card" data-tier="silver">
+                                    <div class="tier-name">🥈 Silver</div>
+                                    <div class="tier-storage">2 GB Storage</div>
+                                    <div class="tier-rewards">1.5x • 8h+/day</div>
+                                    <div style="font-size: 11px; color: var(--success); margin-top: 6px;">💰 500 MCT</div>
+                                </div>
+                                <div class="tier-card" data-tier="gold">
+                                    <div class="tier-name">🥇 Gold</div>
+                                    <div class="tier-storage">4 GB Storage</div>
+                                    <div class="tier-rewards">2.0x • 12h+/day</div>
+                                    <div style="font-size: 11px; color: var(--success); margin-top: 6px;">💰 1000 MCT</div>
+                                </div>
+                                <div class="tier-card" data-tier="platinum">
+                                    <div class="tier-name">💎 Platinum</div>
+                                    <div class="tier-storage">8 GB Storage</div>
+                                    <div class="tier-rewards">3.0x • 16h+/day</div>
+                                    <div style="font-size: 11px; color: var(--success); margin-top: 6px;">💰 2500 MCT</div>
+                                </div>
+                            </div>
+                            <button class="one-click-btn" onclick="setupWizard.nextStep()">
+                                Continue →
+                            </button>
+                        </div>
+
+                        <!-- Step 4: Install & Run -->
+                        <div class="wizard-step-content" id="step4Content" style="display: none;">
+                            <div id="browserInstallContent">
+                                <div class="os-detection">
+                                    <div class="os-icon">🚀</div>
+                                    <div class="os-name">Ready to Launch!</div>
+                                    <div class="os-status">Click below to start your browser relay node</div>
+                                </div>
+                                <button class="one-click-btn" onclick="setupWizard.startBrowserNode()">
+                                    🚀 Start Browser Relay Node
+                                </button>
+                            </div>
+
+                            <div id="desktopInstallContent" style="display: none;">
+                                <div class="os-detection">
+                                    <div class="os-icon" id="installOSIcon">💻</div>
+                                    <div class="os-name" id="installOSName">Desktop Installation</div>
+                                    <div class="os-status">One-click install for your system</div>
+                                </div>
+
+                                <div class="progress-container" id="installProgress" style="display: none;">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progressFill"></div>
+                                    </div>
+                                    <div class="progress-text">
+                                        <span id="progressStep">Downloading...</span>
+                                        <span id="progressPercent">0%</span>
+                                    </div>
+                                </div>
+
+                                <button class="one-click-btn" id="desktopInstallBtn" onclick="setupWizard.installDesktop()">
+                                    📥 Download & Install
+                                </button>
+
+                                <div class="command-cards" style="margin-top: 24px;">
+                                    <div class="command-card" id="windowsCommands" style="display: none;">
+                                        <div class="command-card-title">🪟 Windows Installation</div>
+                                        <p style="font-size: 12px; color: var(--text-secondary);">Run as Administrator:</p>
+                                        <div class="command-code">
+                                            <span>powershell -Command "irm mumblechat.io/install.ps1 | iex"</span>
+                                            <button class="copy-btn" onclick="copyCommand(this)">📋</button>
+                                        </div>
+                                    </div>
+                                    <div class="command-card" id="macCommands" style="display: none;">
+                                        <div class="command-card-title">🍎 macOS Installation</div>
+                                        <p style="font-size: 12px; color: var(--text-secondary);">Run in Terminal:</p>
+                                        <div class="command-code">
+                                            <span>curl -fsSL mumblechat.io/install.sh | bash</span>
+                                            <button class="copy-btn" onclick="copyCommand(this)">📋</button>
+                                        </div>
+                                    </div>
+                                    <div class="command-card" id="linuxCommands" style="display: none;">
+                                        <div class="command-card-title">🐧 Linux Installation</div>
+                                        <p style="font-size: 12px; color: var(--text-secondary);">Run in Terminal:</p>
+                                        <div class="command-code">
+                                            <span>curl -fsSL mumblechat.io/install.sh | sudo bash</span>
+                                            <button class="copy-btn" onclick="copyCommand(this)">📋</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Console -->
+                <div class="console-container">
+                    <div class="console-header">
+                        <div class="console-title">
+                            <div class="console-title-dot" id="consoleDot"></div>
+                            <span>📟 Setup Console</span>
+                        </div>
+                        <div class="console-actions">
+                            <button class="console-btn" onclick="clearConsole()">🗑️ Clear</button>
+                            <button class="console-btn" onclick="copyConsole()">📋 Copy All</button>
+                            <button class="console-btn" onclick="downloadLog()">💾 Download Log</button>
+                        </div>
+                    </div>
+                    <div class="console-output" id="wizardConsole">
+                        <div class="console-line">
+                            <span class="console-timestamp">[System]</span>
+                            <span class="console-message" style="color: #4bc0c8;">MumbleChat Relay Node Setup Wizard v2.0</span>
+                        </div>
+                        <div class="console-line">
+                            <span class="console-timestamp">[System]</span>
+                            <span class="console-message">Initializing setup wizard...</span>
+                        </div>
+                    </div>
+                    <div class="console-input-container">
+                        <span class="console-prompt">$</span>
+                        <input type="text" class="console-input" id="consoleInput" placeholder="Type a command (help, status, start, stop, clear)..." onkeypress="handleConsoleInput(event)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- BROWSER MODE -->
+            <div class="mode-content" id="browserMode">
+                <!-- Wallet Connection -->
+                <div id="walletSection" class="node-status">
+                    <h2>🔗 Connect Your Wallet</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 15px;">
+                        Connect your wallet to check MCT balance, select a tier, and start earning tokens by relaying messages
+                    </p>
+                    <button class="btn-primary btn-large" id="connectWalletBtn" style="padding: 16px 32px; font-size: 16px; width: 100%; max-width: 300px;">
+                        🔗 Connect Wallet
+                    </button>
+                    <div id="walletInfo" style="margin-top: 20px; display: none; animation: slideDown 0.3s ease;">
+                        <div class="info-row">
+                            <span class="info-label">Wallet Address</span>
+                            <span class="info-value" id="walletAddressDisplay" style="font-family: monospace; font-size: 12px;">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">MCT Balance</span>
+                            <span class="info-value" id="mctBalance" style="font-size: 18px; font-weight: 700;">Loading...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Operating System</span>
+                            <span class="info-value" id="osType" style="font-size: 16px;">Detecting...</span>
+                        </div>
+                        <div style="margin-top: 15px; padding: 16px; background: rgba(27, 140, 255, 0.1); border-left: 4px solid var(--primary); border-radius: 8px;">
+                            <p id="mctStatus" style="margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5;"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Node Dashboard (hidden initially) -->
+                <div id="nodeDashboard" style="display: none; animation: fadeIn 0.5s ease;">
+                    <!-- Status Cards -->
+                    <div class="status-grid">
+                        <div class="status-card">
+                            <div class="status-card-icon">⏱️</div>
+                            <div class="status-card-value" id="uptimeValue">0h 0m</div>
+                            <div class="status-card-label">Uptime</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-card-icon">👥</div>
+                            <div class="status-card-value" id="peersValue">0</div>
+                            <div class="status-card-label">Connected Peers</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-card-icon">📨</div>
+                            <div class="status-card-value" id="messagesValue">0</div>
+                            <div class="status-card-label">Messages Relayed</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-card-icon">💎</div>
+                            <div class="status-card-value" id="tierValue">Bronze</div>
+                            <div class="status-card-label">Current Tier</div>
+                        </div>
+                    </div>
+
+                    <!-- Earnings -->
+                    <div class="earnings-card">
+                        <div class="earnings-amount" id="earningsValue">0.00 MCT</div>
+                        <div class="earnings-label">Total Earnings (Estimated)</div>
+                    </div>
+
+                    <!-- Node Control -->
+                    <div class="node-status">
+                        <h2>Node Status</h2>
+                        <div class="status-indicator">
+                            <span class="status-dot" id="statusDot"></span>
+                            <span id="statusText">Node Stopped</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Wallet Address</span>
+                            <span class="info-value" id="walletAddress">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Node ID</span>
+                            <span class="info-value" id="nodeId">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Storage Used</span>
+                            <span class="info-value" id="storageUsed">0 MB / 1024 MB</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Messages Stored</span>
+                            <span class="info-value" id="messagesStored">0</span>
+                        </div>
+
+                        <!-- Tier Selection -->
+                        <h3 style="margin-top: 24px; margin-bottom: 16px; font-size: 18px;">💎 Select Tier</h3>
+                        <div class="tier-selector">
+                            <div class="tier-card selected" data-tier="bronze" title="Requires 100 MCT">
+                                <div class="tier-name">🥉 Bronze</div>
+                                <div class="tier-storage">1 GB Storage</div>
+                                <div class="tier-rewards">1.0x Rewards • 4h+/day</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--success); margin-top: 8px; font-weight: 600;">💰 100 MCT</div>
+                            </div>
+                            <div class="tier-card" data-tier="silver" title="Requires 500 MCT">
+                                <div class="tier-name">🥈 Silver</div>
+                                <div class="tier-storage">2 GB Storage</div>
+                                <div class="tier-rewards">1.5x Rewards • 8h+/day</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--success); margin-top: 8px; font-weight: 600;">💰 500 MCT</div>
+                            </div>
+                            <div class="tier-card" data-tier="gold" title="Requires 1000 MCT">
+                                <div class="tier-name">🥇 Gold</div>
+                                <div class="tier-storage">4 GB Storage</div>
+                                <div class="tier-rewards">2.0x Rewards • 12h+/day</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--success); margin-top: 8px; font-weight: 600;">💰 1000 MCT</div>
+                            </div>
+                            <div class="tier-card" data-tier="platinum" title="Requires 2500 MCT">
+                                <div class="tier-name">💎 Platinum</div>
+                                <div class="tier-storage">8 GB Storage</div>
+                                <div class="tier-rewards">3.0x Rewards • 16h+/day</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--success); margin-top: 8px; font-weight: 600;">💰 2500 MCT</div>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn-large btn-start" id="startNodeBtn">
+                                🚀 Start Relay Node
+                            </button>
+                            <button class="btn-large btn-stop" id="stopNodeBtn" style="display: none;">
+                                ⏹️ Stop Node
+                            </button>
+                            <button class="btn-large btn-secondary" id="disconnectBtn">
+                                🔌 Disconnect
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Console -->
+                    <div class="console-container">
+                        <div class="console-header">
+                            <div class="console-title">
+                                <div class="console-title-dot"></div>
+                                <span>📟 Node Console</span>
+                            </div>
+                            <div class="console-actions">
+                                <button class="console-btn" onclick="clearBrowserConsole()">🗑️ Clear</button>
+                                <button class="console-btn" onclick="copyBrowserConsole()">📋 Copy</button>
+                                <button class="console-btn" onclick="downloadBrowserLog()">💾 Log</button>
+                            </div>
+                        </div>
+                        <div class="console-output" id="consoleOutput">
+                            <div class="console-line">MumbleChat Relay Node Console</div>
+                            <div class="console-line">Ready to start...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DESKTOP MODE -->
+            <div class="mode-content" id="desktopMode">
+                <div class="node-status">
+                    <h2>💻 Desktop Relay Node</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                        For <strong style="color: var(--success);">5-10x higher earnings</strong>, run the desktop relay node. 
+                        It runs 24/7 in the background and automatically starts with your computer.
+                    </p>
+
+                    <div class="os-detection" style="padding: 30px 0;">
+                        <div class="os-icon" id="desktopOSIcon">💻</div>
+                        <div class="os-name" id="desktopOSName">Detecting your OS...</div>
+                        <div class="os-status" id="desktopOSStatus">Please wait...</div>
+                    </div>
+
+                    <div id="desktopDownloads" class="tier-selector">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="command-cards" id="desktopCommandCards">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div style="margin-top: 24px; padding: 18px 20px; background: rgba(75, 192, 200, 0.1); border-left: 4px solid #4bc0c8; border-radius: 8px;">
+                        <strong style="color: #4bc0c8;">⚡ Pro Tip:</strong> 
+                        <span style="color: var(--text-secondary);">
+                            Desktop nodes earn 5-10x more because they stay online 24/7. 
+                            After installation, use these commands to manage your node:
+                        </span>
+                        <div class="command-code" style="margin-top: 12px;">
+                            <span>mumblechat-relay status | start | stop | logs</span>
+                            <button class="copy-btn" onclick="copyCommand(this)">📋</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentation -->
+            <div class="doc-section">
+                <h2>📚 How to Run a Relay Node</h2>
+                
+                <h3>What is a Relay Node?</h3>
+                <p>
+                    A relay node helps store and forward encrypted messages in the MumbleChat network. 
+                    When users are offline, their messages are stored on relay nodes and delivered when they come back online.
+                    You earn MCT tokens for providing this service!
+                </p>
+
+                <h3>Requirements</h3>
+                <ul>
+                    <li>MetaMask or compatible Web3 wallet</li>
+                    <li>Minimum MCT tokens for your chosen tier (100-2500 MCT)</li>
+                    <li>Stable internet connection</li>
+                    <li>For desktop: Node.js 18+ (auto-installed)</li>
+                </ul>
+
+                <h3>Browser vs Desktop</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;">
+                    <div style="padding: 16px; background: var(--bg-soft); border-radius: 12px;">
+                        <h4 style="margin: 0 0 8px;">🌐 Browser Node</h4>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 13px;">
+                            <li>Instant start, no install</li>
+                            <li>Runs while tab is open</li>
+                            <li>Lower rewards (1x)</li>
+                            <li>Good for testing</li>
+                        </ul>
+                    </div>
+                    <div style="padding: 16px; background: rgba(51, 214, 159, 0.1); border-radius: 12px; border: 1px solid var(--success);">
+                        <h4 style="margin: 0 0 8px; color: var(--success);">💻 Desktop Node ⭐</h4>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 13px;">
+                            <li>Runs 24/7 in background</li>
+                            <li>Auto-starts with computer</li>
+                            <li><strong>5-10x more rewards</strong></li>
+                            <li>Recommended for earning</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Reward Tiers</h3>
+                <ul>
+                    <li><strong>🥉 Bronze:</strong> 1 GB storage, 4+ hours/day - 1.0x rewards (100 MCT required)</li>
+                    <li><strong>🥈 Silver:</strong> 2 GB storage, 8+ hours/day - 1.5x rewards (500 MCT required)</li>
+                    <li><strong>🥇 Gold:</strong> 4 GB storage, 12+ hours/day - 2.0x rewards (1000 MCT required)</li>
+                    <li><strong>💎 Platinum:</strong> 8 GB storage, 16+ hours/day - 3.0x rewards (2500 MCT required)</li>
+                </ul>
+
+                <div style="margin-top: 24px; padding: 16px; background: rgba(27, 140, 255, 0.1); border-radius: 8px; border: 1px solid rgba(27, 140, 255, 0.3);">
+                    <strong>💡 Pro Tip:</strong> Higher storage and longer uptime = more rewards! 
+                    Desktop nodes can achieve 24h/day uptime for maximum earnings.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+    <script src="js/relay-node.js"></script>
+    <script src="js/setup-wizard.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- Load Live Network Stats -->
+    <script>
+        const RPC_URL = 'https://blockchain.ramestta.com';
+        const MCT_TOKEN = '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE';
+        const REGISTRY = '0x53c4D1dB6975f3ACf76D2887fE6776F8c0601D76';
+        
+        function getFunctionSelector(name) {
+            const sigs = {
+                'feePool': '0xa81b2f8d',
+                'totalRelayNodes': '0x4d33dd55',
+                'getTodayPoolInfo': '0x6e553f65'
+            };
+            return sigs[name] || '0x';
+        }
+        
+        async function ethCall(to, data) {
+            try {
+                const response = await fetch(RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'eth_call',
+                        params: [{ to, data }, 'latest']
+                    })
+                });
+                const result = await response.json();
+                return result.result;
+            } catch (e) {
+                return null;
+            }
+        }
+        
+        function formatMCT(hexValue) {
+            if (!hexValue || hexValue === '0x') return '0.00';
+            const value = BigInt(hexValue);
+            const decimals = BigInt(10 ** 18);
+            const whole = value / decimals;
+            const fraction = (value % decimals) / BigInt(10 ** 16);
+            return `${whole.toLocaleString()}.${fraction.toString().padStart(2, '0')}`;
+        }
+        
+        function parseUint256(hexValue) {
+            if (!hexValue || hexValue === '0x') return 0n;
+            return BigInt(hexValue);
+        }
+        
+        async function loadNetworkStats() {
+            try {
+                const feePoolHex = await ethCall(MCT_TOKEN, getFunctionSelector('feePool'));
+                if (feePoolHex) {
+                    document.getElementById('feePoolAmount').textContent = `${formatMCT(feePoolHex)} MCT`;
+                }
+                
+                const totalNodesHex = await ethCall(REGISTRY, getFunctionSelector('totalRelayNodes'));
+                if (totalNodesHex) {
+                    document.getElementById('activeNodesCount').textContent = parseUint256(totalNodesHex).toString();
+                }
+                
+                const poolInfoHex = await ethCall(REGISTRY, getFunctionSelector('getTodayPoolInfo'));
+                if (poolInfoHex && poolInfoHex.length > 2) {
+                    const cleanHex = poolInfoHex.slice(2);
+                    const totalRelays = BigInt('0x' + cleanHex.slice(64, 128));
+                    document.getElementById('todayRelaysCount').textContent = totalRelays.toLocaleString();
+                }
+            } catch (error) {
+                console.error('Failed to load network stats:', error);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadNetworkStats);
+        setInterval(loadNetworkStats, 30000);
+    </script>
+</body>
+</html>

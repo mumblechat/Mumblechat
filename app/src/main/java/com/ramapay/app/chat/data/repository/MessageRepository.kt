@@ -69,4 +69,12 @@ class MessageRepository @Inject constructor(
     suspend fun deleteAllForGroup(groupId: String) {
         messageDao.deleteAllForGroup(groupId)
     }
+    
+    /**
+     * Get the last message received from a specific sender.
+     * Used for sync to determine what messages we might have missed.
+     */
+    suspend fun getLastMessageFrom(senderAddress: String): MessageEntity? {
+        return messageDao.getLastMessageFromSender(senderAddress)
+    }
 }

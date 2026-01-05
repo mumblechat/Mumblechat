@@ -1,0 +1,46 @@
+# Logs
+logs/
+*.log
+
+# Data
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Keystore (contains encrypted private keys)
+keystore/
+
+# Environment file (contains secrets)
+.env
+
+# Build output
+dist/
+*.js
+*.js.map
+*.d.ts
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Package binaries
+*.exe
+mumblechat-relay-*
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/
