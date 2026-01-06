@@ -14,7 +14,9 @@
     <meta property="og:url" content="https://mumblechat.com">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
     
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
@@ -22,7 +24,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="MumbleChat">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,9 +47,15 @@
                 <li><a href="index.html" class="active">Home</a></li>
                 <li><a href="protocol.html">Protocol</a></li>
                 <li><a href="token.html">MCT Token</a></li>
-                <li><a href="relay-nodes.html">Relay Nodes</a></li>
-                <li><a href="network-status.html">📡 Network Status</a></li>
-                <li><a href="relay-node.html" style="color: #4bc0c8;">🚀 Run Node</a></li>
+                <li class="nav-dropdown">
+                    <a>🌐 Network</a>
+                    <div class="dropdown-menu">
+                        <a href="relay-nodes.html">📋 Relay Nodes</a>
+                        <a href="network-status.html">📡 Network Status</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="relay-node.html" style="color: #4bc0c8;">🚀 Run a Node</a>
+                    </div>
+                </li>
                 <li><a href="download.html">Download</a></li>
                 <li><a href="docs.html">Docs</a></li>
             </ul>
@@ -487,6 +495,54 @@
         
         // Refresh every 30 seconds
         setInterval(loadHeroStats, 30000);
+    </script>
+    
+    <!-- Bottom Navigation for Mobile -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-container">
+            <a href="index.html" class="bottom-nav-item active">
+                <span class="bottom-nav-icon">🏠</span>
+                <span class="bottom-nav-label">Home</span>
+            </a>
+            <div class="bottom-nav-item bottom-nav-dropdown" onclick="toggleNetworkMenu(this)">
+                <span class="bottom-nav-icon">📡</span>
+                <span class="bottom-nav-label">Network</span>
+                <div class="bottom-nav-menu">
+                    <a href="relay-nodes.html">📋 Relay Nodes</a>
+                    <a href="network-status.html">📡 Network Status</a>
+                    <div class="divider"></div>
+                    <a href="relay-node.html" style="color: #4bc0c8;">🚀 Run a Node</a>
+                </div>
+            </div>
+            <a href="chat2.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">💬</span>
+                <span class="bottom-nav-label">Chat</span>
+            </a>
+            <a href="token.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">🪙</span>
+                <span class="bottom-nav-label">Token</span>
+            </a>
+            <a href="docs.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">📚</span>
+                <span class="bottom-nav-label">Docs</span>
+            </a>
+        </div>
+    </nav>
+    
+    <script>
+        function toggleNetworkMenu(el) {
+            el.classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            // Close menu when clicking a link inside it
+            if (e.target.closest('.bottom-nav-menu a')) {
+                document.querySelectorAll('.bottom-nav-dropdown').forEach(d => d.classList.remove('open'));
+                return;
+            }
+            if (!e.target.closest('.bottom-nav-dropdown')) {
+                document.querySelectorAll('.bottom-nav-dropdown').forEach(d => d.classList.remove('open'));
+            }
+        });
     </script>
     <script src="js/app.js"></script>
 </body>

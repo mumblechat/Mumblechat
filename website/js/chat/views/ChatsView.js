@@ -15,6 +15,7 @@ export function renderChatsView(container) {
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="header-top">
+                    <a href="index.html" class="back-arrow" title="Back to Website">←</a>
                     <h1>Chats</h1>
                     <span class="badge-pill" id="conversationCount">${state.contacts.length}</span>
                     <button class="header-btn" id="newChatBtn" title="New Chat">➕</button>
@@ -335,6 +336,27 @@ export function getChatsStyles() {
         
         .header-btn:hover {
             background: #17345a;
+        }
+        
+        .back-arrow {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        
+        .back-arrow:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
         }
         
         .search-container {

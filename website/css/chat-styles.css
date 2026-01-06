@@ -570,8 +570,9 @@ body {
 
     .main-view {
         width: 100%;
-        height: calc(100vh - 140px);
+        height: calc(100vh - 70px);
         border-right: none;
+        border-bottom: none;
     }
 
     .chat-area {
@@ -589,7 +590,7 @@ body {
     }
 
     .status-bar {
-        display: none;
+        display: none !important;
     }
 
     .empty-icon {

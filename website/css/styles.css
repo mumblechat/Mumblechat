@@ -182,7 +182,7 @@ p {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 24px;
   list-style: none;
 }
 
@@ -190,11 +190,83 @@ p {
   color: var(--text-secondary);
   font-weight: 500;
   transition: color var(--transition-fast);
+  font-size: 14px;
 }
 
 .nav-links a:hover,
 .nav-links a.active {
   color: var(--text-primary);
+}
+
+/* Dropdown Menu */
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown > a {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.nav-dropdown > a::after {
+  content: '▼';
+  font-size: 8px;
+  transition: transform 0.2s;
+}
+
+.nav-dropdown:hover > a::after {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s;
+  margin-top: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.nav-dropdown:hover .dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+}
+
+.dropdown-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.dropdown-menu a:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--text-primary);
+}
+
+.dropdown-menu a.active {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
 }
 
 .nav-actions {
@@ -377,6 +449,25 @@ p {
   justify-content: center;
   gap: 16px;
   flex-wrap: wrap;
+  padding: 0 16px;
+}
+
+@media (max-width: 600px) {
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  
+  .hero-actions .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
 }
 
 .hero-stats {
@@ -386,6 +477,19 @@ p {
   margin-top: 80px;
   padding-top: 40px;
   border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .hero-stats {
+    gap: 24px;
+    margin-top: 40px;
+    padding-top: 24px;
+  }
+  
+  .stat {
+    min-width: 120px;
+  }
 }
 
 .stat {
@@ -729,43 +833,195 @@ tr:hover td {
   z-index: 1001;
 }
 
+/* Bottom Navigation for Mobile */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15, 15, 35, 0.98);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  z-index: 1000;
+  padding: 8px 0;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.bottom-nav-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 500;
+  transition: color 0.2s;
+  min-width: 60px;
+}
+
+.bottom-nav-item.active {
+  color: var(--primary);
+}
+
+.bottom-nav-item:hover {
+  color: var(--text-primary);
+}
+
+.bottom-nav-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.bottom-nav-label {
+  white-space: nowrap;
+}
+
+/* Network dropdown in bottom nav */
+.bottom-nav-dropdown {
+  position: relative;
+}
+
+.bottom-nav-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 0;
+  min-width: 160px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
+  display: none;
+  margin-bottom: 8px;
+}
+
+.bottom-nav-dropdown.open .bottom-nav-menu {
+  display: block;
+}
+
+.bottom-nav-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.bottom-nav-menu a:hover,
+.bottom-nav-menu a.active {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--text-primary);
+}
+
+.bottom-nav-menu .divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
 @media (max-width: 900px) {
   .mobile-menu-btn {
-    display: block;
+    display: none;
   }
   
+  /* Hide top nav links on mobile */
   .nav-links {
-    display: none;
-    position: fixed;
-    top: 70px;
-    left: 0;
-    right: 0;
-    background: rgba(15, 15, 35, 0.98);
-    backdrop-filter: blur(20px);
-    flex-direction: column;
-    padding: 24px;
-    gap: 0;
-    border-bottom: 1px solid var(--border);
-    z-index: 999;
+    display: none !important;
   }
   
-  .nav-links.show {
-    display: flex;
+  /* Hide chat now button on mobile */
+  .nav-actions {
+    display: none !important;
   }
   
-  .nav-links li {
-    width: 100%;
-  }
-  
-  .nav-links a {
+  /* Show bottom navigation */
+  .bottom-nav {
     display: block;
-    padding: 16px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 1.1rem;
   }
   
-  .nav-actions .btn {
-    display: none;
+  /* Add padding for bottom nav */
+  body {
+    padding-bottom: 70px;
+  }
+  
+  /* Adjust footer for bottom nav */
+  .footer {
+    padding-bottom: 80px;
+  }
+  
+  /* Make navbar scroll away on mobile for full screen experience */
+  .navbar {
+    position: relative;
+    padding: 10px 0;
+  }
+  
+  .navbar .container {
+    justify-content: center;
+  }
+  
+  /* Hero adjustments for mobile - no extra top padding needed now */
+  .hero {
+    min-height: auto;
+    padding: 30px 16px 40px;
+  }
+  
+  .hero-title {
+    font-size: 1.8rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.9rem;
+    padding: 0 8px;
+  }
+  
+  .hero-buttons {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    padding: 0 16px;
+  }
+  
+  .hero-buttons .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .hero-badge {
+    font-size: 0.7rem;
+    padding: 6px 12px;
+  }
+  
+  /* Horizontal scroll for tables on mobile */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .node-table {
+    min-width: 700px;
+  }
+  
+  table {
+    min-width: 600px;
+  }
+  
+  .card {
+    overflow-x: auto;
   }
 }
 
@@ -834,6 +1090,12 @@ tr:hover td {
 
 #pwa-install-banner.show {
   bottom: 20px;
+}
+
+@media (max-width: 900px) {
+  #pwa-install-banner.show {
+    bottom: 90px;
+  }
 }
 
 .install-content {
@@ -931,29 +1193,20 @@ tr:hover td {
    ========================================== */
 @media (max-width: 900px) {
   :root {
-    --section-padding: 60px 0;
-  }
-  
-  .hero {
-    min-height: auto;
-    padding: 100px 16px 60px;
-  }
-  
-  .hero-subtitle {
-    font-size: 1rem;
+    --section-padding: 50px 0;
   }
   
   .hero-stats {
     flex-wrap: wrap;
-    gap: 30px;
+    gap: 20px;
   }
   
   .stat-value {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
   
   .section-title {
-    margin-bottom: 40px;
+    margin-bottom: 30px;
   }
   
   .container {
@@ -961,17 +1214,25 @@ tr:hover td {
   }
   
   .card {
-    padding: 24px;
+    padding: 20px;
   }
   
   .tier-card {
-    padding: 24px;
+    padding: 20px;
   }
   
   .footer-bottom {
     flex-direction: column;
     gap: 16px;
     text-align: center;
+  }
+  
+  .grid {
+    gap: 16px;
+  }
+  
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -981,36 +1242,49 @@ tr:hover td {
   }
   
   .hero {
-    padding: 90px 12px 40px;
+    padding: 70px 12px 30px;
+  }
+  
+  .hero-title {
+    font-size: 1.6rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.85rem;
   }
   
   .hero-badge {
-    font-size: 0.75rem;
-    padding: 6px 12px;
+    font-size: 0.7rem;
+    padding: 5px 10px;
+  }
+  
+  .btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
   }
   
   .btn-lg {
     padding: 14px 24px;
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
   
   .card {
-    padding: 20px;
+    padding: 16px;
   }
   
   .card-icon {
-    width: 48px;
-    height: 48px;
-    font-size: 1.25rem;
-  }
-  
-  .grid {
-    gap: 16px;
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
   }
   
   table th, table td {
-    padding: 12px;
-    font-size: 0.85rem;
+    padding: 10px;
+    font-size: 0.8rem;
+  }
+  
+  .section {
+    padding: 40px 0;
   }
 }
 

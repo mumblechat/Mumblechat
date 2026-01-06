@@ -6,10 +6,13 @@
     <title>Network Status - MumbleChat Protocol Live Dashboard</title>
     <meta name="description" content="Real-time view of MumbleChat relay network. See active nodes, messages relayed, node tiers, and network health.">
     
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#6366f1">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MumbleChat">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -120,6 +123,19 @@
         .tier-badge.silver { background: rgba(192, 192, 192, 0.2); color: #c0c0c0; }
         .tier-badge.gold { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
         .tier-badge.platinum { background: rgba(229, 228, 226, 0.2); color: #e5e4e2; }
+        
+        .node-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .node-type-badge.desktop { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
+        .node-type-badge.phone { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
         
         .address-cell {
             font-family: 'JetBrains Mono', monospace;
@@ -249,9 +265,15 @@
                 <li><a href="index.html">Home</a></li>
                 <li><a href="protocol.html">Protocol</a></li>
                 <li><a href="token.html">MCT Token</a></li>
-                <li><a href="relay-nodes.html">Relay Nodes</a></li>
-                <li><a href="network-status.html" class="active">📡 Network Status</a></li>
-                <li><a href="relay-node.html" style="color: #4bc0c8;">🚀 Run Node</a></li>
+                <li class="nav-dropdown">
+                    <a class="active">🌐 Network</a>
+                    <div class="dropdown-menu">
+                        <a href="relay-nodes.html">📋 Relay Nodes</a>
+                        <a href="network-status.html" class="active">📡 Network Status</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="relay-node.html" style="color: #4bc0c8;">🚀 Run a Node</a>
+                    </div>
+                </li>
                 <li><a href="download.html">Download</a></li>
                 <li><a href="docs.html">Docs</a></li>
             </ul>
@@ -354,6 +376,7 @@
                                 <th>#</th>
                                 <th>Node Address</th>
                                 <th>Status</th>
+                                <th>Node Type</th>
                                 <th>Tier</th>
                                 <th>Storage</th>
                                 <th>Messages Relayed</th>
@@ -363,7 +386,7 @@
                         </thead>
                         <tbody id="nodeList">
                             <tr>
-                                <td colspan="8" class="no-nodes-message">
+                                <td colspan="9" class="no-nodes-message">
                                     <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
                                     Loading node data from blockchain...
                                 </td>
@@ -540,6 +563,10 @@
             }
         }
         
+        // Node type definitions
+        const NODE_TYPES = ['Desktop', 'Phone'];
+        const NODE_TYPE_ICONS = { 'Desktop': '🖥️', 'Phone': '📱' };
+        
         // Generate mock node data (in production, this would come from blockchain)
         function generateMockNodes(count) {
             const nodes = [];
@@ -554,12 +581,15 @@
                 const messagesRelayed = Math.floor(Math.random() * 50000);
                 const uptimeHours = Math.floor(Math.random() * 720); // up to 30 days
                 const staked = 100 + (tier * 100);
+                // Desktop nodes are more common (70%) than phone nodes
+                const nodeType = Math.random() > 0.3 ? 'Desktop' : 'Phone';
                 
                 nodes.push({
                     address: `0x${generateRandomHex(40)}`,
                     status: isOnline ? 'online' : 'offline',
                     tier: tier,
                     tierName: TIER_NAMES[tier],
+                    nodeType: nodeType,
                     storage: TIER_STORAGE[tier],
                     storageUsed: Math.floor(Math.random() * 100),
                     messagesRelayed: messagesRelayed,
@@ -598,7 +628,7 @@
             if (nodes.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="no-nodes-message">
+                        <td colspan="9" class="no-nodes-message">
                             <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
                             No relay nodes registered yet.<br>
                             <a href="relay-node.html" style="color: var(--primary);">Be the first to run a node!</a>
@@ -617,6 +647,11 @@
                         <td>
                             <span class="node-status ${node.status}">
                                 ${node.status === 'online' ? '🟢' : '🔴'} ${node.status}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="node-type-badge ${node.nodeType.toLowerCase()}">
+                                ${NODE_TYPE_ICONS[node.nodeType]} ${node.nodeType}
                             </span>
                         </td>
                         <td>
@@ -711,6 +746,54 @@
         
         // Auto-refresh every 30 seconds
         setInterval(loadNetworkData, 30000);
+    </script>
+    
+    <!-- Bottom Navigation for Mobile -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-container">
+            <a href="index.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">🏠</span>
+                <span class="bottom-nav-label">Home</span>
+            </a>
+            <div class="bottom-nav-item bottom-nav-dropdown active" onclick="toggleNetworkMenu(this)">
+                <span class="bottom-nav-icon">📡</span>
+                <span class="bottom-nav-label">Network</span>
+                <div class="bottom-nav-menu">
+                    <a href="relay-nodes.html">📋 Relay Nodes</a>
+                    <a href="network-status.html" class="active">📡 Network Status</a>
+                    <div class="divider"></div>
+                    <a href="relay-node.html" style="color: #4bc0c8;">🚀 Run a Node</a>
+                </div>
+            </div>
+            <a href="chat2.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">💬</span>
+                <span class="bottom-nav-label">Chat</span>
+            </a>
+            <a href="token.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">🪙</span>
+                <span class="bottom-nav-label">Token</span>
+            </a>
+            <a href="docs.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">📚</span>
+                <span class="bottom-nav-label">Docs</span>
+            </a>
+        </div>
+    </nav>
+    
+    <script>
+        function toggleNetworkMenu(el) {
+            el.classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            // Close menu when clicking a link inside it
+            if (e.target.closest('.bottom-nav-menu a')) {
+                document.querySelectorAll('.bottom-nav-dropdown').forEach(d => d.classList.remove('open'));
+                return;
+            }
+            if (!e.target.closest('.bottom-nav-dropdown')) {
+                document.querySelectorAll('.bottom-nav-dropdown').forEach(d => d.classList.remove('open'));
+            }
+        });
     </script>
     <script src="js/app.js"></script>
 </body>
