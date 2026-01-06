@@ -807,6 +807,7 @@
                 <li><a href="protocol.html">Protocol</a></li>
                 <li><a href="token.html">MCT Token</a></li>
                 <li><a href="relay-nodes.html">Relay Nodes</a></li>
+                <li><a href="network-status.html">📡 Network Status</a></li>
                 <li><a href="relay-node.html" class="active" style="color: #4bc0c8;">🚀 Run Node</a></li>
                 <li><a href="download.html">Download</a></li>
                 <li><a href="docs.html">Docs</a></li>
@@ -945,31 +946,34 @@
 
                         <!-- Step 3: Tier Selection -->
                         <div class="wizard-step-content" id="step3Content" style="display: none;">
-                            <h3 style="text-align: center; margin-bottom: 20px;">💎 Select Your Tier</h3>
+                            <h3 style="text-align: center; margin-bottom: 12px;">💎 Select Your Tier</h3>
+                            <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-bottom: 20px;">
+                                Daily pool of 100 MCT is distributed at midnight UTC based on tier multiplier
+                            </p>
                             <div class="tier-selector" id="wizardTierSelector">
                                 <div class="tier-card selected" data-tier="bronze">
                                     <div class="tier-name">🥉 Bronze</div>
                                     <div class="tier-storage">1 GB Storage</div>
-                                    <div class="tier-rewards">1.0x • 4h+/day</div>
-                                    <div style="font-size: 11px; color: var(--success); margin-top: 6px;">💰 100 MCT</div>
+                                    <div class="tier-rewards">1.0x share • 4h+/day</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: 100 MCT</div>
                                 </div>
                                 <div class="tier-card" data-tier="silver">
                                     <div class="tier-name">🥈 Silver</div>
                                     <div class="tier-storage">2 GB Storage</div>
-                                    <div class="tier-rewards">1.5x • 8h+/day</div>
-                                    <div style="font-size: 11px; color: var(--success); margin-top: 6px;">💰 500 MCT</div>
+                                    <div class="tier-rewards">1.5x share • 8h+/day</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: 500 MCT</div>
                                 </div>
                                 <div class="tier-card" data-tier="gold">
                                     <div class="tier-name">🥇 Gold</div>
                                     <div class="tier-storage">4 GB Storage</div>
-                                    <div class="tier-rewards">2.0x • 12h+/day</div>
-                                    <div style="font-size: 11px; color: var(--success); margin-top: 6px;">💰 1000 MCT</div>
+                                    <div class="tier-rewards">2.0x share • 12h+/day</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: 1000 MCT</div>
                                 </div>
                                 <div class="tier-card" data-tier="platinum">
                                     <div class="tier-name">💎 Platinum</div>
                                     <div class="tier-storage">8 GB Storage</div>
-                                    <div class="tier-rewards">3.0x • 16h+/day</div>
-                                    <div style="font-size: 11px; color: var(--success); margin-top: 6px;">💰 2500 MCT</div>
+                                    <div class="tier-rewards">3.0x share • 16h+/day</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: 2500 MCT</div>
                                 </div>
                             </div>
                             <button class="one-click-btn" onclick="setupWizard.nextStep()">
@@ -1160,31 +1164,34 @@
                         </div>
 
                         <!-- Tier Selection -->
-                        <h3 style="margin-top: 24px; margin-bottom: 16px; font-size: 18px;">💎 Select Tier</h3>
+                        <h3 style="margin-top: 24px; margin-bottom: 8px; font-size: 18px;">💎 Select Tier</h3>
+                        <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 16px;">
+                            Daily pool of 100 MCT distributed at midnight UTC based on tier multiplier
+                        </p>
                         <div class="tier-selector">
-                            <div class="tier-card selected" data-tier="bronze" title="Requires 100 MCT">
+                            <div class="tier-card selected" data-tier="bronze" title="Stake 100 MCT">
                                 <div class="tier-name">🥉 Bronze</div>
                                 <div class="tier-storage">1 GB Storage</div>
-                                <div class="tier-rewards">1.0x Rewards • 4h+/day</div>
-                                <div class="tier-requirement" style="font-size: 12px; color: var(--success); margin-top: 8px; font-weight: 600;">💰 100 MCT</div>
+                                <div class="tier-rewards">1.0x Pool Share • 4h+/day</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: 100 MCT</div>
                             </div>
-                            <div class="tier-card" data-tier="silver" title="Requires 500 MCT">
+                            <div class="tier-card" data-tier="silver" title="Stake 500 MCT">
                                 <div class="tier-name">🥈 Silver</div>
                                 <div class="tier-storage">2 GB Storage</div>
-                                <div class="tier-rewards">1.5x Rewards • 8h+/day</div>
-                                <div class="tier-requirement" style="font-size: 12px; color: var(--success); margin-top: 8px; font-weight: 600;">💰 500 MCT</div>
+                                <div class="tier-rewards">1.5x Pool Share • 8h+/day</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: 500 MCT</div>
                             </div>
-                            <div class="tier-card" data-tier="gold" title="Requires 1000 MCT">
+                            <div class="tier-card" data-tier="gold" title="Stake 1000 MCT">
                                 <div class="tier-name">🥇 Gold</div>
                                 <div class="tier-storage">4 GB Storage</div>
-                                <div class="tier-rewards">2.0x Rewards • 12h+/day</div>
-                                <div class="tier-requirement" style="font-size: 12px; color: var(--success); margin-top: 8px; font-weight: 600;">💰 1000 MCT</div>
+                                <div class="tier-rewards">2.0x Pool Share • 12h+/day</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: 1000 MCT</div>
                             </div>
-                            <div class="tier-card" data-tier="platinum" title="Requires 2500 MCT">
+                            <div class="tier-card" data-tier="platinum" title="Stake 2500 MCT">
                                 <div class="tier-name">💎 Platinum</div>
                                 <div class="tier-storage">8 GB Storage</div>
-                                <div class="tier-rewards">3.0x Rewards • 16h+/day</div>
-                                <div class="tier-requirement" style="font-size: 12px; color: var(--success); margin-top: 8px; font-weight: 600;">💰 2500 MCT</div>
+                                <div class="tier-rewards">3.0x Pool Share • 16h+/day</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: 2500 MCT</div>
                             </div>
                         </div>
 
@@ -1300,17 +1307,28 @@
                     </div>
                 </div>
 
-                <h3>Reward Tiers</h3>
+                <h3>Reward Tiers & Daily Pool</h3>
+                <div style="margin-bottom: 16px; padding: 16px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid #f59e0b;">
+                    <strong style="color: #f59e0b;">📊 Daily Pool: 100 MCT Maximum</strong>
+                    <p style="margin: 8px 0 0; font-size: 13px; color: var(--text-secondary);">
+                        The pool is distributed at <strong>midnight UTC</strong> to all active relay nodes based on their relay count × tier multiplier.
+                        Your share = (your weighted relays / total weighted relays) × 100 MCT.
+                    </p>
+                </div>
                 <ul>
-                    <li><strong>🥉 Bronze:</strong> 1 GB storage, 4+ hours/day - 1.0x rewards (100 MCT required)</li>
-                    <li><strong>🥈 Silver:</strong> 2 GB storage, 8+ hours/day - 1.5x rewards (500 MCT required)</li>
-                    <li><strong>🥇 Gold:</strong> 4 GB storage, 12+ hours/day - 2.0x rewards (1000 MCT required)</li>
-                    <li><strong>💎 Platinum:</strong> 8 GB storage, 16+ hours/day - 3.0x rewards (2500 MCT required)</li>
+                    <li><strong>🥉 Bronze:</strong> 1 GB storage, 4+ hours/day - <span style="color: var(--primary);">1.0x pool share</span> (100 MCT stake)</li>
+                    <li><strong>🥈 Silver:</strong> 2 GB storage, 8+ hours/day - <span style="color: var(--primary);">1.5x pool share</span> (500 MCT stake)</li>
+                    <li><strong>🥇 Gold:</strong> 4 GB storage, 12+ hours/day - <span style="color: var(--primary);">2.0x pool share</span> (1000 MCT stake)</li>
+                    <li><strong>💎 Platinum:</strong> 8 GB storage, 16+ hours/day - <span style="color: var(--primary);">3.0x pool share</span> (2500 MCT stake)</li>
                 </ul>
+                <div style="margin-top: 8px; padding: 12px; background: var(--bg-card); border-radius: 8px; font-size: 12px;">
+                    <strong>Example:</strong> If you're a Gold tier node relaying 100 messages, and total weighted relays = 1000, 
+                    your share = (100 × 2.0) / 1000 × 100 MCT = <strong>20 MCT</strong> for that day.
+                </div>
 
                 <div style="margin-top: 24px; padding: 16px; background: rgba(27, 140, 255, 0.1); border-radius: 8px; border: 1px solid rgba(27, 140, 255, 0.3);">
-                    <strong>💡 Pro Tip:</strong> Higher storage and longer uptime = more rewards! 
-                    Desktop nodes can achieve 24h/day uptime for maximum earnings.
+                    <strong>💡 Pro Tip:</strong> Higher tier multiplier = bigger share of the daily 100 MCT pool! 
+                    Desktop nodes can run 24/7 to relay more messages and maximize your daily earnings.
                 </div>
             </div>
         </div>

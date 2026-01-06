@@ -29,6 +29,7 @@
                 <li><a href="protocol.html">Protocol</a></li>
                 <li><a href="token.html">MCT Token</a></li>
                 <li><a href="relay-nodes.html" class="active">Relay Nodes</a></li>
+                <li><a href="network-status.html">📡 Network Status</a></li>
                 <li><a href="relay-node.html" style="color: #4bc0c8;">🚀 Run Node</a></li>
                 <li><a href="download.html">Download</a></li>
                 <li><a href="docs.html">Docs</a></li>
@@ -214,7 +215,7 @@
             <div class="section-title">
                 <h2>Tier <span>System</span></h2>
                 <p class="section-subtitle">
-                    Higher tiers earn more from the fee pool. Tier is calculated from uptime + storage.
+                    Daily pool of 100 MCT distributed at midnight UTC. Higher tier = bigger share based on relay count × multiplier.
                 </p>
             </div>
             
@@ -227,9 +228,9 @@
                         1 GB storage
                     </div>
                     <ul class="tier-benefits">
-                        <li>10% of daily pool</li>
-                        <li>1.0x fee multiplier</li>
-                        <li>Basic rewards</li>
+                        <li>Stake: 100 MCT</li>
+                        <li>1.0x pool share</li>
+                        <li>Base multiplier</li>
                         <li>Entry tier</li>
                     </ul>
                 </div>
@@ -242,9 +243,9 @@
                         2 GB storage
                     </div>
                     <ul class="tier-benefits">
-                        <li>20% of daily pool</li>
-                        <li>1.5x fee multiplier</li>
-                        <li>50% bonus rewards</li>
+                        <li>Stake: 500 MCT</li>
+                        <li>1.5x pool share</li>
+                        <li>50% bonus per relay</li>
                         <li>Part-time node</li>
                     </ul>
                 </div>
@@ -257,9 +258,9 @@
                         4 GB storage
                     </div>
                     <ul class="tier-benefits">
-                        <li>30% of daily pool</li>
-                        <li>2.0x fee multiplier</li>
-                        <li>100% bonus rewards</li>
+                        <li>Stake: 1000 MCT</li>
+                        <li>2.0x pool share</li>
+                        <li>100% bonus per relay</li>
                         <li>Active node</li>
                     </ul>
                 </div>
@@ -272,11 +273,36 @@
                         8+ GB storage
                     </div>
                     <ul class="tier-benefits">
-                        <li>40% of daily pool</li>
-                        <li>3.0x fee multiplier</li>
-                        <li>200% bonus rewards</li>
+                        <li>Stake: 2500 MCT</li>
+                        <li>3.0x pool share</li>
+                        <li>200% bonus per relay</li>
                         <li>Dedicated node</li>
                     </ul>
+                </div>
+            </div>
+            
+            <!-- Pool Distribution Example -->
+            <div class="card mt-4" style="background: var(--bg-dark);">
+                <h4 style="margin: 0 0 16px;">📊 How Daily Rewards Work</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div>
+                        <strong style="color: var(--primary);">1. Daily Pool</strong>
+                        <p style="color: var(--text-muted); font-size: 14px; margin: 8px 0 0;">
+                            100 MCT maximum is distributed each day at midnight UTC.
+                        </p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--primary);">2. Weighted Relays</strong>
+                        <p style="color: var(--text-muted); font-size: 14px; margin: 8px 0 0;">
+                            Your relays × tier multiplier = your weighted share.
+                        </p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--primary);">3. Fair Distribution</strong>
+                        <p style="color: var(--text-muted); font-size: 14px; margin: 8px 0 0;">
+                            Your share = (your weighted / total weighted) × 100 MCT.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

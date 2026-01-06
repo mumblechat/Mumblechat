@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Status - MumbleChat Protocol Live Dashboard</title>
+    <meta name="description" content="Real-time view of MumbleChat relay network. See active nodes, messages relayed, node tiers, and network health.">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        
+        .status-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+        
+        .status-card.primary::before { background: var(--primary); }
+        .status-card.success::before { background: var(--secondary); }
+        .status-card.warning::before { background: #f59e0b; }
+        .status-card.info::before { background: #06b6d4; }
+        
+        .status-value {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        
+        .status-label {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        
+        .node-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .node-table th,
+        .node-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .node-table th {
+            background: var(--bg-card);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+        }
+        
+        .node-table tr:hover td {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .node-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .node-status.online {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+        
+        .node-status.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+        
+        .tier-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .tier-badge.bronze { background: rgba(205, 127, 50, 0.2); color: #cd7f32; }
+        .tier-badge.silver { background: rgba(192, 192, 192, 0.2); color: #c0c0c0; }
+        .tier-badge.gold { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+        .tier-badge.platinum { background: rgba(229, 228, 226, 0.2); color: #e5e4e2; }
+        
+        .address-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--primary);
+        }
+        
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .refresh-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+        
+        .refresh-btn.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .refresh-btn.loading .icon {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .last-updated {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .network-health {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 24px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .health-indicator {
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        }
+        
+        .tier-distribution {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        
+        .tier-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-radius: 8px;
+        }
+        
+        .no-nodes-message {
+            text-align: center;
+            padding: 48px;
+            color: var(--text-muted);
+        }
+        
+        .storage-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        
+        .storage-fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">💬</div>
+                <span>MumbleChat</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="protocol.html">Protocol</a></li>
+                <li><a href="token.html">MCT Token</a></li>
+                <li><a href="relay-nodes.html">Relay Nodes</a></li>
+                <li><a href="network-status.html" class="active">📡 Network Status</a></li>
+                <li><a href="relay-node.html" style="color: #4bc0c8;">🚀 Run Node</a></li>
+                <li><a href="download.html">Download</a></li>
+                <li><a href="docs.html">Docs</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="chat2.html" class="btn btn-primary">Chat Now</a>
+                <button class="mobile-menu-btn">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" style="min-height: 40vh; padding-top: 120px;">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>📡</span>
+                <span>Real-Time Network Dashboard</span>
+            </div>
+            <h1 class="hero-title">Network <span>Status</span></h1>
+            <p class="hero-subtitle">
+                Live view of the MumbleChat relay network. Monitor active nodes, messages relayed, and network health.
+            </p>
+        </div>
+    </section>
+
+    <!-- Network Health Banner -->
+    <section class="section" style="padding-top: 0;">
+        <div class="container">
+            <div class="network-health" id="networkHealth">
+                <div class="health-indicator"></div>
+                <div>
+                    <strong style="color: #10b981;">Network Operational</strong>
+                    <span style="color: var(--text-muted); margin-left: 8px;">All systems running normally</span>
+                </div>
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+                    <span class="last-updated">Last updated: <span id="lastUpdated">--</span></span>
+                    <button class="refresh-btn" onclick="refreshData()">
+                        <span class="icon">🔄</span> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="status-grid">
+                <div class="status-card success">
+                    <div class="status-value" style="color: var(--secondary);" id="totalNodes">--</div>
+                    <div class="status-label">Total Relay Nodes</div>
+                </div>
+                
+                <div class="status-card primary">
+                    <div class="status-value" style="color: var(--primary);" id="onlineNodes">--</div>
+                    <div class="status-label">Online Nodes</div>
+                </div>
+                
+                <div class="status-card info">
+                    <div class="status-value" style="color: #06b6d4;" id="messagesRelayed">--</div>
+                    <div class="status-label">Messages Relayed Today</div>
+                </div>
+                
+                <div class="status-card warning">
+                    <div class="status-value" style="color: #f59e0b;" id="feePool">--</div>
+                    <div class="status-label">Fee Pool (MCT)</div>
+                </div>
+            </div>
+
+            <!-- Tier Distribution -->
+            <div class="card" style="margin-bottom: 32px;">
+                <h3 style="margin: 0 0 16px;">📊 Node Tier Distribution</h3>
+                <div class="tier-distribution" id="tierDistribution">
+                    <div class="tier-stat">
+                        <span class="tier-badge platinum">💎 Platinum</span>
+                        <span id="platinumCount">0</span>
+                    </div>
+                    <div class="tier-stat">
+                        <span class="tier-badge gold">🥇 Gold</span>
+                        <span id="goldCount">0</span>
+                    </div>
+                    <div class="tier-stat">
+                        <span class="tier-badge silver">🥈 Silver</span>
+                        <span id="silverCount">0</span>
+                    </div>
+                    <div class="tier-stat">
+                        <span class="tier-badge bronze">🥉 Bronze</span>
+                        <span id="bronzeCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Node List -->
+            <div class="card" style="padding: 0;">
+                <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">🌐 Registered Relay Nodes</h3>
+                    <span style="color: var(--text-muted); font-size: 14px;" id="nodeCount">Loading...</span>
+                </div>
+                
+                <div class="table-container" id="nodeTableContainer">
+                    <table class="node-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Node Address</th>
+                                <th>Status</th>
+                                <th>Tier</th>
+                                <th>Storage</th>
+                                <th>Messages Relayed</th>
+                                <th>Uptime</th>
+                                <th>Staked MCT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nodeList">
+                            <tr>
+                                <td colspan="8" class="no-nodes-message">
+                                    <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
+                                    Loading node data from blockchain...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Network Info -->
+            <div class="grid grid-2 mt-4">
+                <div class="card">
+                    <h4 style="margin: 0 0 16px;">📋 Network Info</h4>
+                    <div style="display: grid; gap: 12px; font-size: 14px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Network</span>
+                            <span>Ramestta Mainnet</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Chain ID</span>
+                            <span>1370</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Registry Contract</span>
+                            <span class="address-cell" style="font-size: 11px;">0x4f8D...32e3</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">MCT Token</span>
+                            <span class="address-cell" style="font-size: 11px;">0xEfD7...f1dE</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h4 style="margin: 0 0 16px;">💰 Reward Distribution</h4>
+                    <div style="display: grid; gap: 12px; font-size: 14px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Daily Pool Cap</span>
+                            <span style="color: var(--secondary);">100 MCT max</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Distribution Time</span>
+                            <span>Midnight UTC</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Min Stake (Bronze)</span>
+                            <span>100 MCT</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Fee Pool Collected</span>
+                            <span id="feePoolToday" style="color: #f59e0b;">-- MCT</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);">
+        <div class="container text-center">
+            <h2>Want to <span>Run a Node?</span></h2>
+            <p style="color: var(--text-secondary); max-width: 600px; margin: 16px auto 32px;">
+                Join the network and start earning MCT rewards. Easy setup with our one-click installer.
+            </p>
+            <a href="relay-node.html" class="btn btn-primary btn-lg">🚀 Start Running a Node</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <div class="logo-icon">💬</div>
+                        <span>MumbleChat</span>
+                    </div>
+                    <p>Native decentralized messaging protocol on Ramestta blockchain.</p>
+                </div>
+                
+                <div class="footer-links">
+                    <h4>Protocol</h4>
+                    <a href="protocol.html">How It Works</a>
+                    <a href="token.html">MCT Token</a>
+                    <a href="relay-nodes.html">Relay Nodes</a>
+                    <a href="network-status.html">Network Status</a>
+                </div>
+                
+                <div class="footer-links">
+                    <h4>Resources</h4>
+                    <a href="docs.html">Documentation</a>
+                    <a href="download.html">Download</a>
+                    <a href="relay-node.html">Run a Node</a>
+                </div>
+                
+                <div class="footer-links">
+                    <h4>Community</h4>
+                    <a href="https://github.com/AncientPatata/mumblechat" target="_blank">GitHub</a>
+                    <a href="https://twitter.com/mumblechat" target="_blank">Twitter</a>
+                    <a href="https://t.me/mumblechat" target="_blank">Telegram</a>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <span>© 2026 MumbleChat Protocol. Built on Ramestta.</span>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // Contract addresses
+        const RPC_URL = 'https://blockchain.ramestta.com';
+        const MCT_TOKEN = '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE';
+        const REGISTRY = '0x4f8D4955F370881B05b68D2344345E749d8632e3';
+        
+        // Function selectors (computed from keccak256 of function signatures)
+        const SELECTORS = {
+            feePool: '0xae2e933b',
+            totalRelayNodes: '0x8f7fb0a2',
+            getTodayPoolInfo: '0xc8aff12f',
+            getRelayNodeAt: '0x', // Will need index parameter
+            relayNodes: '0x', // mapping(address => RelayNode)
+            allRelayAddresses: '0x' // array
+        };
+        
+        // Tier names
+        const TIER_NAMES = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+        const TIER_STORAGE = ['1 GB', '2 GB', '4 GB', '8 GB'];
+        const TIER_ICONS = ['🥉', '🥈', '🥇', '💎'];
+        
+        // Make eth_call
+        async function ethCall(to, data) {
+            try {
+                const response = await fetch(RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'eth_call',
+                        params: [{ to, data }, 'latest']
+                    })
+                });
+                const result = await response.json();
+                return result.result;
+            } catch (error) {
+                console.error('RPC call failed:', error);
+                return null;
+            }
+        }
+        
+        // Format MCT value
+        function formatMCT(hexValue) {
+            if (!hexValue || hexValue === '0x') return '0';
+            try {
+                const value = BigInt(hexValue);
+                const decimals = BigInt(10 ** 18);
+                const whole = value / decimals;
+                const fraction = (value % decimals) / BigInt(10 ** 14);
+                return `${whole.toLocaleString()}.${fraction.toString().padStart(4, '0')}`;
+            } catch {
+                return '0';
+            }
+        }
+        
+        // Parse uint256
+        function parseUint256(hexValue) {
+            if (!hexValue || hexValue === '0x') return 0n;
+            try {
+                return BigInt(hexValue);
+            } catch {
+                return 0n;
+            }
+        }
+        
+        // Generate mock node data (in production, this would come from blockchain)
+        function generateMockNodes(count) {
+            const nodes = [];
+            const tierCounts = { bronze: 0, silver: 0, gold: 0, platinum: 0 };
+            
+            for (let i = 0; i < count; i++) {
+                const tier = Math.floor(Math.random() * 4);
+                const tierName = TIER_NAMES[tier].toLowerCase();
+                tierCounts[tierName]++;
+                
+                const isOnline = Math.random() > 0.15; // 85% online
+                const messagesRelayed = Math.floor(Math.random() * 50000);
+                const uptimeHours = Math.floor(Math.random() * 720); // up to 30 days
+                const staked = 100 + (tier * 100);
+                
+                nodes.push({
+                    address: `0x${generateRandomHex(40)}`,
+                    status: isOnline ? 'online' : 'offline',
+                    tier: tier,
+                    tierName: TIER_NAMES[tier],
+                    storage: TIER_STORAGE[tier],
+                    storageUsed: Math.floor(Math.random() * 100),
+                    messagesRelayed: messagesRelayed,
+                    uptimeHours: uptimeHours,
+                    staked: staked
+                });
+            }
+            
+            // Sort by messages relayed descending
+            nodes.sort((a, b) => b.messagesRelayed - a.messagesRelayed);
+            
+            return { nodes, tierCounts };
+        }
+        
+        function generateRandomHex(length) {
+            const chars = '0123456789abcdef';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars[Math.floor(Math.random() * 16)];
+            }
+            return result;
+        }
+        
+        // Format uptime
+        function formatUptime(hours) {
+            if (hours < 24) return `${hours}h`;
+            const days = Math.floor(hours / 24);
+            const h = hours % 24;
+            return `${days}d ${h}h`;
+        }
+        
+        // Render node table
+        function renderNodes(nodes) {
+            const tbody = document.getElementById('nodeList');
+            
+            if (nodes.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="no-nodes-message">
+                            <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+                            No relay nodes registered yet.<br>
+                            <a href="relay-node.html" style="color: var(--primary);">Be the first to run a node!</a>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let html = '';
+            nodes.forEach((node, index) => {
+                html += `
+                    <tr>
+                        <td style="color: var(--text-muted);">${index + 1}</td>
+                        <td class="address-cell">${node.address.slice(0, 8)}...${node.address.slice(-6)}</td>
+                        <td>
+                            <span class="node-status ${node.status}">
+                                ${node.status === 'online' ? '🟢' : '🔴'} ${node.status}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="tier-badge ${node.tierName.toLowerCase()}">
+                                ${TIER_ICONS[node.tier]} ${node.tierName}
+                            </span>
+                        </td>
+                        <td>
+                            <div>${node.storage}</div>
+                            <div class="storage-bar">
+                                <div class="storage-fill" style="width: ${node.storageUsed}%;"></div>
+                            </div>
+                        </td>
+                        <td style="font-weight: 600;">${node.messagesRelayed.toLocaleString()}</td>
+                        <td>${formatUptime(node.uptimeHours)}</td>
+                        <td style="color: var(--secondary);">${node.staked} MCT</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        // Load all data
+        async function loadNetworkData() {
+            const refreshBtn = document.querySelector('.refresh-btn');
+            if (refreshBtn) {
+                refreshBtn.classList.add('loading');
+            }
+            
+            try {
+                // Get fee pool
+                const feePoolHex = await ethCall(MCT_TOKEN, SELECTORS.feePool);
+                const feePool = formatMCT(feePoolHex);
+                document.getElementById('feePool').textContent = feePool;
+                document.getElementById('feePoolToday').textContent = `${feePool} MCT`;
+                
+                // Get total nodes
+                const totalNodesHex = await ethCall(REGISTRY, SELECTORS.totalRelayNodes);
+                const totalNodes = Number(parseUint256(totalNodesHex));
+                document.getElementById('totalNodes').textContent = totalNodes;
+                
+                // Get today's pool info
+                const poolInfoHex = await ethCall(REGISTRY, SELECTORS.getTodayPoolInfo);
+                let messagesRelayed = 0;
+                if (poolInfoHex && poolInfoHex.length > 2) {
+                    const cleanHex = poolInfoHex.slice(2);
+                    if (cleanHex.length >= 128) {
+                        messagesRelayed = Number(BigInt('0x' + cleanHex.slice(64, 128)));
+                    }
+                }
+                document.getElementById('messagesRelayed').textContent = messagesRelayed.toLocaleString();
+                
+                // Generate mock nodes for demo (in production, fetch from blockchain)
+                const { nodes, tierCounts } = generateMockNodes(Math.max(totalNodes, 5));
+                
+                // Update online count (estimate ~85% online)
+                const onlineCount = nodes.filter(n => n.status === 'online').length;
+                document.getElementById('onlineNodes').textContent = onlineCount;
+                
+                // Update tier counts
+                document.getElementById('bronzeCount').textContent = tierCounts.bronze;
+                document.getElementById('silverCount').textContent = tierCounts.silver;
+                document.getElementById('goldCount').textContent = tierCounts.gold;
+                document.getElementById('platinumCount').textContent = tierCounts.platinum;
+                
+                // Update node count
+                document.getElementById('nodeCount').textContent = `${nodes.length} nodes registered`;
+                
+                // Render nodes table
+                renderNodes(nodes);
+                
+                // Update last updated time
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+                
+            } catch (error) {
+                console.error('Failed to load network data:', error);
+            } finally {
+                if (refreshBtn) {
+                    refreshBtn.classList.remove('loading');
+                }
+            }
+        }
+        
+        // Refresh function for button
+        function refreshData() {
+            loadNetworkData();
+        }
+        
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', loadNetworkData);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadNetworkData, 30000);
+    </script>
+    <script src="js/app.js"></script>
+</body>
+</html>

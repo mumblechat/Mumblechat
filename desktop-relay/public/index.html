@@ -964,7 +964,7 @@
             <div class="modal-body">
                 <p style="color: var(--text-secondary); margin-bottom: 20px;">
                     Stake MCT tokens to register your relay node on the blockchain. 
-                    Higher stakes = higher tier = more rewards!
+                    Daily 100 MCT pool distributed at midnight based on your relays × tier multiplier.
                 </p>
                 <div class="form-group">
                     <label class="form-label">Stake Amount (MCT)</label>
@@ -972,17 +972,50 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Relay Endpoint</label>
-                    <input type="text" class="form-input" id="relayEndpointInput" placeholder="e.g., wss://relay.yourdomain.com">
-                </div>
-                <div style="background: var(--bg-dark); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
-                    <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 8px;">Tier Benefits</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
-                        <div>🥉 Bronze: 100+ MCT</div>
-                        <div>🥈 Silver: 1,000+ MCT</div>
-                        <div>🥇 Gold: 10,000+ MCT</div>
-                        <div>💎 Diamond: 100,000+ MCT</div>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" class="form-input" id="relayEndpointInput" placeholder="Auto-generated or custom URL" style="flex: 1;">
+                        <button class="btn" onclick="generateAutoEndpoint()" style="white-space: nowrap; background: var(--bg-card-hover);">
+                            🔄 Auto
+                        </button>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        Click "Auto" to use MumbleChat's relay network (recommended for beginners)
                     </div>
                 </div>
+                
+                <!-- Tier Info with Earnings Estimate -->
+                <div style="background: var(--bg-dark); padding: 16px; border-radius: 10px; margin-bottom: 16px;">
+                    <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">📊 Tier Requirements & Daily Pool Share</div>
+                    <div style="display: grid; gap: 10px; font-size: 12px;">
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(205, 127, 50, 0.1); border-radius: 6px;">
+                            <span>🥉 <strong>Bronze</strong>: 100 MCT stake</span>
+                            <span style="color: #cd7f32;">1.0x share (1 GB, 4h+/day)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(192, 192, 192, 0.1); border-radius: 6px;">
+                            <span>🥈 <strong>Silver</strong>: 500 MCT stake</span>
+                            <span style="color: #c0c0c0;">1.5x share (2 GB, 8h+/day)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(255, 215, 0, 0.1); border-radius: 6px;">
+                            <span>🥇 <strong>Gold</strong>: 1,000 MCT stake</span>
+                            <span style="color: #ffd700;">2.0x share (4 GB, 12h+/day)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(229, 228, 226, 0.1); border-radius: 6px;">
+                            <span>💎 <strong>Platinum</strong>: 2,500 MCT stake</span>
+                            <span style="color: #e5e4e2;">3.0x share (8 GB, 16h+/day)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Earnings Estimate -->
+                <div style="background: linear-gradient(135deg, rgba(108, 99, 255, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%); padding: 16px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--border);">
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">💰 Estimated Daily Earnings</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+                        <strong>Daily Pool:</strong> 100 MCT distributed at midnight UTC<br>
+                        <strong>Your Share:</strong> (Your Relays × Tier Multiplier) ÷ Total Network Score<br>
+                        <strong>Example:</strong> If you relay 1,000 messages as Gold (2.0x) and network total is 10,000 weighted relays, you earn: 1,000 × 2.0 ÷ 10,000 × 100 = <span style="color: var(--success);">20 MCT/day</span>
+                    </div>
+                </div>
+                
                 <button class="btn btn-primary" onclick="registerNode()" style="width: 100%;">
                     Register & Stake
                 </button>
@@ -1230,25 +1263,38 @@
         // Modal Functions
         function showRegisterModal() {
             document.getElementById('registerModal').classList.add('active');
+            // Auto-generate endpoint on modal open
+            generateAutoEndpoint();
         }
 
         function closeModal() {
             document.getElementById('registerModal').classList.remove('active');
         }
+        
+        // Auto-generate relay endpoint using MumbleChat's relay network
+        function generateAutoEndpoint() {
+            const walletAddr = state.walletAddress || 'unknown';
+            const shortAddr = walletAddr.slice(2, 10).toLowerCase();
+            // Use MumbleChat's relay network subdomain
+            const autoEndpoint = `wss://relay-${shortAddr}.mumblechat.io`;
+            document.getElementById('relayEndpointInput').value = autoEndpoint;
+            showToast('Auto-endpoint generated! Your node will be accessible via MumbleChat relay network.', 'success');
+        }
 
         // Registration
         async function registerNode() {
             const stakeAmount = document.getElementById('stakeAmount').value;
-            const endpoint = document.getElementById('relayEndpointInput').value;
+            let endpoint = document.getElementById('relayEndpointInput').value;
             
             if (!stakeAmount || stakeAmount < 100) {
                 showToast('Minimum stake is 100 MCT', 'error');
                 return;
             }
             
+            // Auto-generate endpoint if empty
             if (!endpoint) {
-                showToast('Please enter your relay endpoint', 'error');
-                return;
+                generateAutoEndpoint();
+                endpoint = document.getElementById('relayEndpointInput').value;
             }
             
             showToast('Registration requires RAMA for gas. Please fund your wallet first.', 'warning');
@@ -1263,10 +1309,10 @@
             document.getElementById('registerBtn').style.display = 'none';
             document.getElementById('unregisterBtn').style.display = 'inline-flex';
             
-            // Update tier based on stake
-            if (stakeAmount >= 100000) state.tier = 'diamond';
-            else if (stakeAmount >= 10000) state.tier = 'gold';
-            else if (stakeAmount >= 1000) state.tier = 'silver';
+            // Update tier based on stake (correct thresholds)
+            if (stakeAmount >= 2500) state.tier = 'platinum';
+            else if (stakeAmount >= 1000) state.tier = 'gold';
+            else if (stakeAmount >= 500) state.tier = 'silver';
             else state.tier = 'bronze';
             
             updateTierBadge();
