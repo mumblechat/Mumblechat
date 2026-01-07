@@ -813,7 +813,7 @@
                 <!-- Registration Section -->
                 <div class="section">
                     <div class="section-header">
-                        <div class="section-title">📝 Node Registration</div>
+                        <div class="section-title">📝 Node Registration (V4)</div>
                         <div class="btn-group">
                             <button class="btn btn-primary" id="registerBtn" onclick="showRegisterModal()">
                                 Register Node
@@ -830,18 +830,40 @@
                                     <div class="reg-item-label">Registration Status</div>
                                     <div class="reg-item-value" id="regStatus">Not Registered</div>
                                 </div>
+                                <div class="reg-item" style="grid-column: 1 / -1;">
+                                    <div class="reg-item-label">🆔 Node ID (SHA256)</div>
+                                    <div class="reg-item-value" id="nodeId" style="font-family: monospace; font-size: 11px; word-break: break-all; color: var(--primary);">-</div>
+                                </div>
+                                <div class="reg-item">
+                                    <div class="reg-item-label">💎 Tier</div>
+                                    <div class="reg-item-value" id="nodeTier">-</div>
+                                </div>
                                 <div class="reg-item">
                                     <div class="reg-item-label">Staked MCT</div>
                                     <div class="reg-item-value" id="stakedMct">0 MCT</div>
+                                </div>
+                                <div class="reg-item">
+                                    <div class="reg-item-label">🖥️ Instance</div>
+                                    <div class="reg-item-value" id="instanceNumber">#-</div>
                                 </div>
                                 <div class="reg-item">
                                     <div class="reg-item-label">Relay Endpoint</div>
                                     <div class="reg-item-value" id="relayEndpoint">-</div>
                                 </div>
                                 <div class="reg-item">
-                                    <div class="reg-item-label">Next Payout</div>
-                                    <div class="reg-item-value" id="nextPayout">-</div>
+                                    <div class="reg-item-label">📅 Registered</div>
+                                    <div class="reg-item-value" id="registeredDate">-</div>
                                 </div>
+                                <div class="reg-item">
+                                    <div class="reg-item-label">⏱️ Daily Uptime</div>
+                                    <div class="reg-item-value" id="dailyUptime">-</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 16px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
+                                <strong style="color: var(--primary);">💡 Multi-Node Support:</strong>
+                                <span style="color: var(--text-secondary); font-size: 13px; margin-left: 8px;">
+                                    V4 allows running multiple nodes from one PC with different wallet addresses. Each node has a unique ID.
+                                </span>
                             </div>
                         </div>
                     </div>

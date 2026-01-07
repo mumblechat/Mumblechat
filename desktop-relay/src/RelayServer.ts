@@ -66,10 +66,36 @@ export class RelayServer extends EventEmitter {
       this.blockchain = new BlockchainService(
         this.config.blockchain.rpcUrl,
         this.config.blockchain.registryAddress,
+        this.config.blockchain.relayManagerAddress,
         this.config.blockchain.mctTokenAddress,
         privateKey
       );
       await this.blockchain.printStatus();
+
+      // ⚠️ CRITICAL: Check if node is registered before starting
+      this.logger.info('Checking registration status...');
+      const isRegistered = await this.blockchain.isRelayRegistered();
+      
+      if (!isRegistered) {
+        this.logger.error('❌ Node is NOT registered!');
+        this.logger.error('');
+        this.logger.error('You must register this node before it can operate.');
+        this.logger.error('Run: node dist/cli.js register --tier bronze');
+        this.logger.error('');
+        throw new Error('Node not registered. Please register first.');
+      }
+      
+      this.logger.info('✅ Node is registered');
+      
+      // Load node IDs for this wallet
+      const nodeIds = await this.blockchain.getWalletNodeIds();
+      this.logger.info(`Found ${nodeIds.length} node(s) registered to this wallet`);
+      
+      if (nodeIds.length > 0) {
+        // TODO: For multi-node support, need to select which node ID this instance uses
+        // For now, use the first one or generate new if needed
+        this.logger.info(`Using Node ID: ${nodeIds[0]}`);
+      }
 
       // Initialize storage
       this.logger.info('Initializing message storage...');

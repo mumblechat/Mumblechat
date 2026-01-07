@@ -74,7 +74,7 @@
         <div class="hero-content animate-fade-in">
             <div class="hero-badge">
                 <span>🚀</span>
-                <span>V3.0 - Native Protocol • 99% Complete</span>
+                <span>V4.0 - Split Architecture • Live on Mainnet</span>
             </div>
             
             <h1 class="hero-title">
@@ -200,94 +200,8 @@
         </div>
     </section>
 
-    <!-- Comparison Section -->
+    <!-- Smart Contracts Section -->
     <section class="section" style="background: var(--bg-card);">
-        <div class="container">
-            <div class="section-title">
-                <h2>MumbleChat <span>V1 → V2 → V3</span></h2>
-                <p class="section-subtitle">
-                    Evolution from XMTP-based to fully native P2P protocol with Sybil resistance.
-                </p>
-            </div>
-            
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Feature</th>
-                            <th>V1 (XMTP)</th>
-                            <th>V2 (Native)</th>
-                            <th>
-                                <div class="comparison-header">
-                                    V3 (P2P + Security)
-                                    <span class="comparison-badge">CURRENT</span>
-                                </div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Protocol</td>
-                            <td>XMTP (third-party)</td>
-                            <td>Native MumbleChat</td>
-                            <td>✅ Full P2P + Kademlia DHT</td>
-                        </tr>
-                        <tr>
-                            <td>Encryption</td>
-                            <td>Signal via XMTP</td>
-                            <td>X25519 + AES-256-GCM</td>
-                            <td>✅ + AEAD Binding (anti-replay)</td>
-                        </tr>
-                        <tr>
-                            <td>Peer Discovery</td>
-                            <td>XMTP Network</td>
-                            <td>Blockchain Lookup</td>
-                            <td>✅ Kademlia DHT + STUN</td>
-                        </tr>
-                        <tr>
-                            <td>NAT Traversal</td>
-                            <td>❌ None</td>
-                            <td>❌ None</td>
-                            <td>✅ UDP Hole Punching</td>
-                        </tr>
-                        <tr>
-                            <td>Sybil Protection</td>
-                            <td>❌ None</td>
-                            <td>❌ None</td>
-                            <td>✅ Wallet Signature Verification</td>
-                        </tr>
-                        <tr>
-                            <td>Rate Limiting</td>
-                            <td>❌ None</td>
-                            <td>❌ None</td>
-                            <td>✅ 100 msg/min per peer</td>
-                        </tr>
-                        <tr>
-                            <td>Battery Optimization</td>
-                            <td>❌ Always-on</td>
-                            <td>Basic</td>
-                            <td>✅ 4-mode Strategy Manager</td>
-                        </tr>
-                        <tr>
-                            <td>Token Rewards</td>
-                            <td>❌ None</td>
-                            <td>✅ MCT Token</td>
-                            <td>✅ MCT V3 + Daily Pool</td>
-                        </tr>
-                        <tr>
-                            <td>Implementation</td>
-                            <td>Deprecated</td>
-                            <td>Partial</td>
-                            <td>✅ 99% Complete</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-
-    <!-- Quick Stats -->
-    <section class="section">
         <div class="container">
             <div class="section-title">
                 <h2>Smart <span>Contracts</span></h2>
@@ -296,29 +210,42 @@
                 </p>
             </div>
             
-            <div class="grid grid-2">
-                <div class="card">
-                    <div class="card-icon">🪙</div>
-                    <h3 class="card-title">MCT Token</h3>
-                    <p class="card-text">ERC-20 with fee pool, halving, and governance.</p>
-                    <div class="contract-address mt-3">
-                        <code>0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE</code>
-                        <button onclick="copyAddress('0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE')">📋</button>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1200px; margin: 0 auto;">
+                <div class="card" style="text-align: center; padding: 32px 24px;">
+                    <div class="card-icon" style="font-size: 3rem; margin-bottom: 16px;">🪙</div>
+                    <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 8px;">MCT Token</h3>
+                    <p class="card-text" style="font-size: 0.9rem; margin-bottom: 20px;">ERC-20 with fee pool, halving, and governance.</p>
+                    <div class="contract-address" style="background: var(--bg-dark); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <code style="font-size: 0.75rem; word-break: break-all;">0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE</code>
+                        <button onclick="copyAddress('0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE')" style="margin-left: 8px;">📋</button>
                     </div>
-                    <a href="https://ramascan.com/address/0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE" target="_blank" class="btn btn-secondary btn-sm mt-3">
+                    <a href="https://ramascan.com/address/0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE" target="_blank" class="btn btn-secondary btn-sm">
                         View on RamaScan →
                     </a>
                 </div>
                 
-                <div class="card">
-                    <div class="card-icon">📝</div>
-                    <h3 class="card-title">MumbleChatRegistry</h3>
-                    <p class="card-text">Identity + Relay Node + Tier System.</p>
-                    <div class="contract-address mt-3">
-                        <code>0x4f8D4955F370881B05b68D2344345E749d8632e3</code>
-                        <button onclick="copyAddress('0x4f8D4955F370881B05b68D2344345E749d8632e3')">📋</button>
+                <div class="card" style="text-align: center; padding: 32px 24px;">
+                    <div class="card-icon" style="font-size: 3rem; margin-bottom: 16px;">📝</div>
+                    <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 8px;">MumbleChatRegistry V4</h3>
+                    <p class="card-text" style="font-size: 0.9rem; margin-bottom: 20px;">Core Identity + User Blocking.</p>
+                    <div class="contract-address" style="background: var(--bg-dark); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <code style="font-size: 0.75rem; word-break: break-all;">0x4f8D4955F370881B05b68D2344345E749d8632e3</code>
+                        <button onclick="copyAddress('0x4f8D4955F370881B05b68D2344345E749d8632e3')" style="margin-left: 8px;">📋</button>
                     </div>
-                    <a href="https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3" target="_blank" class="btn btn-secondary btn-sm mt-3">
+                    <a href="https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3" target="_blank" class="btn btn-secondary btn-sm">
+                        View on RamaScan →
+                    </a>
+                </div>
+                
+                <div class="card" style="text-align: center; padding: 32px 24px;">
+                    <div class="card-icon" style="font-size: 3rem; margin-bottom: 16px;">📡</div>
+                    <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 8px;">RelayManager V1</h3>
+                    <p class="card-text" style="font-size: 0.9rem; margin-bottom: 20px;">V4 Node Identity + Tier Staking.</p>
+                    <div class="contract-address" style="background: var(--bg-dark); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <code style="font-size: 0.75rem; word-break: break-all;">0xF78F840eF0e321512b09e98C76eA0229Affc4b73</code>
+                        <button onclick="copyAddress('0xF78F840eF0e321512b09e98C76eA0229Affc4b73')" style="margin-left: 8px;">📋</button>
+                    </div>
+                    <a href="https://ramascan.com/address/0xF78F840eF0e321512b09e98C76eA0229Affc4b73" target="_blank" class="btn btn-secondary btn-sm">
                         View on RamaScan →
                     </a>
                 </div>

@@ -865,10 +865,118 @@
                 </div>
             </section>
 
+            <!-- Node Viewer Section -->
+            <section class="section" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%); padding: 32px; border-radius: 16px; margin-bottom: 32px;">
+                <div class="section-title" style="margin-bottom: 24px;">
+                    <h2>🔍 View <span>Node Status</span></h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-top: 8px;">Search by Node ID or connect your wallet to view your nodes - Full transparency!</p>
+                </div>
+                
+                <div class="card" style="padding: 24px;">
+                    <!-- Wallet Connect / Node ID Tabs -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 12px;">
+                        <button id="tabWalletConnect" onclick="switchViewerTab('wallet')" 
+                            style="flex: 1; padding: 12px 20px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 10px 10px 0 0; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                            🔗 Connect Wallet
+                        </button>
+                        <button id="tabNodeId" onclick="switchViewerTab('nodeid')" 
+                            style="flex: 1; padding: 12px 20px; background: var(--bg-card); color: var(--text-secondary); border: none; border-radius: 10px 10px 0 0; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                            🔍 Search by Node ID
+                        </button>
+                    </div>
+                    
+                    <!-- Wallet Connect View -->
+                    <div id="walletConnectView">
+                        <div id="walletNotConnected" style="text-align: center; padding: 30px 0;">
+                            <div style="font-size: 64px; margin-bottom: 16px;">👛</div>
+                            <h3 style="margin: 0 0 12px; font-size: 20px;">Connect Your Wallet</h3>
+                            <p style="color: var(--text-muted); margin: 0 0 24px; font-size: 14px;">
+                                Select your wallet to automatically view all your relay nodes
+                            </p>
+                            
+                            <!-- Wallet Selection Grid -->
+                            <div id="walletSelectionGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; max-width: 700px; margin: 0 auto 24px;">
+                                <!-- Wallets will be dynamically added here -->
+                            </div>
+                            
+                            <div id="noWalletsFound" style="display: none; padding: 20px; background: rgba(239, 68, 68, 0.1); border-radius: 10px; margin: 20px auto; max-width: 500px;">
+                                <p style="margin: 0 0 12px; color: var(--text-muted); font-size: 14px;">
+                                    ⚠️ No wallet detected. Install one of these recommended wallets:
+                                </p>
+                                <div id="recommendedWallets" style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 16px;">
+                                    <!-- Recommended wallets will be added here -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="walletConnected" style="display: none;">
+                            <div style="background: var(--bg-dark); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 4px;">Connected Wallet</div>
+                                        <div id="connectedWalletAddress" style="font-family: monospace; font-size: 13px; color: var(--primary); font-weight: 600;">--</div>
+                                    </div>
+                                    <button onclick="disconnectWalletViewer()" 
+                                        style="padding: 8px 16px; background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; cursor: pointer;">
+                                        Disconnect
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="myNodesLoading" style="text-align: center; padding: 30px 0;">
+                                <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(99, 102, 241, 0.3); border-radius: 50%; border-top-color: #6366f1; animation: spin 1s linear infinite;"></div>
+                                <p style="margin-top: 16px; color: var(--text-muted);">Loading your nodes...</p>
+                            </div>
+                            
+                            <div id="myNodesContainer" style="display: none;"></div>
+                            
+                            <div id="noNodesFound" style="display: none; text-align: center; padding: 30px 0;">
+                                <div style="font-size: 64px; margin-bottom: 16px;">📭</div>
+                                <h3 style="margin: 0 0 12px; font-size: 18px;">No Nodes Found</h3>
+                                <p style="color: var(--text-muted); margin: 0; font-size: 14px;">
+                                    This wallet has no registered relay nodes yet.<br>
+                                    Register a node to start earning MCT rewards!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Node ID Search View -->
+                    <div id="nodeIdSearchView" style="display: none;">
+                        <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                            <input type="text" id="nodeIdInput" placeholder="Enter Node ID (0x...)" 
+                                style="flex: 1; padding: 14px 16px; background: var(--bg-dark); border: 2px solid var(--border); border-radius: 10px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+                            <button onclick="lookupNodeById()" 
+                                style="padding: 14px 24px; background: linear-gradient(135deg, #8b5cf6, #06b6d4); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                                onmouseover="this.style.transform='translateY(-2px)'" 
+                                onmouseout="this.style.transform='translateY(0)'">
+                                🔍 Lookup
+                            </button>
+                        </div>
+                        </div>
+                        
+                        <div id="nodeViewerResult" style="display: none;">
+                            <div id="singleNodeResult"></div>
+                        </div>
+                        
+                        <div id="nodeViewerError" style="display: none; padding: 20px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">❌</div>
+                            <div style="color: var(--error); font-weight: 600;">Node not found</div>
+                            <div style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">Check the Node ID and try again</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 12px; background: var(--bg-dark); border-radius: 8px;">
+                        <p style="margin: 0; font-size: 12px; color: var(--text-muted);">
+                            💡 <strong>Multi-Node Support:</strong> V4 allows running multiple nodes from one PC with different wallet addresses. Each node has a unique Node ID (SHA256 hash).
+                        </p>
+                    </div>
+                </div>
+            </section>
+
             <!-- Mode Selector -->
             <div class="mode-tabs">
                 <div class="mode-tab active" data-mode="wizard">🚀 Quick Setup Wizard</div>
-                <div class="mode-tab" data-mode="browser">🌐 Browser Node</div>
                 <div class="mode-tab" data-mode="desktop">💻 Desktop Node</div>
             </div>
 
@@ -911,15 +1019,10 @@
                             </div>
 
                             <div class="install-options" id="installOptions" style="display: none;">
-                                <div class="install-option selected" data-install="browser">
-                                    <div class="install-option-icon">🌐</div>
-                                    <div class="install-option-title">Browser Node</div>
-                                    <div class="install-option-desc">Run directly in this tab. Lower rewards but instant start.</div>
-                                </div>
-                                <div class="install-option" data-install="desktop">
+                                <div class="install-option selected" data-install="desktop">
                                     <div class="install-option-icon">💻</div>
-                                    <div class="install-option-title">Desktop Node</div>
-                                    <div class="install-option-desc">5-10x more rewards. Runs 24/7 in background.</div>
+                                    <div class="install-option-title">Desktop Relay Node</div>
+                                    <div class="install-option-desc">Full-featured node running 24/7 in background. Earn MCT rewards.</div>
                                 </div>
                             </div>
 
@@ -965,25 +1068,25 @@
                                     <div class="tier-name">🥉 Bronze</div>
                                     <div class="tier-storage">1 GB Storage</div>
                                     <div class="tier-rewards">1.0x share • 4h+/day</div>
-                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: 100 MCT</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: <strong>100 MCT</strong></div>
                                 </div>
                                 <div class="tier-card" data-tier="silver">
                                     <div class="tier-name">🥈 Silver</div>
                                     <div class="tier-storage">2 GB Storage</div>
                                     <div class="tier-rewards">1.5x share • 8h+/day</div>
-                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: 100 MCT</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: <strong>200 MCT</strong></div>
                                 </div>
                                 <div class="tier-card" data-tier="gold">
                                     <div class="tier-name">🥇 Gold</div>
                                     <div class="tier-storage">4 GB Storage</div>
                                     <div class="tier-rewards">2.0x share • 12h+/day</div>
-                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: 100 MCT</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: <strong>300 MCT</strong></div>
                                 </div>
                                 <div class="tier-card" data-tier="platinum">
                                     <div class="tier-name">💎 Platinum</div>
                                     <div class="tier-storage">8 GB Storage</div>
                                     <div class="tier-rewards">3.0x share • 16h+/day</div>
-                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: 100 MCT</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: <strong>400 MCT</strong></div>
                                 </div>
                             </div>
                             <button class="one-click-btn" onclick="setupWizard.nextStep()">
@@ -993,18 +1096,7 @@
 
                         <!-- Step 4: Install & Run -->
                         <div class="wizard-step-content" id="step4Content" style="display: none;">
-                            <div id="browserInstallContent">
-                                <div class="os-detection">
-                                    <div class="os-icon">🚀</div>
-                                    <div class="os-name">Ready to Launch!</div>
-                                    <div class="os-status">Click below to start your browser relay node</div>
-                                </div>
-                                <button class="one-click-btn" onclick="setupWizard.startBrowserNode()">
-                                    🚀 Start Browser Relay Node
-                                </button>
-                            </div>
-
-                            <div id="desktopInstallContent" style="display: none;">
+                            <div id="desktopInstallContent">
                                 <div class="os-detection">
                                     <div class="os-icon" id="installOSIcon">💻</div>
                                     <div class="os-name" id="installOSName">Desktop Installation</div>
@@ -1183,25 +1275,25 @@
                                 <div class="tier-name">🥉 Bronze</div>
                                 <div class="tier-storage">1 GB Storage</div>
                                 <div class="tier-rewards">1.0x Pool Share • 4h+/day</div>
-                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: 100 MCT</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: <strong>100 MCT</strong></div>
                             </div>
-                            <div class="tier-card" data-tier="silver" title="Stake 100 MCT">
+                            <div class="tier-card" data-tier="silver" title="Stake 200 MCT">
                                 <div class="tier-name">🥈 Silver</div>
                                 <div class="tier-storage">2 GB Storage</div>
                                 <div class="tier-rewards">1.5x Pool Share • 8h+/day</div>
-                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: 100 MCT</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: <strong>200 MCT</strong></div>
                             </div>
-                            <div class="tier-card" data-tier="gold" title="Stake 100 MCT">
+                            <div class="tier-card" data-tier="gold" title="Stake 300 MCT">
                                 <div class="tier-name">🥇 Gold</div>
                                 <div class="tier-storage">4 GB Storage</div>
                                 <div class="tier-rewards">2.0x Pool Share • 12h+/day</div>
-                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: 100 MCT</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: <strong>300 MCT</strong></div>
                             </div>
-                            <div class="tier-card" data-tier="platinum" title="Stake 100 MCT">
+                            <div class="tier-card" data-tier="platinum" title="Stake 400 MCT">
                                 <div class="tier-name">💎 Platinum</div>
                                 <div class="tier-storage">8 GB Storage</div>
                                 <div class="tier-rewards">3.0x Pool Share • 16h+/day</div>
-                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: 100 MCT</div>
+                                <div class="tier-requirement" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Stake: <strong>400 MCT</strong></div>
                             </div>
                         </div>
 
@@ -1290,7 +1382,7 @@
                 <h3>Requirements</h3>
                 <ul>
                     <li>MetaMask or compatible Web3 wallet</li>
-                    <li>100 MCT tokens for staking (same for all tiers)</li>
+                    <li>MCT tokens for staking: 100 (Bronze), 200 (Silver), 300 (Gold), or 400 (Platinum)</li>
                     <li>Stable internet connection</li>
                     <li>For desktop: Node.js 18+ (auto-installed)</li>
                 </ul>
@@ -1326,12 +1418,12 @@
                     </p>
                 </div>
                 <ul>
-                    <li><strong>🥉 Bronze:</strong> 1 GB storage, 4+ hours/day - <span style="color: var(--primary);">1.0x pool share</span></li>
-                    <li><strong>🥈 Silver:</strong> 2 GB storage, 8+ hours/day - <span style="color: var(--primary);">1.5x pool share</span></li>
-                    <li><strong>🥇 Gold:</strong> 4 GB storage, 12+ hours/day - <span style="color: var(--primary);">2.0x pool share</span></li>
-                    <li><strong>💎 Platinum:</strong> 8 GB storage, 16+ hours/day - <span style="color: var(--primary);">3.0x pool share</span></li>
+                    <li><strong>🥉 Bronze:</strong> 1 GB storage, 4+ hours/day, <strong>100 MCT stake</strong> - <span style="color: var(--primary);">1.0x pool share, 10% fee pool</span></li>
+                    <li><strong>🥈 Silver:</strong> 2 GB storage, 8+ hours/day, <strong>200 MCT stake</strong> - <span style="color: var(--primary);">1.5x pool share, 20% fee pool</span></li>
+                    <li><strong>🥇 Gold:</strong> 4 GB storage, 12+ hours/day, <strong>300 MCT stake</strong> - <span style="color: var(--primary);">2.0x pool share, 30% fee pool</span></li>
+                    <li><strong>💎 Platinum:</strong> 8 GB storage, 16+ hours/day, <strong>400 MCT stake</strong> - <span style="color: var(--primary);">3.0x pool share, 40% fee pool</span></li>
                 </ul>
-                <p style="margin-top: 8px; font-size: 13px; color: var(--text-muted);">💡 <strong>All tiers require only 100 MCT stake.</strong> Your tier is determined by your uptime and storage capacity.</p>
+                <p style="margin-top: 8px; font-size: 13px; color: var(--text-muted);">💡 <strong>V4 Tier-Based Staking:</strong> Higher tiers require more MCT stake but earn proportionally higher rewards from both daily pool and fee pool.</p>
                 <div style="margin-top: 8px; padding: 12px; background: var(--bg-card); border-radius: 8px; font-size: 12px;">
                     <strong>Example:</strong> If you're a Gold tier node relaying 100 messages, and total weighted relays = 1000, 
                     your share = (100 × 2.0) / 1000 × 100 MCT = <strong>20 MCT</strong> for that day.
@@ -1354,15 +1446,680 @@
     <script>
         const RPC_URL = 'https://blockchain.ramestta.com';
         const MCT_TOKEN = '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE';
-        const REGISTRY = '0x53c4D1dB6975f3ACf76D2887fE6776F8c0601D76';
+        const REGISTRY = '0x4f8D4955F370881B05b68D2344345E749d8632e3';
+        const RELAY_MANAGER = '0xF78F840eF0e321512b09e98C76eA0229Affc4b73';
         
         function getFunctionSelector(name) {
             const sigs = {
                 'feePool': '0xa81b2f8d',
                 'totalRelayNodes': '0x4d33dd55',
-                'getTodayPoolInfo': '0x6e553f65'
+                'getTodayPoolInfo': '0x6e553f65',
+                // RelayManager V4 functions
+                'getNodeByNodeId': '0x', // Will use ABI encoding
+                'getTotalNodeIds': '0x8d928af8',
+                'isNodeOnlineByNodeId': '0x' // Will use ABI encoding  
             };
             return sigs[name] || '0x';
+        }
+        
+        // Lookup node by Node ID
+        async function lookupNodeById() {
+            const nodeIdInput = document.getElementById('nodeIdInput').value.trim();
+            const resultDiv = document.getElementById('nodeViewerResult');
+            const singleResult = document.getElementById('singleNodeResult');
+            const errorDiv = document.getElementById('nodeViewerError');
+            
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            
+            if (!nodeIdInput || !nodeIdInput.startsWith('0x') || nodeIdInput.length !== 66) {
+                errorDiv.style.display = 'block';
+                errorDiv.querySelector('div:last-child').textContent = 'Please enter a valid 32-byte Node ID (0x...)';
+                return;
+            }
+            
+            try {
+                const info = await fetchNodeInfo(nodeIdInput);
+                
+                if (!info || info.walletAddress === '0x0000000000000000000000000000000000000000') {
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Check if running locally
+                const localNodes = await checkLocalNodes();
+                const isLocal = localNodes.includes(nodeIdInput);
+                
+                // Create node card
+                const card = createNodeCard(nodeIdInput, info, isLocal);
+                singleResult.innerHTML = '';
+                singleResult.appendChild(card);
+                
+                resultDiv.style.display = 'block';
+            } catch (error) {
+                console.error('Node lookup error:', error);
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        // Allow Enter key to trigger lookup
+        document.getElementById('nodeIdInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') lookupNodeById();
+        });
+        
+        // ========== WALLET CONNECT FOR VIEWER ==========
+        let viewerWalletConnected = false;
+        let viewerWalletAddress = null;
+        let selectedWalletProvider = null;
+        
+        // EIP-6963 Wallet Detection
+        const eip6963Wallets = new Map();
+        let eip6963Initialized = false;
+        
+        function initEIP6963() {
+            if (eip6963Initialized) return;
+            eip6963Initialized = true;
+            
+            window.addEventListener('eip6963:announceProvider', (event) => {
+                const { info, provider } = event.detail;
+                console.log('🔐 Wallet detected:', info.name);
+                eip6963Wallets.set(info.rdns, { info, provider });
+                updateWalletGrid();
+            });
+            
+            window.dispatchEvent(new Event('eip6963:requestProvider'));
+        }
+        
+        const LEGACY_WALLETS = {
+            ramaPay: {
+                id: 'io.ramestta.ramapay',
+                name: 'RamaPay',
+                icon: '💎',
+                color: '#6366f1',
+                check: () => window.ramaPay || window.ethereum?.isRamaPay,
+                getProvider: () => window.ramaPay || window.ethereum
+            },
+            metamask: {
+                id: 'io.metamask',
+                name: 'MetaMask',
+                icon: '🦊',
+                color: '#f6851b',
+                check: () => window.ethereum?.isMetaMask && !window.ethereum?.isRamaPay,
+                getProvider: () => window.ethereum
+            },
+            trustWallet: {
+                id: 'com.trustwallet.app',
+                name: 'Trust Wallet',
+                icon: '🛡️',
+                color: '#3375bb',
+                check: () => window.ethereum?.isTrust || window.trustwallet,
+                getProvider: () => window.trustwallet?.ethereum || window.ethereum
+            },
+            coinbase: {
+                id: 'com.coinbase.wallet',
+                name: 'Coinbase',
+                icon: '🔵',
+                color: '#0052ff',
+                check: () => window.ethereum?.isCoinbaseWallet,
+                getProvider: () => window.ethereum
+            }
+        };
+        
+        async function detectWallets() {
+            const detected = [];
+            const seenIds = new Set();
+            
+            initEIP6963();
+            await new Promise(resolve => setTimeout(resolve, 150));
+            
+            // Add EIP-6963 wallets
+            for (const [rdns, wallet] of eip6963Wallets) {
+                detected.push({
+                    id: rdns,
+                    name: wallet.info.name,
+                    icon: wallet.info.icon,
+                    iconEmoji: getWalletEmoji(rdns),
+                    color: getWalletColor(rdns),
+                    provider: wallet.provider,
+                    method: 'eip6963'
+                });
+                seenIds.add(rdns);
+            }
+            
+            // Add legacy wallets
+            for (const [key, wallet] of Object.entries(LEGACY_WALLETS)) {
+                if (seenIds.has(wallet.id)) continue;
+                try {
+                    if (wallet.check()) {
+                        detected.push({
+                            id: wallet.id,
+                            name: wallet.name,
+                            icon: null,
+                            iconEmoji: wallet.icon,
+                            color: wallet.color,
+                            provider: wallet.getProvider(),
+                            method: 'legacy'
+                        });
+                    }
+                } catch (e) {}
+            }
+            
+            return detected;
+        }
+        
+        function getWalletEmoji(rdns) {
+            const map = {
+                'io.ramestta.ramapay': '💎',
+                'io.metamask': '🦊',
+                'com.trustwallet.app': '🛡️',
+                'com.coinbase.wallet': '🔵',
+                'me.rainbow': '🌈',
+                'app.phantom': '👻'
+            };
+            return map[rdns] || '🔐';
+        }
+        
+        function getWalletColor(rdns) {
+            const map = {
+                'io.ramestta.ramapay': '#6366f1',
+                'io.metamask': '#f6851b',
+                'com.trustwallet.app': '#3375bb',
+                'com.coinbase.wallet': '#0052ff',
+                'me.rainbow': '#001e59'
+            };
+            return map[rdns] || '#888888';
+        }
+        
+        async function updateWalletGrid() {
+            const grid = document.getElementById('walletSelectionGrid');
+            const noWallets = document.getElementById('noWalletsFound');
+            
+            const wallets = await detectWallets();
+            
+            if (wallets.length === 0) {
+                grid.style.display = 'none';
+                noWallets.style.display = 'block';
+                showRecommendedWallets();
+                return;
+            }
+            
+            grid.style.display = 'grid';
+            noWallets.style.display = 'none';
+            grid.innerHTML = '';
+            
+            for (const wallet of wallets) {
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    padding: 20px;
+                    background: var(--bg-card);
+                    border: 2px solid var(--border);
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    text-align: center;
+                `;
+                
+                const iconDisplay = wallet.icon ? 
+                    `<img src="${wallet.icon}" style="width: 48px; height: 48px; border-radius: 50%; margin-bottom: 12px;" alt="${wallet.name}">` :
+                    `<div style="font-size: 48px; margin-bottom: 12px;">${wallet.iconEmoji}</div>`;
+                
+                card.innerHTML = `
+                    ${iconDisplay}
+                    <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">${wallet.name}</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Detected</div>
+                `;
+                
+                card.onmouseover = () => {
+                    card.style.borderColor = wallet.color;
+                    card.style.transform = 'translateY(-4px)';
+                };
+                card.onmouseout = () => {
+                    card.style.borderColor = 'var(--border)';
+                    card.style.transform = 'translateY(0)';
+                };
+                card.onclick = () => connectSpecificWallet(wallet);
+                
+                grid.appendChild(card);
+            }
+        }
+        
+        function showRecommendedWallets() {
+            const container = document.getElementById('recommendedWallets');
+            const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+            
+            const recommended = [
+                { name: 'RamaPay', icon: '💎', url: isMobile ? 'https://play.google.com/store/apps/details?id=io.ramestta.ramapay' : 'https://ramapay.io' },
+                { name: 'MetaMask', icon: '🦊', url: 'https://metamask.io/download' },
+                { name: 'Trust Wallet', icon: '🛡️', url: 'https://trustwallet.com/download' }
+            ];
+            
+            container.innerHTML = recommended.map(w => `
+                <a href="${w.url}" target="_blank" style="padding: 10px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--text-primary); font-size: 13px; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                    <span style="font-size: 20px;">${w.icon}</span>
+                    <span>${w.name}</span>
+                </a>
+            `).join('');
+        }
+        
+        async function connectSpecificWallet(wallet) {
+            try {
+                const accounts = await wallet.provider.request({ method: 'eth_requestAccounts' });
+                viewerWalletAddress = accounts[0];
+                viewerWalletConnected = true;
+                selectedWalletProvider = wallet.provider;
+                
+                document.getElementById('walletNotConnected').style.display = 'none';
+                document.getElementById('walletConnected').style.display = 'block';
+                document.getElementById('connectedWalletAddress').textContent = viewerWalletAddress;
+                
+                await loadMyNodes();
+            } catch (error) {
+                console.error('Connection error:', error);
+                alert('Failed to connect: ' + error.message);
+            }
+        }
+        
+        function disconnectWalletViewer() {
+            viewerWalletConnected = false;
+            viewerWalletAddress = null;
+            selectedWalletProvider = null;
+            document.getElementById('walletNotConnected').style.display = 'block';
+            document.getElementById('walletConnected').style.display = 'none';
+            document.getElementById('myNodesContainer').innerHTML = '';
+        }
+        
+        // Initialize wallet detection on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateWalletGrid();
+        });
+        
+        // Load all nodes for connected wallet
+        async function loadMyNodes() {
+            const container = document.getElementById('myNodesContainer');
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading your nodes...</div>';
+            
+            try {
+                // Get all node IDs for this wallet
+                const nodeIds = await relayManagerContract.methods.getWalletNodeIds(viewerWalletAddress).call();
+                
+                if (nodeIds.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">No nodes registered yet</div>';
+                    return;
+                }
+                
+                // Check if local node is running
+                let localNodeId = null;
+                try {
+                    const localResp = await fetch('http://localhost:19371/api/node-id', { timeout: 2000 });
+                    if (localResp.ok) {
+                        const localData = await localResp.json();
+                        localNodeId = localData.nodeId;
+                    }
+                } catch (e) {}
+                
+                // Fetch details for each node
+                const nodePromises = nodeIds.map(nodeId => 
+                    relayManagerContract.methods.getNodeInfoByNodeId(nodeId).call()
+                        .then(info => ({ nodeId, ...info }))
+                );
+                
+                const nodes = await Promise.all(nodePromises);
+                
+                // Display nodes
+                container.innerHTML = '';
+                nodes.forEach(node => {
+                    const isLocal = localNodeId && localNodeId === node.nodeId;
+                    const card = createNodeCard(node, isLocal);
+                    container.appendChild(card);
+                });
+                
+            } catch (error) {
+                console.error('Error loading nodes:', error);
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;">Error loading nodes: ' + error.message + '</div>';
+            }
+        }
+        
+        function createNodeCard(node, isLocal) {
+            const card = document.createElement('div');
+            card.style.cssText = `
+                background: var(--bg-card);
+                border: 2px solid var(--border);
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 16px;
+            `;
+            
+            const statusColor = node.isActive ? '#10b981' : '#6b7280';
+            const tierName = ['Bronze', 'Silver', 'Gold', 'Platinum'][parseInt(node.tier)] || 'Unknown';
+            
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                    <div>
+                        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Node ID</div>
+                        <div style="font-family: 'Courier New', monospace; font-size: 12px; word-break: break-all; margin-bottom: 8px;">${node.nodeId}</div>
+                        ${isLocal ? '<span style="background: #10b981; color: white; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600;">🟢 Running Locally</span>' : ''}
+                    </div>
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: ${statusColor};"></div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Status</div>
+                        <div style="font-size: 14px; font-weight: 600; color: ${statusColor};">${node.isActive ? 'Active' : 'Inactive'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Tier</div>
+                        <div style="font-size: 14px; font-weight: 600;">${tierName}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Total Staked</div>
+                        <div style="font-size: 14px; font-weight: 600;">${window.web3.utils.fromWei(node.totalStaked, 'ether')} MCT</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Relays Processed</div>
+                        <div style="font-size: 14px; font-weight: 600;">${node.relaysProcessed}</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Operator</div>
+                <div style="font-family: 'Courier New', monospace; font-size: 11px; color: var(--text-secondary); word-break: break-all;">${node.operator}</div>
+            `;
+            
+            return card;
+        }
+        
+        function switchViewerTab(tab) {
+            const walletTab = document.getElementById('tabWalletConnect');
+            const nodeIdTab = document.getElementById('tabNodeId');
+            const walletView = document.getElementById('walletConnectView');
+            const nodeIdView = document.getElementById('nodeIdSearchView');
+            
+            if (tab === 'wallet') {
+                walletTab.style.background = 'linear-gradient(135deg, #6366f1, #8b5cf6)';
+                walletTab.style.color = 'white';
+                nodeIdTab.style.background = 'var(--bg-card)';
+                nodeIdTab.style.color = 'var(--text-secondary)';
+                walletView.style.display = 'block';
+                nodeIdView.style.display = 'none';
+            } else {
+                walletTab.style.background = 'var(--bg-card)';
+                walletTab.style.color = 'var(--text-secondary)';
+                nodeIdTab.style.background = 'linear-gradient(135deg, #6366f1, #8b5cf6)';
+                nodeIdTab.style.color = 'white';
+                walletView.style.display = 'none';
+                nodeIdView.style.display = 'block';
+            }
+        }
+        
+        async function connectWalletForViewer() {
+            if (typeof window.ethereum === 'undefined') {
+                alert('MetaMask is not installed! Please install MetaMask to continue.');
+                return;
+            }
+            
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                viewerWalletAddress = accounts[0];
+                viewerWalletConnected = true;
+                
+                document.getElementById('walletNotConnected').style.display = 'none';
+                document.getElementById('walletConnected').style.display = 'block';
+                document.getElementById('connectedWalletAddress').textContent = viewerWalletAddress;
+                
+                await loadMyNodes();
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                alert('Failed to connect wallet: ' + error.message);
+            }
+        }
+        
+        function disconnectWalletViewer() {
+            viewerWalletConnected = false;
+            viewerWalletAddress = null;
+            document.getElementById('walletNotConnected').style.display = 'block';
+            document.getElementById('walletConnected').style.display = 'none';
+            document.getElementById('myNodesContainer').innerHTML = '';
+        }
+        
+        async function loadMyNodes() {
+            document.getElementById('myNodesLoading').style.display = 'block';
+            document.getElementById('myNodesContainer').style.display = 'none';
+            document.getElementById('noNodesFound').style.display = 'none';
+            
+            try {
+                // Call getWalletNodeIds(address) - function selector: 0x8d2c7c2d
+                const walletPadded = viewerWalletAddress.slice(2).padStart(64, '0');
+                const callData = '0x8d2c7c2d' + walletPadded;
+                
+                const response = await fetch(RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'eth_call',
+                        params: [{ to: RELAY_MANAGER, data: callData }, 'latest']
+                    })
+                });
+                const result = await response.json();
+                
+                if (!result.result || result.result === '0x' || result.result.length < 130) {
+                    // No nodes registered
+                    document.getElementById('myNodesLoading').style.display = 'none';
+                    const noNodesDiv = document.getElementById('noNodesFound');
+                    noNodesDiv.innerHTML = `
+                        <div style="font-size: 64px; margin-bottom: 16px;">📭</div>
+                        <h3 style="margin: 0 0 12px; font-size: 18px;">No Relay Nodes Registered</h3>
+                        <p style="color: var(--text-muted); margin: 0 0 20px; font-size: 14px;">
+                            This wallet (${viewerWalletAddress.slice(0,6)}...${viewerWalletAddress.slice(-4)}) has not registered any relay nodes yet.
+                        </p>
+                        <div style="padding: 20px; background: rgba(99, 102, 241, 0.1); border: 2px solid rgba(99, 102, 241, 0.3); border-radius: 12px; max-width: 500px; margin: 0 auto;">
+                            <h4 style="margin: 0 0 10px; color: var(--primary);">🚀 Ready to Start Earning?</h4>
+                            <p style="margin: 0 0 16px; color: var(--text-secondary); font-size: 13px;">
+                                Download the desktop relay node to start earning MCT tokens by helping the network!
+                            </p>
+                            <button onclick="switchToMode('wizard')" 
+                                style="padding: 12px 24px; background: linear-gradient(135deg, #8b5cf6, #06b6d4); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                🎯 Setup Relay Node
+                            </button>
+                        </div>
+                    `;
+                    noNodesDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Decode array of bytes32
+                const data = result.result.slice(2);
+                const arrayLength = parseInt(data.slice(64, 128), 16);
+                
+                if (arrayLength === 0) {
+                    // Same as above - no nodes
+                    document.getElementById('myNodesLoading').style.display = 'none';
+                    const noNodesDiv = document.getElementById('noNodesFound');
+                    noNodesDiv.innerHTML = `
+                        <div style="font-size: 64px; margin-bottom: 16px;">📭</div>
+                        <h3 style="margin: 0 0 12px; font-size: 18px;">No Relay Nodes Registered</h3>
+                        <p style="color: var(--text-muted); margin: 0 0 20px; font-size: 14px;">
+                            This wallet has not registered any relay nodes yet.
+                        </p>
+                        <div style="padding: 20px; background: rgba(99, 102, 241, 0.1); border: 2px solid rgba(99, 102, 241, 0.3); border-radius: 12px; max-width: 500px; margin: 0 auto;">
+                            <h4 style="margin: 0 0 10px; color: var(--primary);">🚀 Ready to Start Earning?</h4>
+                            <p style="margin: 0 0 16px; color: var(--text-secondary); font-size: 13px;">
+                                Download the desktop relay node to start earning MCT tokens!
+                            </p>
+                            <button onclick="switchToMode('wizard')" 
+                                style="padding: 12px 24px; background: linear-gradient(135deg, #8b5cf6, #06b6d4); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                🎯 Setup Relay Node
+                            </button>
+                        </div>
+                    `;
+                    noNodesDiv.style.display = 'block';
+                    return;
+                }
+                
+                const nodeIds = [];
+                for (let i = 0; i < arrayLength; i++) {
+                    const offset = 128 + (i * 64);
+                    const nodeId = '0x' + data.slice(offset, offset + 64);
+                    nodeIds.push(nodeId);
+                }
+                
+                // Check local storage for running nodes
+                const localNodes = await checkLocalNodes();
+                
+                // Load info for each node
+                const container = document.getElementById('myNodesContainer');
+                container.innerHTML = '';
+                
+                for (const nodeId of nodeIds) {
+                    const nodeInfo = await fetchNodeInfo(nodeId);
+                    if (nodeInfo) {
+                        const isLocal = localNodes.includes(nodeId);
+                        container.appendChild(createNodeCard(nodeId, nodeInfo, isLocal));
+                    }
+                }
+                
+                document.getElementById('myNodesLoading').style.display = 'none';
+                document.getElementById('myNodesContainer').style.display = 'block';
+            } catch (error) {
+                console.error('Failed to load nodes:', error);
+                document.getElementById('myNodesLoading').style.display = 'none';
+                const noNodesDiv = document.getElementById('noNodesFound');
+                noNodesDiv.innerHTML = `
+                    <div style="font-size: 64px; margin-bottom: 16px;">⚠️</div>
+                    <h3 style="margin: 0 0 12px; font-size: 18px; color: #ef4444;">Error Loading Nodes</h3>
+                    <p style="color: var(--text-muted); margin: 0; font-size: 14px;">
+                        ${error.message || 'Failed to connect to blockchain'}
+                    </p>
+                `;
+                noNodesDiv.style.display = 'block';
+            }
+        }
+        
+        async function fetchNodeInfo(nodeId) {
+            try {
+                const nodeIdData = nodeId.slice(2).padStart(64, '0');
+                const callData = '0x7f58e8ab' + nodeIdData; // getNodeByNodeId selector
+                
+                const response = await fetch(RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'eth_call',
+                        params: [{ to: RELAY_MANAGER, data: callData }, 'latest']
+                    })
+                });
+                const result = await response.json();
+                
+                if (!result.result || result.result === '0x' || result.result.length < 130) {
+                    return null;
+                }
+                
+                const data = result.result.slice(2);
+                return {
+                    walletAddress: '0x' + data.slice(24, 64),
+                    machineIdHash: '0x' + data.slice(64, 128),
+                    instanceNumber: BigInt('0x' + data.slice(128, 192)),
+                    stakedAmount: BigInt('0x' + data.slice(256, 320)),
+                    messagesRelayed: BigInt('0x' + data.slice(320, 384)),
+                    rewardsEarned: BigInt('0x' + data.slice(384, 448)),
+                    isActive: BigInt('0x' + data.slice(448, 512)) !== 0n,
+                    dailyUptimeSeconds: BigInt('0x' + data.slice(512, 576)),
+                    storageMB: BigInt('0x' + data.slice(576, 640)),
+                    tier: BigInt('0x' + data.slice(640, 704)),
+                    isOnline: BigInt('0x' + data.slice(704, 768)) !== 0n,
+                    registeredAt: BigInt('0x' + data.slice(768, 832))
+                };
+            } catch (error) {
+                console.error('Failed to fetch node info:', error);
+                return null;
+            }
+        }
+        
+        async function checkLocalNodes() {
+            // Check if running on localhost and if desktop-relay files exist
+            const localNodes = [];
+            try {
+                // Try to detect local relay node by checking for common config paths
+                // This would require a local API endpoint from the desktop relay
+                const response = await fetch('http://localhost:19371/api/node-id', {
+                    method: 'GET',
+                    timeout: 1000
+                }).catch(() => null);
+                
+                if (response && response.ok) {
+                    const data = await response.json();
+                    if (data.nodeId) {
+                        localNodes.push(data.nodeId);
+                    }
+                }
+            } catch (e) {
+                // Local relay not running or not accessible
+            }
+            return localNodes;
+        }
+        
+        function createNodeCard(nodeId, info, isLocal) {
+            const tierNames = ['🥉 Bronze', '🥈 Silver', '🥇 Gold', '💎 Platinum'];
+            const tierName = tierNames[Number(info.tier)] || 'Unknown';
+            
+            const card = document.createElement('div');
+            card.style.cssText = 'background: var(--bg-dark); border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 2px solid ' + (isLocal ? '#10b981' : 'var(--border)');
+            
+            const statusColor = info.isOnline && info.isActive ? '#10b981' : info.isActive ? '#f59e0b' : '#ef4444';
+            const statusText = info.isOnline && info.isActive ? '🟢 Online' : info.isActive ? '🟡 Offline' : '🔴 Inactive';
+            
+            const uptimeHours = Number(info.dailyUptimeSeconds) / 3600;
+            const regDate = new Date(Number(info.registeredAt) * 1000);
+            
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: between; margin-bottom: 16px;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <h4 style="margin: 0; font-size: 16px;">📡 Node ${info.instanceNumber}</h4>
+                            ${isLocal ? '<span style="padding: 4px 8px; background: rgba(16, 185, 129, 0.2); color: #10b981; border-radius: 6px; font-size: 11px; font-weight: 600;">🖥️ RUNNING LOCALLY</span>' : ''}
+                        </div>
+                        <div style="font-family: monospace; font-size: 10px; color: var(--text-muted);">${nodeId}</div>
+                    </div>
+                    <span style="padding: 6px 12px; background: rgba(${statusColor === '#10b981' ? '16, 185, 129' : statusColor === '#f59e0b' ? '245, 158, 11' : '239, 68, 68'}, 0.2); color: ${statusColor}; border-radius: 20px; font-size: 12px; font-weight: 600;">${statusText}</span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                    <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                        <div style="color: var(--text-muted); font-size: 11px; margin-bottom: 4px;">💎 Tier</div>
+                        <div style="font-size: 16px; font-weight: 700;">${tierName}</div>
+                    </div>
+                    <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                        <div style="color: var(--text-muted); font-size: 11px; margin-bottom: 4px;">🔒 Staked</div>
+                        <div style="font-size: 16px; font-weight: 700; color: var(--primary);">${formatMCT('0x' + info.stakedAmount.toString(16).padStart(64, '0'))} MCT</div>
+                    </div>
+                    <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                        <div style="color: var(--text-muted); font-size: 11px; margin-bottom: 4px;">📨 Messages</div>
+                        <div style="font-size: 16px; font-weight: 700;">${info.messagesRelayed.toLocaleString()}</div>
+                    </div>
+                    <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                        <div style="color: var(--text-muted); font-size: 11px; margin-bottom: 4px;">🏆 Rewards</div>
+                        <div style="font-size: 16px; font-weight: 700; color: var(--success);">${formatMCT('0x' + info.rewardsEarned.toString(16).padStart(64, '0'))} MCT</div>
+                    </div>
+                    <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                        <div style="color: var(--text-muted); font-size: 11px; margin-bottom: 4px;">⏱️ Uptime Today</div>
+                        <div style="font-size: 16px; font-weight: 700;">${uptimeHours.toFixed(1)}h</div>
+                    </div>
+                    <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                        <div style="color: var(--text-muted); font-size: 11px; margin-bottom: 4px;">💾 Storage</div>
+                        <div style="font-size: 16px; font-weight: 700;">${info.storageMB.toLocaleString()} MB</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 12px; padding: 10px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; font-size: 12px;">
+                    <strong style="color: var(--primary);">🖥️ Machine:</strong> <span style="color: var(--text-muted);">${info.machineIdHash.slice(0, 12)}...</span>
+                    <strong style="color: var(--primary); margin-left: 16px;">📅 Registered:</strong> <span style="color: var(--text-muted);">${regDate.toLocaleDateString()}</span>
+                </div>
+            `;
+            
+            return card;
         }
         
         async function ethCall(to, data) {
@@ -1461,6 +2218,20 @@
         function toggleNetworkMenu(el) {
             el.classList.toggle('open');
         }
+        
+        function switchToMode(modeName) {
+            // Hide all mode contents
+            document.querySelectorAll('.mode-content').forEach(m => m.classList.remove('active'));
+            // Show selected mode
+            const targetMode = modeName === 'wizard' ? 'wizardMode' : modeName === 'desktop' ? 'desktopMode' : 'viewerMode';
+            document.getElementById(targetMode)?.classList.add('active');
+            // Update tabs
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.mode-tab[data-mode="${modeName}"]`)?.classList.add('active');
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
         document.addEventListener('click', function(e) {
             // Close menu when clicking a link inside it
             if (e.target.closest('.bottom-nav-menu a')) {

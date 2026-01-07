@@ -56,12 +56,12 @@
         <div class="hero-content">
             <div class="hero-badge">
                 <span>🌐</span>
-                <span>P2P Network + Relay Rewards</span>
+                <span>V4 Node Identity + Tier Staking System</span>
             </div>
             <h1 class="hero-title">Become a <span>Relay Node</span></h1>
             <p class="hero-subtitle">
-                Join the decentralized P2P network. Store encrypted messages for offline users. 
-                Stake 100 MCT, provide uptime and storage, earn rewards based on your tier.
+                Join the decentralized P2P network with V4 Node Identity System. 
+                Stake MCT based on your tier (100-400 MCT), earn rewards proportional to uptime and relays.
             </p>
             <div class="hero-actions">
                 <a href="download.html" class="btn btn-primary btn-lg">
@@ -237,9 +237,9 @@
                         1 GB storage
                     </div>
                     <ul class="tier-benefits">
-                        <li>Stake: 100 MCT</li>
+                        <li>Stake: <strong>100 MCT</strong></li>
                         <li>1.0x pool share</li>
-                        <li>Base multiplier</li>
+                        <li>10% fee pool share</li>
                         <li>Entry tier</li>
                     </ul>
                 </div>
@@ -252,9 +252,9 @@
                         2 GB storage
                     </div>
                     <ul class="tier-benefits">
-                        <li>Stake: 100 MCT</li>
+                        <li>Stake: <strong>200 MCT</strong></li>
                         <li>1.5x pool share</li>
-                        <li>50% bonus per relay</li>
+                        <li>20% fee pool share</li>
                         <li>Part-time node</li>
                     </ul>
                 </div>
@@ -267,9 +267,9 @@
                         4 GB storage
                     </div>
                     <ul class="tier-benefits">
-                        <li>Stake: 100 MCT</li>
+                        <li>Stake: <strong>300 MCT</strong></li>
                         <li>2.0x pool share</li>
-                        <li>100% bonus per relay</li>
+                        <li>30% fee pool share</li>
                         <li>Active node</li>
                     </ul>
                 </div>
@@ -282,9 +282,9 @@
                         8+ GB storage
                     </div>
                     <ul class="tier-benefits">
-                        <li>Stake: 100 MCT</li>
+                        <li>Stake: <strong>400 MCT</strong></li>
                         <li>3.0x pool share</li>
-                        <li>200% bonus per relay</li>
+                        <li>40% fee pool share</li>
                         <li>Dedicated node</li>
                     </ul>
                 </div>
@@ -314,10 +314,116 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Missed Rewards Redistribution System -->
+            <div class="card mt-4" style="border: 2px solid #f59e0b; background: rgba(245, 158, 11, 0.05);">
+                <h4 style="margin: 0 0 16px; color: #f59e0b;">⚠️ Missed Rewards Redistribution System</h4>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+                    If you stake for a higher tier but don't meet the uptime requirement, you'll only receive proportional rewards. 
+                    The missed portion goes to nodes who met their uptime goals.
+                </p>
+                
+                <div style="background: var(--bg-card); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                    <h5 style="margin: 0 0 12px; color: var(--text-primary);">📐 How It's Calculated</h5>
+                    <div class="code-block" style="background: #0a0a0a; padding: 16px; border-radius: 8px; font-size: 13px;">
+<pre style="margin: 0; color: #00ff00;">
+Uptime % = (Actual Uptime / Required Uptime) × 100
+
+Actual Reward = Tier Reward × Uptime %
+Missed Reward = Tier Reward - Actual Reward
+
+Missed rewards are pooled and redistributed to nodes with 100% uptime.
+</pre>
+                    </div>
+                </div>
+                
+                <h5 style="margin: 0 0 12px; color: var(--text-primary);">📊 Example Scenario</h5>
+                <div class="table-container" style="margin-bottom: 16px;">
+                    <table style="font-size: 13px;">
+                        <thead>
+                            <tr>
+                                <th>Node</th>
+                                <th>Tier</th>
+                                <th>Stake</th>
+                                <th>Required</th>
+                                <th>Actual</th>
+                                <th>Uptime%</th>
+                                <th>Tier Share</th>
+                                <th>Gets</th>
+                                <th>Missed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: rgba(239, 68, 68, 0.1);">
+                                <td><strong>Node A</strong></td>
+                                <td>💎 Platinum</td>
+                                <td>400 MCT</td>
+                                <td>16h</td>
+                                <td style="color: #ef4444;"><strong>8h</strong></td>
+                                <td style="color: #ef4444;">50%</td>
+                                <td>40 MCT</td>
+                                <td>20 MCT</td>
+                                <td style="color: #ef4444;">20 MCT</td>
+                            </tr>
+                            <tr style="background: rgba(16, 185, 129, 0.1);">
+                                <td><strong>Node B</strong></td>
+                                <td>🥇 Gold</td>
+                                <td>300 MCT</td>
+                                <td>12h</td>
+                                <td style="color: #10b981;"><strong>12h</strong></td>
+                                <td style="color: #10b981;">100%</td>
+                                <td>30 MCT</td>
+                                <td>30 MCT</td>
+                                <td>0 MCT</td>
+                            </tr>
+                            <tr style="background: rgba(16, 185, 129, 0.1);">
+                                <td><strong>Node C</strong></td>
+                                <td>🥈 Silver</td>
+                                <td>200 MCT</td>
+                                <td>8h</td>
+                                <td style="color: #10b981;"><strong>8h</strong></td>
+                                <td style="color: #10b981;">100%</td>
+                                <td>20 MCT</td>
+                                <td>20 MCT</td>
+                                <td>0 MCT</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.1)); border-radius: 12px; padding: 20px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                    <h5 style="margin: 0 0 12px; color: #10b981;">🎁 Redistribution Result</h5>
+                    <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 12px;">
+                        <strong>20 MCT missed</strong> (from Node A) ÷ <strong>2 eligible nodes</strong> (B & C with 100% uptime) = <strong>10 MCT bonus each</strong>
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center;">
+                        <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: var(--text-muted);">Node A (Platinum)</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #ef4444;">20 MCT</div>
+                            <div style="font-size: 10px; color: #ef4444;">❌ Lost 20 MCT</div>
+                        </div>
+                        <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: var(--text-muted);">Node B (Gold)</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #10b981;">40 MCT</div>
+                            <div style="font-size: 10px; color: #10b981;">✅ 30 + 10 bonus</div>
+                        </div>
+                        <div style="background: var(--bg-card); padding: 12px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: var(--text-muted);">Node C (Silver)</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #10b981;">30 MCT</div>
+                            <div style="font-size: 10px; color: #10b981;">✅ 20 + 10 bonus</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 16px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
+                    <strong style="color: var(--primary);">💡 Key Takeaway:</strong>
+                    <span style="color: var(--text-muted); font-size: 13px;">
+                        Only stake for a tier you can maintain! A Gold node with 100% uptime earns MORE than a Platinum node with 50% uptime.
+                    </span>
+                </div>
+            </div>
         </div>
     </section>
-
-    <!-- Earnings Calculator -->
     <section class="section" id="earnings">
         <div class="container">
             <div class="section-title">
@@ -403,9 +509,9 @@
             <div class="grid grid-3">
                 <div class="card">
                     <div class="card-icon">🪙</div>
-                    <h3 class="card-title">100 MCT Stake</h3>
+                    <h3 class="card-title">MCT Stake (Tier-Based)</h3>
                     <p class="card-text">
-                        Stake MCT tokens to register as a relay node. 
+                        Stake MCT tokens based on your chosen tier: 100 (Bronze), 200 (Silver), 300 (Gold), or 400 (Platinum). 
                         Stake is returned when you deactivate.
                     </p>
                 </div>
@@ -472,7 +578,7 @@
                 <div class="card">
                     <h3 class="card-title">Can I stop being a relay node?</h3>
                     <p class="card-text">
-                        <strong>YES!</strong> Call deactivateRelay() anytime. Your 100 MCT stake is returned, 
+                        <strong>YES!</strong> Call deactivateNodeById() anytime. Your MCT stake is returned, 
                         and you go back to being a normal user. No penalties.
                     </p>
                 </div>

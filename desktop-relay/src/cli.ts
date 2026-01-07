@@ -284,6 +284,7 @@ program
       const blockchain = new BlockchainService(
         config.blockchain.rpcUrl,
         config.blockchain.registryAddress,
+        config.blockchain.relayManagerAddress,
         config.blockchain.mctTokenAddress,
         privateKey
       );
@@ -319,6 +320,7 @@ program
       const blockchain = new BlockchainService(
         config.blockchain.rpcUrl,
         config.blockchain.registryAddress,
+        config.blockchain.relayManagerAddress,
         config.blockchain.mctTokenAddress,
         privateKey
       );
@@ -374,6 +376,7 @@ program
       const blockchain = new BlockchainService(
         config.blockchain.rpcUrl,
         config.blockchain.registryAddress,
+        config.blockchain.relayManagerAddress,
         config.blockchain.mctTokenAddress,
         privateKey
       );
@@ -382,8 +385,7 @@ program
       spinner.text = 'Claiming message relay rewards...';
       await blockchain.claimRewards();
 
-      spinner.text = 'Claiming daily pool rewards...';
-      await blockchain.claimDailyPoolReward();
+      spinner.succeed('Successfully claimed all rewards!');
 
       spinner.succeed('Rewards claimed!');
       await blockchain.printStatus();

@@ -34,8 +34,8 @@
     },
     "MumbleChatRelayManager": {
       "proxy": "0xF78F840eF0e321512b09e98C76eA0229Affc4b73",
-      "implementation": "0xb9E673952e25E6E86745264B90FBC82b50ffb067",
-      "version": "1.0.0",
+      "implementation": "0xc9D5A9624368C903DE78B1530b7A1b1E70952d67",
+      "version": "2.0.0",
       "deployedAt": "2026-01-07T14:04:03.411Z",
       "verified": true,
       "features": [
@@ -46,8 +46,12 @@
         "Fee pool percentages (10%/20%/30%/40%)",
         "Relay proof verification",
         "Protection protocol (slashing, reputation)",
-        "Daily pool distribution"
-      ]
+        "Daily pool distribution",
+        "getActiveEndpoints() - Decentralized discovery",
+        "updateEndpoint() - Dynamic IP support"
+      ],
+      "upgradedAt": "2026-01-07T21:54:22.935Z",
+      "lastUpgraded": "2026-01-07T21:58:00.000Z"
     }
   },
   "verification": {

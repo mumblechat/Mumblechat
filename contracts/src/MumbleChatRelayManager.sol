@@ -941,6 +941,76 @@ contract MumbleChatRelayManager is
         require(IERC20(mctToken).transfer(owner(), amount), "Transfer failed");
     }
     
+    // ============ Decentralized Endpoint Discovery ============
+    
+    /// @notice Get all active node endpoints for P2P discovery (no bootstrap server needed)
+    /// @return nodeIds Array of active node IDs
+    /// @return endpoints Array of endpoints (IP:port or domain)
+    /// @return wallets Array of wallet addresses
+    function getActiveEndpoints() external view returns (
+        bytes32[] memory nodeIds,
+        string[] memory endpoints,
+        address[] memory wallets
+    ) {
+        // Count active nodes
+        uint256 count = 0;
+        for (uint256 i = 0; i < allNodeIds.length; i++) {
+            if (nodeIdentities[allNodeIds[i]].isActive) {
+                count++;
+            }
+        }
+        
+        // Allocate arrays
+        nodeIds = new bytes32[](count);
+        endpoints = new string[](count);
+        wallets = new address[](count);
+        
+        // Populate arrays
+        uint256 j = 0;
+        for (uint256 i = 0; i < allNodeIds.length; i++) {
+            bytes32 nodeId = allNodeIds[i];
+            if (nodeIdentities[nodeId].isActive) {
+                nodeIds[j] = nodeId;
+                endpoints[j] = nodeRelayData[nodeId].endpoint;
+                wallets[j] = nodeIdentities[nodeId].walletAddress;
+                j++;
+            }
+        }
+        
+        return (nodeIds, endpoints, wallets);
+    }
+    
+    /// @notice Update your node's endpoint without re-registering
+    /// @param nodeId Your registered node ID
+    /// @param newEndpoint New endpoint (IP:port or domain:port)
+    function updateEndpoint(bytes32 nodeId, string calldata newEndpoint) external {
+        require(bytes(newEndpoint).length > 0, "Endpoint required");
+        require(nodeIdentities[nodeId].walletAddress == msg.sender, "Not your node");
+        require(nodeIdentities[nodeId].isActive, "Node not active");
+        
+        nodeRelayData[nodeId].endpoint = newEndpoint;
+        
+        emit EndpointUpdated(nodeId, msg.sender, newEndpoint);
+    }
+    
+    /// @notice Get a single node's endpoint by wallet address
+    function getEndpointByWallet(address wallet) external view returns (string memory endpoint, bool isActive) {
+        bytes32[] storage nodeIds = walletNodeIds[wallet];
+        if (nodeIds.length == 0) {
+            return ("", false);
+        }
+        bytes32 nodeId = nodeIds[0]; // Return first node's endpoint
+        return (nodeRelayData[nodeId].endpoint, nodeIdentities[nodeId].isActive);
+    }
+    
+    /// @notice Get a single node's endpoint by node ID
+    function getEndpointByNodeId(bytes32 nodeId) external view returns (string memory endpoint, address wallet, bool isActive) {
+        return (nodeRelayData[nodeId].endpoint, nodeIdentities[nodeId].walletAddress, nodeIdentities[nodeId].isActive);
+    }
+    
+    // Event for endpoint updates
+    event EndpointUpdated(bytes32 indexed nodeId, address indexed wallet, string newEndpoint);
+    
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     
     function version() public pure returns (string memory) {

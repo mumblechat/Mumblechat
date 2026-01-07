@@ -2,9 +2,31 @@
  * MumbleChat Desktop Relay Node - Configuration
  * 
  * Based on MumbleChat Protocol documentation (04_RELAY_AND_REWARDS.md)
+ * 
+ * Supports TWO modes:
+ * 1. SELF_HOSTED: Node operator provides their own IP/domain (advanced users)
+ * 2. MANAGED: Node connects to MumbleChat Hub, we provide endpoint (easy mode)
  */
 
+export type NodeMode = 'SELF_HOSTED' | 'MANAGED';
+
 export interface RelayConfig {
+  mode: NodeMode;                    // SELF_HOSTED or MANAGED
+  
+  // Hub settings (for MANAGED mode)
+  hub: {
+    url: string;                     // wss://hub.mumblechat.io
+    reconnectIntervalMs: number;     // Auto-reconnect interval
+    feePercent: number;              // Hub takes this % of rewards
+  };
+  
+  // Self-hosted settings (for SELF_HOSTED mode)
+  selfHosted: {
+    endpoint: string;                // Your public endpoint (ip:port or domain:port)
+    port: number;                    // Local listening port
+    host: string;                    // Local bind address
+  };
+  
   relay: {
     port: number;
     host: string;
@@ -17,6 +39,7 @@ export interface RelayConfig {
     rpcUrl: string;
     chainId: number;
     registryAddress: string;
+    relayManagerAddress: string;
     mctTokenAddress: string;
   };
   wallet: {
@@ -172,6 +195,23 @@ export function getTierMultiplier(tier: RelayTier): number {
  * Default configuration
  */
 export const defaultConfig: RelayConfig = {
+  // Default to MANAGED mode (easiest for most users)
+  mode: 'MANAGED',
+  
+  // Hub settings for managed mode
+  hub: {
+    url: 'wss://hub.mumblechat.com/node/connect',
+    reconnectIntervalMs: 5000,
+    feePercent: 10,
+  },
+  
+  // Self-hosted settings (empty by default, user must configure)
+  selfHosted: {
+    endpoint: '',  // e.g., "192.168.1.100:19370" or "myrelay.example.com:443"
+    port: 19370,
+    host: '0.0.0.0',
+  },
+  
   relay: {
     port: 19370,
     host: '0.0.0.0',
@@ -184,6 +224,7 @@ export const defaultConfig: RelayConfig = {
     rpcUrl: 'https://blockchain.ramestta.com',
     chainId: 1370,
     registryAddress: '0x4f8D4955F370881B05b68D2344345E749d8632e3',
+    relayManagerAddress: '0xF78F840eF0e321512b09e98C76eA0229Affc4b73',
     mctTokenAddress: '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE',
   },
   wallet: {

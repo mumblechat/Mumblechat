@@ -56,7 +56,7 @@
         <div class="hero-content">
             <div class="hero-badge">
                 <span>📚</span>
-                <span>MumbleChat V3.0 - 99% Complete</span>
+                <span>MumbleChat V4.0 - Split Contract Architecture</span>
             </div>
             <h1 class="hero-title"><span>Documentation</span></h1>
             <p class="hero-subtitle">
@@ -149,8 +149,8 @@ function feePool() view returns (uint256)</code></pre>
                 
                 <div class="card">
                     <div class="card-icon">📋</div>
-                    <h3 class="card-title">MumbleChatRegistry V3.2</h3>
-                    <p class="card-text">Identity, relay nodes, and messaging registry.</p>
+                    <h3 class="card-title">MumbleChatRegistry V4</h3>
+                    <p class="card-text">Core identity and user blocking registry.</p>
                     
                     <div class="contract-info">
                         <div class="contract-address">
@@ -168,20 +168,75 @@ function feePool() view returns (uint256)</code></pre>
                     <h4 style="margin-top: 24px;">Key Functions</h4>
                     <div class="code-block">
 <pre><code>// Identity
-function register(string username, bytes32 pubKey)
+function register(bytes32 publicKeyX, string displayName)
 function isRegistered(address) view returns (bool)
-function getPublicKey(address) view returns (bytes32)
+function updatePublicKey(bytes32 newPublicKeyX)
+function updateDisplayName(string newDisplayName)
+function deactivate()
 
-// Relay Nodes
-function registerAsRelay(uint256 storageGB) payable
-function deactivateRelay()
-function recordUptime()
-function getTier(address) view returns (Tier)
+// User Blocking
+function blockUser(address userToBlock)
+function unblockUser(address userToUnblock)
+function isBlocked(address blocker, address blocked) view
 
-// Messaging
-function sendMessage(address to, bytes ciphertext)
-function getMessages(address) view returns (Message[])</code></pre>
+// Legacy Relay (use RelayManager for V4)
+function registerAsRelay(string endpoint, uint256 storageMB)
+function heartbeat()</code></pre>
                     </div>
+                </div>
+            </div>
+            
+            <!-- RelayManager Contract -->
+            <div class="card mt-4">
+                <div class="card-icon">📡</div>
+                <h3 class="card-title">MumbleChatRelayManager V1 (NEW)</h3>
+                <p class="card-text">V4 Node Identity System with tier-based staking and rewards.</p>
+                
+                <div class="contract-info">
+                    <div class="contract-address">
+                        <strong>Address:</strong>
+                        <code>0xF78F840eF0e321512b09e98C76eA0229Affc4b73</code>
+                    </div>
+                    <div class="contract-links">
+                        <a href="https://ramascan.com/address/0xF78F840eF0e321512b09e98C76eA0229Affc4b73" 
+                           target="_blank" class="btn btn-small">
+                            View on RamaScan
+                        </a>
+                    </div>
+                </div>
+                
+                <h4 style="margin-top: 24px;">Key Functions</h4>
+                <div class="code-block">
+<pre><code>// Node Registration (V4 Node Identity)
+function registerNodeWithId(
+    bytes32 nodeId,
+    bytes32 machineIdHash,
+    bytes32 serialHash,
+    string endpoint,
+    uint256 storageMB,
+    NodeTier tier  // Bronze=0, Silver=1, Gold=2, Platinum=3
+)
+function deactivateNodeById(bytes32 nodeId)
+function heartbeatByNodeId(bytes32 nodeId)
+
+// Tier Staking (100/200/300/400 MCT)
+function getStakeForTier(NodeTier tier) view returns (uint256)
+function getUptimeForTier(NodeTier tier) view returns (uint256)
+function getFeePercentForTier(NodeTier tier) view returns (uint256)
+
+// Daily Pool Rewards
+function claimDailyPoolReward(uint256 dayId)
+function submitRelayProof(bytes32 nodeId, bytes32 messageHash, ...)
+
+// Protection Protocol
+function reportViolation(bytes32 nodeId, string reason)
+function slashNode(bytes32 nodeId, string reason)  // owner only
+function blacklistNode(address wallet, string reason)  // owner only
+
+// View Functions
+function getNodeByNodeId(bytes32 nodeId) view
+function getWalletNodeIds(address wallet) view returns (bytes32[])
+function getActiveNodeIds() view returns (bytes32[], address[])</code></pre>
                 </div>
             </div>
         </div>
@@ -243,39 +298,53 @@ function getMessages(address) view returns (Message[])</code></pre>
             
             <!-- Relay API -->
             <div class="card mb-4">
-                <h3>🌐 Relay Node Functions</h3>
+                <h3>🌐 RelayManager Node Functions (V4)</h3>
                 
                 <div class="api-section">
-                    <h4 class="api-title">registerAsRelay(uint256 storageGB) payable</h4>
-                    <p class="api-desc">Register as a relay node. Requires 100 MCT stake (sent with transaction).</p>
+                    <h4 class="api-title">registerNodeWithId(bytes32 nodeId, bytes32 machineIdHash, bytes32 serialHash, string endpoint, uint256 storageMB, NodeTier tier)</h4>
+                    <p class="api-desc">Register as a relay node with V4 Node Identity. Requires MCT stake based on tier.</p>
                     
                     <div class="grid grid-2">
                         <div>
                             <strong>Parameters:</strong>
                             <ul class="api-params">
-                                <li><code>storageGB</code> - Storage capacity in GB (1-8+)</li>
+                                <li><code>nodeId</code> - Unique node identifier (SHA256 hash)</li>
+                                <li><code>machineIdHash</code> - Hash of machine MAC address</li>
+                                <li><code>serialHash</code> - Hash of hardware serial</li>
+                                <li><code>endpoint</code> - P2P endpoint (multiaddr format)</li>
+                                <li><code>storageMB</code> - Storage capacity in MB</li>
+                                <li><code>tier</code> - Bronze=0, Silver=1, Gold=2, Platinum=3</li>
                             </ul>
                         </div>
                         <div>
-                            <strong>Value:</strong> 100 MCT (approve first)<br>
-                            <strong>Gas:</strong> ~120,000
+                            <strong>Stake Required:</strong><br>
+                            • Bronze: 100 MCT<br>
+                            • Silver: 200 MCT<br>
+                            • Gold: 300 MCT<br>
+                            • Platinum: 400 MCT<br>
+                            <strong>Gas:</strong> ~150,000
                         </div>
                     </div>
                 </div>
                 
                 <div class="api-section">
-                    <h4 class="api-title">recordUptime()</h4>
+                    <h4 class="api-title">heartbeatByNodeId(bytes32 nodeId)</h4>
                     <p class="api-desc">Heartbeat function. Call every 5 minutes to record uptime.</p>
                 </div>
                 
                 <div class="api-section">
-                    <h4 class="api-title">deactivateRelay()</h4>
+                    <h4 class="api-title">deactivateNodeById(bytes32 nodeId)</h4>
                     <p class="api-desc">Stop being a relay node. Returns staked MCT.</p>
                 </div>
                 
                 <div class="api-section">
-                    <h4 class="api-title">getTier(address relay) view returns (Tier)</h4>
-                    <p class="api-desc">Get relay's tier (Bronze=0, Silver=1, Gold=2, Platinum=3).</p>
+                    <h4 class="api-title">claimDailyPoolReward(uint256 dayId)</h4>
+                    <p class="api-desc">Claim your share of the daily 100 MCT pool for a specific day.</p>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-title">submitRelayProof(bytes32 nodeId, bytes32 messageHash, address sender, address recipient, uint256 timestamp, bytes senderSignature)</h4>
+                    <p class="api-desc">Submit cryptographic proof of message relay for rewards.</p>
                 </div>
             </div>
             

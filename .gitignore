@@ -84,3 +84,45 @@ output/
 node_modules/
 ramapay-release.keystore
 *.keystore
+
+# Encrypted files
+*.enc
+
+# Environment and secrets
+.env
+.env.*
+*.env
+relay.env
+
+# Node modules
+node_modules/
+dist/
+
+# Build outputs
+build/
+out/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Private keys - NEVER commit these
+*.pem
+*.key
+private_key*
+*private*key*
+
+# Test artifacts
+coverage/
+.nyc_output/
+
+# Lock files for storage
+.storage.lock
+.reserved_space
