@@ -74,7 +74,7 @@
         <div class="hero-content animate-fade-in">
             <div class="hero-badge">
                 <span>🚀</span>
-                <span>V4.0 - Split Architecture • Live on Mainnet</span>
+                <span>V4.0 - Managed Hub + Multi-Node • Live on Mainnet</span>
             </div>
             
             <h1 class="hero-title">
@@ -84,7 +84,7 @@
             
             <p class="hero-subtitle">
                 MumbleChat Protocol: Native, end-to-end encrypted P2P messaging on Ramestta blockchain. 
-                Kademlia DHT routing, STUN/UDP hole punching, Sybil-resistant peer discovery. 
+                Decentralized endpoint discovery, managed hub for NAT traversal, multi-node support.
                 Earn MCT tokens as a relay node. Zero central servers.
             </p>
             
@@ -107,6 +107,11 @@
                     <div class="stat-label">Active Relay Nodes</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-icon">🌐</div>
+                    <div class="stat-value" style="font-size: 14px; color: #10b981;">hub.mumblechat.com</div>
+                    <div class="stat-label">Managed Hub (V4)</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-icon">💰</div>
                     <div class="stat-value" id="feePool">-- MCT</div>
                     <div class="stat-label">Fee Pool Balance</div>
@@ -115,11 +120,6 @@
                     <div class="stat-icon">🎁</div>
                     <div class="stat-value">100 MCT</div>
                     <div class="stat-label">Daily Relay Pool</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⚡</div>
-                    <div class="stat-value" id="todayRelays">--</div>
-                    <div class="stat-label">Relays Today</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">🔐</div>
@@ -239,8 +239,8 @@
                 
                 <div class="card" style="text-align: center; padding: 32px 24px;">
                     <div class="card-icon" style="font-size: 3rem; margin-bottom: 16px;">📡</div>
-                    <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 8px;">RelayManager V1</h3>
-                    <p class="card-text" style="font-size: 0.9rem; margin-bottom: 20px;">V4 Node Identity + Tier Staking.</p>
+                    <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 8px;">RelayManager V2</h3>
+                    <p class="card-text" style="font-size: 0.9rem; margin-bottom: 20px;">V4 Endpoint Discovery + Multi-Node.</p>
                     <div class="contract-address" style="background: var(--bg-dark); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
                         <code style="font-size: 0.75rem; word-break: break-all;">0xF78F840eF0e321512b09e98C76eA0229Affc4b73</code>
                         <button onclick="copyAddress('0xF78F840eF0e321512b09e98C76eA0229Affc4b73')" style="margin-left: 8px;">📋</button>
@@ -327,12 +327,12 @@
             </div>
             
             <div class="footer-bottom">
-                <span>© 2026 MumbleChat Protocol V3.0 (99% Complete). Built on Ramestta.</span>
+                <span>© 2026 MumbleChat Protocol V4.0 - Production Ready. Built on Ramestta.</span>
                 <div class="footer-social">
                     <a href="#" title="Twitter">𝕏</a>
                     <a href="#" title="Discord">💬</a>
                     <a href="#" title="Telegram">📱</a>
-                    <a href="#" title="GitHub">⌨️</a>
+                    <a href="https://github.com/ramestta/Mumblechat-Protocol" target="_blank" title="GitHub">⌨️</a>
                 </div>
             </div>
         </div>
