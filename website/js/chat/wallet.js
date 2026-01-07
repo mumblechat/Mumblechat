@@ -6,13 +6,33 @@
 import { RAMESTTA_CONFIG, CONTRACTS, REGISTRY_ABI } from './config.js';
 import { state, updateState, saveUserData, clearAllData } from './state.js';
 
+// Store the selected provider (set by LoginView when user selects a wallet)
+let selectedProvider = null;
+
+/**
+ * Set the provider to use for wallet operations
+ * Called from LoginView when user selects a specific wallet via EIP-6963
+ */
+export function setWalletProvider(provider) {
+    selectedProvider = provider;
+    console.log('🔐 Wallet provider set:', provider ? 'custom' : 'default');
+}
+
+/**
+ * Get the current provider (selected or fallback to window.ethereum)
+ */
+function getProvider() {
+    return selectedProvider || window.ethereum;
+}
+
 /**
  * Setup wallet event listeners
  */
 export function setupWalletListeners() {
-    if (window.ethereum) {
-        window.ethereum.on('accountsChanged', handleAccountChange);
-        window.ethereum.on('chainChanged', () => location.reload());
+    const provider = getProvider();
+    if (provider) {
+        provider.on('accountsChanged', handleAccountChange);
+        provider.on('chainChanged', () => location.reload());
     }
 }
 
@@ -20,12 +40,13 @@ export function setupWalletListeners() {
  * Check if wallet is already connected
  */
 export async function checkWalletConnection() {
-    if (!window.ethereum) {
+    const provider = getProvider();
+    if (!provider) {
         return { connected: false, error: 'No wallet found' };
     }
 
     try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        const accounts = await provider.request({ method: 'eth_accounts' });
         if (accounts.length > 0 && state.username) {
             state.address = accounts[0];
             return { connected: true, address: accounts[0] };
@@ -41,17 +62,18 @@ export async function checkWalletConnection() {
  * Connect wallet and initialize provider
  */
 export async function connectWallet() {
-    if (!window.ethereum) {
+    const provider = getProvider();
+    if (!provider) {
         throw new Error('Please install MetaMask or another Web3 wallet');
     }
 
-    // Request accounts
-    const accounts = await window.ethereum.request({
+    // Request accounts from the SELECTED provider
+    const accounts = await provider.request({
         method: 'eth_requestAccounts'
     });
 
     state.address = accounts[0];
-    state.wallet = new ethers.BrowserProvider(window.ethereum);
+    state.wallet = new ethers.BrowserProvider(provider);
     state.signer = await state.wallet.getSigner();
     
     // Initialize contract
@@ -67,17 +89,18 @@ export async function connectWallet() {
  * Ensure connected to Ramestta network
  */
 export async function ensureCorrectNetwork() {
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    const provider = getProvider();
+    const chainId = await provider.request({ method: 'eth_chainId' });
     
     if (chainId !== RAMESTTA_CONFIG.chainId) {
         try {
-            await window.ethereum.request({
+            await provider.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: RAMESTTA_CONFIG.chainId }]
             });
         } catch (switchError) {
             if (switchError.code === 4902) {
-                await window.ethereum.request({
+                await provider.request({
                     method: 'wallet_addEthereumChain',
                     params: [RAMESTTA_CONFIG]
                 });

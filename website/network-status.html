@@ -141,15 +141,79 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 12px;
             color: var(--primary);
+            white-space: nowrap;
+        }
+        
+        .table-wrapper {
+            position: relative;
         }
         
         .table-container {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
-            overflow: hidden;
-            max-height: 600px;
-            overflow-y: auto;
+            overflow: auto;
+            max-height: 70vh;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .node-table {
+            min-width: 900px;
+        }
+        
+        .node-table th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--bg-card);
+        }
+        
+        .loading-more {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-muted);
+            gap: 10px;
+        }
+        
+        .loading-more .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .scroll-hint {
+            display: none;
+            text-align: center;
+            padding: 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 8px 8px 0 0;
+        }
+        
+        @media (max-width: 768px) {
+            .scroll-hint {
+                display: block;
+            }
+            
+            .table-container {
+                max-height: 60vh;
+            }
+            
+            .node-table th,
+            .node-table td {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
         }
         
         .refresh-btn {
@@ -279,7 +343,7 @@
             </ul>
             
             <div class="nav-actions">
-                <a href="chat2.html" class="btn btn-primary">Chat Now</a>
+                <a href="conversations.html" class="btn btn-primary">Chat Now</a>
                 <button class="mobile-menu-btn">☰</button>
             </div>
         </div>
@@ -369,30 +433,37 @@
                     <span style="color: var(--text-muted); font-size: 14px;" id="nodeCount">Loading...</span>
                 </div>
                 
-                <div class="table-container" id="nodeTableContainer">
-                    <table class="node-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Node Address</th>
-                                <th>Status</th>
-                                <th>Node Type</th>
-                                <th>Tier</th>
-                                <th>Storage</th>
-                                <th>Messages Relayed</th>
-                                <th>Uptime</th>
-                                <th>Staked MCT</th>
-                            </tr>
-                        </thead>
-                        <tbody id="nodeList">
-                            <tr>
-                                <td colspan="9" class="no-nodes-message">
-                                    <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
-                                    Loading node data from blockchain...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="table-wrapper">
+                    <div class="scroll-hint">↔️ Swipe left/right to see all columns</div>
+                    <div class="table-container" id="nodeTableContainer">
+                        <table class="node-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Node Address</th>
+                                    <th>Status</th>
+                                    <th>Node Type</th>
+                                    <th>Tier</th>
+                                    <th>Storage</th>
+                                    <th>Messages Relayed</th>
+                                    <th>Uptime</th>
+                                    <th>Staked MCT</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nodeList">
+                                <tr>
+                                    <td colspan="9" class="no-nodes-message">
+                                        <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
+                                        Loading node data from blockchain...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="loading-more" id="loadingMore" style="display: none;">
+                            <div class="spinner"></div>
+                            <span>Loading more nodes...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -506,11 +577,10 @@
         // Function selectors (computed from keccak256 of function signatures)
         const SELECTORS = {
             feePool: '0xae2e933b',
-            totalRelayNodes: '0x8f7fb0a2',
+            totalRelayNodes: '0xc4de1ef3',
             getTodayPoolInfo: '0xc8aff12f',
-            getRelayNodeAt: '0x', // Will need index parameter
-            relayNodes: '0x', // mapping(address => RelayNode)
-            allRelayAddresses: '0x' // array
+            activeRelayNodes: '0x73eec9d2',
+            relayNodes: '0xad23e18f'
         };
         
         // Tier names
@@ -567,50 +637,181 @@
         const NODE_TYPES = ['Desktop', 'Phone'];
         const NODE_TYPE_ICONS = { 'Desktop': '🖥️', 'Phone': '📱' };
         
-        // Generate mock node data (in production, this would come from blockchain)
-        function generateMockNodes(count) {
+        // ABI encodings for contract calls
+        
+        // Batch RPC call for multiple requests
+        async function batchEthCall(calls) {
+            try {
+                const response = await fetch(RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(calls.map((call, i) => ({
+                        jsonrpc: '2.0',
+                        id: i + 1,
+                        method: 'eth_call',
+                        params: [{ to: call.to, data: call.data }, 'latest']
+                    })))
+                });
+                const results = await response.json();
+                // Sort by id to maintain order
+                return results.sort((a, b) => a.id - b.id).map(r => r.result);
+            } catch (error) {
+                console.error('Batch RPC call failed:', error);
+                return calls.map(() => null);
+            }
+        }
+        
+        // Fetch real node data from blockchain - OPTIMIZED with parallel batch calls
+        async function fetchRealNodes() {
             const nodes = [];
             const tierCounts = { bronze: 0, silver: 0, gold: 0, platinum: 0 };
             
-            for (let i = 0; i < count; i++) {
-                const tier = Math.floor(Math.random() * 4);
-                const tierName = TIER_NAMES[tier].toLowerCase();
-                tierCounts[tierName]++;
+            try {
+                // Get total nodes count
+                const totalNodesHex = await ethCall(REGISTRY, SELECTORS.totalRelayNodes);
+                const totalNodes = Number(parseUint256(totalNodesHex));
                 
-                const isOnline = Math.random() > 0.15; // 85% online
-                const messagesRelayed = Math.floor(Math.random() * 50000);
-                const uptimeHours = Math.floor(Math.random() * 720); // up to 30 days
-                const staked = 100 + (tier * 100);
-                // Desktop nodes are more common (70%) than phone nodes
-                const nodeType = Math.random() > 0.3 ? 'Desktop' : 'Phone';
+                if (totalNodes === 0) {
+                    return { nodes: [], tierCounts, totalNodes: 0 };
+                }
                 
-                nodes.push({
-                    address: `0x${generateRandomHex(40)}`,
-                    status: isOnline ? 'online' : 'offline',
-                    tier: tier,
-                    tierName: TIER_NAMES[tier],
-                    nodeType: nodeType,
-                    storage: TIER_STORAGE[tier],
-                    storageUsed: Math.floor(Math.random() * 100),
-                    messagesRelayed: messagesRelayed,
-                    uptimeHours: uptimeHours,
-                    staked: staked
+                // STEP 1: Batch fetch ALL node addresses in parallel
+                const addressCalls = [];
+                for (let i = 0; i < totalNodes; i++) {
+                    const indexHex = i.toString(16).padStart(64, '0');
+                    addressCalls.push({ to: REGISTRY, data: SELECTORS.activeRelayNodes + indexHex });
+                }
+                
+                const addressResults = await batchEthCall(addressCalls);
+                const nodeAddresses = addressResults
+                    .filter(r => r && r.length >= 66)
+                    .map(r => '0x' + r.slice(-40));
+                
+                // STEP 2: Batch fetch ALL node details in parallel
+                const detailCalls = nodeAddresses.map(addr => {
+                    const addrPadded = addr.slice(2).toLowerCase().padStart(64, '0');
+                    return { to: REGISTRY, data: SELECTORS.relayNodes + addrPadded };
                 });
+                
+                const detailResults = await batchEthCall(detailCalls);
+                
+                // STEP 3: Parse all results
+                for (let i = 0; i < nodeAddresses.length; i++) {
+                    const nodeDataHex = detailResults[i];
+                    if (nodeDataHex && nodeDataHex.length > 2) {
+                        const nodeData = parseRelayNodeData(nodeDataHex, nodeAddresses[i]);
+                        if (nodeData) {
+                            nodes.push(nodeData);
+                            const tierName = TIER_NAMES[nodeData.tier].toLowerCase();
+                            tierCounts[tierName]++;
+                        }
+                    }
+                }
+                
+                // Sort by messages relayed descending
+                nodes.sort((a, b) => b.messagesRelayed - a.messagesRelayed);
+                
+                return { nodes, tierCounts, totalNodes };
+            } catch (error) {
+                console.error('Error fetching nodes:', error);
+                return { nodes: [], tierCounts, totalNodes: 0 };
             }
-            
-            // Sort by messages relayed descending
-            nodes.sort((a, b) => b.messagesRelayed - a.messagesRelayed);
-            
-            return { nodes, tierCounts };
         }
         
-        function generateRandomHex(length) {
-            const chars = '0123456789abcdef';
-            let result = '';
-            for (let i = 0; i < length; i++) {
-                result += chars[Math.floor(Math.random() * 16)];
+        // Parse relay node struct data from hex
+        function parseRelayNodeData(hexData, address) {
+            try {
+                const data = hexData.slice(2); // Remove 0x
+                
+                // Split into 32-byte (64 hex char) chunks
+                const chunks = [];
+                for (let i = 0; i < data.length; i += 64) {
+                    chunks.push(data.slice(i, i + 64));
+                }
+                
+                // RelayNode struct layout (based on MumbleChatRegistry.sol):
+                // 0: endpoint offset (dynamic string pointer)
+                // 1: stakedAmount (uint256)
+                // 2: registeredAt (uint256)
+                // 3: messagesRelayed (uint256)
+                // 4: rewardsEarned (uint256)
+                // 5: isActive (bool)
+                // 6: totalUptimeSeconds (uint256)
+                // 7: lastHeartbeat (uint256)
+                // 8: currentSessionStart (uint256)
+                // 9: storageMB (uint256)
+                // 10: dailyUptimeSeconds (uint256)
+                // 11: lastDayReset (uint256)
+                // 12: tier (NodeTier enum = uint8)
+                
+                const stakedAmountRaw = BigInt('0x' + (chunks[1] || '0'));
+                const stakedAmount = Number(stakedAmountRaw / BigInt(10**18));
+                const registeredAt = Number(BigInt('0x' + (chunks[2] || '0')));
+                const messagesRelayed = Number(BigInt('0x' + (chunks[3] || '0')));
+                const isActiveNum = Number(BigInt('0x' + (chunks[5] || '0')));
+                const isActive = isActiveNum > 0;
+                const lastHeartbeat = Number(BigInt('0x' + (chunks[7] || '0')));
+                const storageMB = Number(BigInt('0x' + (chunks[9] || '0')));
+                const tier = Number(BigInt('0x' + (chunks[12] || '0')));
+                
+                // Check if node is online (heartbeat within last 1 hour = 3600 seconds)
+                const now = Math.floor(Date.now() / 1000);
+                const timeSinceHeartbeat = now - lastHeartbeat;
+                const isOnline = timeSinceHeartbeat < 3600 && timeSinceHeartbeat >= 0;
+                
+                // Calculate uptime from registration
+                const uptimeSeconds = now - registeredAt;
+                const uptimeHours = Math.max(0, Math.floor(uptimeSeconds / 3600));
+                
+                // Determine node type based on storage (phones typically have less storage)
+                const nodeType = storageMB <= 2048 ? 'Phone' : 'Desktop';
+                
+                // Format storage display
+                let storageDisplay;
+                if (storageMB >= 1024) {
+                    storageDisplay = `${Math.floor(storageMB / 1024)} GB`;
+                } else {
+                    storageDisplay = `${storageMB} MB`;
+                }
+                
+                return {
+                    address: address,
+                    status: isOnline ? 'online' : 'offline',
+                    tier: Math.min(Math.max(tier, 0), 3), // Ensure tier is 0-3
+                    tierName: TIER_NAMES[Math.min(Math.max(tier, 0), 3)],
+                    nodeType: nodeType,
+                    storage: storageDisplay,
+                    storageUsed: 0, // Not used in new struct layout
+                    messagesRelayed: messagesRelayed,
+                    uptimeHours: uptimeHours,
+                    staked: stakedAmount,
+                    lastHeartbeat: lastHeartbeat,
+                    registeredAt: registeredAt,
+                    isActive: isActive,
+                    timeSinceHeartbeat: timeSinceHeartbeat
+                };
+            } catch (e) {
+                console.error('Error parsing node data:', e);
+                return null;
             }
-            return result;
+        }
+        
+        // Check node online status by pinging endpoint (optional)
+        async function checkNodeOnline(endpoint) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(endpoint + '/health', {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeout);
+                return response.ok;
+            } catch {
+                return false;
+            }
         }
         
         // Format uptime
@@ -621,8 +822,101 @@
             return `${days}d ${h}h`;
         }
         
-        // Render node table
+        // Pagination state
+        let allNodes = [];
+        let displayedCount = 0;
+        const NODES_PER_PAGE = 20;
+        let isLoadingMore = false;
+        
+        // Render node row
+        function renderNodeRow(node, index) {
+            // Format last seen
+            let lastSeenText = '';
+            if (node.timeSinceHeartbeat < 60) {
+                lastSeenText = 'Just now';
+            } else if (node.timeSinceHeartbeat < 3600) {
+                lastSeenText = `${Math.floor(node.timeSinceHeartbeat / 60)}m ago`;
+            } else if (node.timeSinceHeartbeat < 86400) {
+                lastSeenText = `${Math.floor(node.timeSinceHeartbeat / 3600)}h ago`;
+            } else {
+                lastSeenText = `${Math.floor(node.timeSinceHeartbeat / 86400)}d ago`;
+            }
+            
+            return `
+                <tr>
+                    <td style="color: var(--text-muted);">${index + 1}</td>
+                    <td class="address-cell">${node.address.slice(0, 8)}...${node.address.slice(-6)}</td>
+                    <td>
+                        <span class="node-status ${node.status}">
+                            ${node.status === 'online' ? '🟢' : '🔴'} ${node.status}
+                        </span>
+                        <div style="font-size: 10px; color: var(--text-muted);">${lastSeenText}</div>
+                    </td>
+                    <td>
+                        <span class="node-type-badge ${node.nodeType.toLowerCase()}">
+                            ${NODE_TYPE_ICONS[node.nodeType]} ${node.nodeType}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="tier-badge ${node.tierName.toLowerCase()}">
+                            ${TIER_ICONS[node.tier]} ${node.tierName}
+                        </span>
+                    </td>
+                    <td>${node.storage}</td>
+                    <td style="font-weight: 600;">${node.messagesRelayed.toLocaleString()}</td>
+                    <td>${formatUptime(node.uptimeHours)}</td>
+                    <td style="color: var(--secondary);">${node.staked} MCT</td>
+                </tr>
+            `;
+        }
+        
+        // Load more nodes
+        function loadMoreNodes() {
+            if (isLoadingMore || displayedCount >= allNodes.length) return;
+            
+            isLoadingMore = true;
+            const loadingEl = document.getElementById('loadingMore');
+            if (loadingEl) loadingEl.style.display = 'flex';
+            
+            // Simulate loading delay for UX
+            setTimeout(() => {
+                const tbody = document.getElementById('nodeList');
+                const endIndex = Math.min(displayedCount + NODES_PER_PAGE, allNodes.length);
+                
+                let html = '';
+                for (let i = displayedCount; i < endIndex; i++) {
+                    html += renderNodeRow(allNodes[i], i);
+                }
+                
+                tbody.insertAdjacentHTML('beforeend', html);
+                displayedCount = endIndex;
+                
+                isLoadingMore = false;
+                if (loadingEl) {
+                    loadingEl.style.display = displayedCount >= allNodes.length ? 'none' : 'none';
+                }
+            }, 300);
+        }
+        
+        // Initialize infinite scroll
+        function initInfiniteScroll() {
+            const container = document.getElementById('nodeTableContainer');
+            if (!container) return;
+            
+            container.addEventListener('scroll', () => {
+                const { scrollTop, scrollHeight, clientHeight } = container;
+                // Load more when scrolled to 80% of the container
+                if (scrollTop + clientHeight >= scrollHeight - 100) {
+                    loadMoreNodes();
+                }
+            });
+        }
+        
+        // Render initial nodes
         function renderNodes(nodes) {
+            allNodes = nodes;
+            displayedCount = 0;
+            
             const tbody = document.getElementById('nodeList');
             
             if (nodes.length === 0) {
@@ -638,41 +932,26 @@
                 return;
             }
             
+            // Clear tbody and load first batch
+            tbody.innerHTML = '';
+            const endIndex = Math.min(NODES_PER_PAGE, nodes.length);
+            
             let html = '';
-            nodes.forEach((node, index) => {
-                html += `
-                    <tr>
-                        <td style="color: var(--text-muted);">${index + 1}</td>
-                        <td class="address-cell">${node.address.slice(0, 8)}...${node.address.slice(-6)}</td>
-                        <td>
-                            <span class="node-status ${node.status}">
-                                ${node.status === 'online' ? '🟢' : '🔴'} ${node.status}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="node-type-badge ${node.nodeType.toLowerCase()}">
-                                ${NODE_TYPE_ICONS[node.nodeType]} ${node.nodeType}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="tier-badge ${node.tierName.toLowerCase()}">
-                                ${TIER_ICONS[node.tier]} ${node.tierName}
-                            </span>
-                        </td>
-                        <td>
-                            <div>${node.storage}</div>
-                            <div class="storage-bar">
-                                <div class="storage-fill" style="width: ${node.storageUsed}%;"></div>
-                            </div>
-                        </td>
-                        <td style="font-weight: 600;">${node.messagesRelayed.toLocaleString()}</td>
-                        <td>${formatUptime(node.uptimeHours)}</td>
-                        <td style="color: var(--secondary);">${node.staked} MCT</td>
-                    </tr>
-                `;
-            });
+            for (let i = 0; i < endIndex; i++) {
+                html += renderNodeRow(nodes[i], i);
+            }
             
             tbody.innerHTML = html;
+            displayedCount = endIndex;
+            
+            // Show loading indicator if there are more nodes
+            const loadingEl = document.getElementById('loadingMore');
+            if (loadingEl && displayedCount < allNodes.length) {
+                loadingEl.style.display = 'none'; // Hidden until user scrolls
+            }
+            
+            // Initialize infinite scroll
+            initInfiniteScroll();
         }
         
         // Load all data
@@ -689,11 +968,6 @@
                 document.getElementById('feePool').textContent = feePool;
                 document.getElementById('feePoolToday').textContent = `${feePool} MCT`;
                 
-                // Get total nodes
-                const totalNodesHex = await ethCall(REGISTRY, SELECTORS.totalRelayNodes);
-                const totalNodes = Number(parseUint256(totalNodesHex));
-                document.getElementById('totalNodes').textContent = totalNodes;
-                
                 // Get today's pool info
                 const poolInfoHex = await ethCall(REGISTRY, SELECTORS.getTodayPoolInfo);
                 let messagesRelayed = 0;
@@ -705,10 +979,13 @@
                 }
                 document.getElementById('messagesRelayed').textContent = messagesRelayed.toLocaleString();
                 
-                // Generate mock nodes for demo (in production, fetch from blockchain)
-                const { nodes, tierCounts } = generateMockNodes(Math.max(totalNodes, 5));
+                // Fetch real nodes from blockchain
+                const { nodes, tierCounts, totalNodes } = await fetchRealNodes();
                 
-                // Update online count (estimate ~85% online)
+                // Update total nodes count
+                document.getElementById('totalNodes').textContent = totalNodes;
+                
+                // Update online count (based on real heartbeat data)
                 const onlineCount = nodes.filter(n => n.status === 'online').length;
                 document.getElementById('onlineNodes').textContent = onlineCount;
                 
@@ -718,8 +995,13 @@
                 document.getElementById('goldCount').textContent = tierCounts.gold;
                 document.getElementById('platinumCount').textContent = tierCounts.platinum;
                 
-                // Update node count
-                document.getElementById('nodeCount').textContent = `${nodes.length} nodes registered`;
+                // Update node count display
+                const nodeCountEl = document.getElementById('nodeCount');
+                if (totalNodes === 0) {
+                    nodeCountEl.textContent = 'No nodes registered yet';
+                } else {
+                    nodeCountEl.textContent = `${totalNodes} node${totalNodes > 1 ? 's' : ''} registered`;
+                }
                 
                 // Render nodes table
                 renderNodes(nodes);
@@ -765,7 +1047,7 @@
                     <a href="relay-node.html" style="color: #4bc0c8;">🚀 Run a Node</a>
                 </div>
             </div>
-            <a href="chat2.html" class="bottom-nav-item">
+            <a href="conversations.html" class="bottom-nav-item">
                 <span class="bottom-nav-icon">💬</span>
                 <span class="bottom-nav-label">Chat</span>
             </a>

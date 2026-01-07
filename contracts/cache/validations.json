@@ -234,1204 +234,6 @@
         },
         "solcVersion": "0.8.22"
       },
-      "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable": {
-        "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:17",
-        "inherit": [
-          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
-        ],
-        "libraries": [],
-        "methods": [],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {
-            "t_bool": {
-              "label": "bool",
-              "numberOfBytes": "1"
-            },
-            "t_struct(InitializableStorage)73_storage": {
-              "label": "struct Initializable.InitializableStorage",
-              "members": [
-                {
-                  "label": "_initialized",
-                  "type": "t_uint64",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "_initializing",
-                  "type": "t_bool",
-                  "offset": 8,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_uint64": {
-              "label": "uint64",
-              "numberOfBytes": "8"
-            }
-          },
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {
-            "erc7201:openzeppelin.storage.Initializable": [
-              {
-                "contract": "Initializable",
-                "label": "_initialized",
-                "type": "t_uint64",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "contract": "Initializable",
-                "label": "_initializing",
-                "type": "t_bool",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
-                "offset": 8,
-                "slot": "0"
-              }
-            ]
-          }
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:ReentrancyGuardUpgradeable": {
-        "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:26",
-        "inherit": [
-          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
-        ],
-        "libraries": [],
-        "methods": [],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {
-            "t_bool": {
-              "label": "bool",
-              "numberOfBytes": "1"
-            },
-            "t_struct(InitializableStorage)73_storage": {
-              "label": "struct Initializable.InitializableStorage",
-              "members": [
-                {
-                  "label": "_initialized",
-                  "type": "t_uint64",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "_initializing",
-                  "type": "t_bool",
-                  "offset": 8,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_struct(ReentrancyGuardStorage)226_storage": {
-              "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
-              "members": [
-                {
-                  "label": "_status",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_uint256": {
-              "label": "uint256",
-              "numberOfBytes": "32"
-            },
-            "t_uint64": {
-              "label": "uint64",
-              "numberOfBytes": "8"
-            }
-          },
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {
-            "erc7201:openzeppelin.storage.ReentrancyGuard": [
-              {
-                "contract": "ReentrancyGuardUpgradeable",
-                "label": "_status",
-                "type": "t_uint256",
-                "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:43",
-                "offset": 0,
-                "slot": "0"
-              }
-            ],
-            "erc7201:openzeppelin.storage.Initializable": [
-              {
-                "contract": "Initializable",
-                "label": "_initialized",
-                "type": "t_uint64",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "contract": "Initializable",
-                "label": "_initializing",
-                "type": "t_bool",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
-                "offset": 8,
-                "slot": "0"
-              }
-            ]
-          }
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts/interfaces/IERC1967.sol:IERC1967": {
-        "src": "@openzeppelin/contracts/interfaces/IERC1967.sol:9",
-        "inherit": [],
-        "libraries": [],
-        "methods": [],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable": {
-        "src": "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:10",
-        "inherit": [],
-        "libraries": [],
-        "methods": [
-          "proxiableUUID()"
-        ],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:ERC1967Utils": {
-        "src": "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:15",
-        "version": {
-          "withMetadata": "b896719c755c299135f32dbd37f0c16bb2aed3ff414a38c3d36dfac5405c55c6",
-          "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
-          "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
-        },
-        "inherit": [],
-        "libraries": [
-          "@openzeppelin/contracts/utils/StorageSlot.sol:StorageSlot",
-          "@openzeppelin/contracts/utils/Address.sol:Address"
-        ],
-        "methods": [],
-        "linkReferences": [],
-        "errors": [
-          {
-            "kind": "delegatecall",
-            "src": "@openzeppelin/contracts/utils/Address.sol:97"
-          },
-          {
-            "kind": "delegatecall",
-            "src": "@openzeppelin/contracts/utils/Address.sol:97"
-          }
-        ],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts/proxy/beacon/IBeacon.sol:IBeacon": {
-        "src": "@openzeppelin/contracts/proxy/beacon/IBeacon.sol:9",
-        "inherit": [],
-        "libraries": [],
-        "methods": [
-          "implementation()"
-        ],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts/utils/Address.sol:Address": {
-        "src": "@openzeppelin/contracts/utils/Address.sol:11",
-        "version": {
-          "withMetadata": "2de0fcb78fa368cc66b1ab0af38b4f2d75da6b8dad8886cb75a121f504829aec",
-          "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
-          "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
-        },
-        "inherit": [],
-        "libraries": [
-          "@openzeppelin/contracts/utils/Errors.sol:Errors"
-        ],
-        "methods": [],
-        "linkReferences": [],
-        "errors": [
-          {
-            "kind": "delegatecall",
-            "src": "@openzeppelin/contracts/utils/Address.sol:97"
-          }
-        ],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts/utils/Errors.sol:Errors": {
-        "src": "@openzeppelin/contracts/utils/Errors.sol:14",
-        "version": {
-          "withMetadata": "473d60c0451a5db8c737caf5fa65b6c6bd0f4a946a43fd052a6204a641b40854",
-          "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
-          "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
-        },
-        "inherit": [],
-        "libraries": [],
-        "methods": [],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts/utils/StorageSlot.sol:StorageSlot": {
-        "src": "@openzeppelin/contracts/utils/StorageSlot.sol:34",
-        "version": {
-          "withMetadata": "e85c0d8abaf275d0aed943cf4804f4d1746226744376f5126f3e5378de017d3a",
-          "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
-          "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
-        },
-        "inherit": [],
-        "libraries": [],
-        "methods": [],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "src/MumbleChatRegistry.sol:IERC20": {
-        "src": "src/MumbleChatRegistry.sol:1415",
-        "inherit": [],
-        "libraries": [],
-        "methods": [
-          "transfer(address,uint256)",
-          "transferFrom(address,address,uint256)",
-          "balanceOf(address)"
-        ],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "src/MumbleChatRegistry.sol:IMCTToken": {
-        "src": "src/MumbleChatRegistry.sol:1422",
-        "inherit": [],
-        "libraries": [],
-        "methods": [
-          "setActiveRelayCount(uint256)",
-          "claimFeeReward(address,uint256)"
-        ],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {},
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {}
-        },
-        "solcVersion": "0.8.22"
-      },
-      "src/MumbleChatRegistry.sol:MumbleChatRegistry": {
-        "src": "src/MumbleChatRegistry.sol:42",
-        "version": {
-          "withMetadata": "bbcf4169c9b741e6528054ea56a294170a0052e3eca6e3167626d82153f61ea5",
-          "withoutMetadata": "55ac19294067b550c1dad2b9aaefade2f7aaf45a0554f17c4ef32c9d7c541f98",
-          "linkedWithoutMetadata": "55ac19294067b550c1dad2b9aaefade2f7aaf45a0554f17c4ef32c9d7c541f98"
-        },
-        "inherit": [
-          "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:ReentrancyGuardUpgradeable",
-          "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
-          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
-          "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:OwnableUpgradeable",
-          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
-          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
-        ],
-        "libraries": [],
-        "methods": [
-          "()",
-          "initialize(address)",
-          "initializeV3_1()",
-          "register(bytes32,string)",
-          "updatePublicKey(bytes32)",
-          "updateDisplayName(string)",
-          "deactivate()",
-          "registerAsRelay(string,uint256)",
-          "registerAsRelay(string)",
-          "deactivateRelay()",
-          "heartbeat()",
-          "updateStorage(uint256)",
-          "getRewardMultiplier(address)",
-          "isNodeOnline(address)",
-          "recordRelayedMessage(address,bytes32,uint256)",
-          "claimFeeReward()",
-          "submitRelayProof(bytes32,address,address,uint256,bytes)",
-          "submitBatchRelayProofs(bytes32[],address[],address[],uint256[],bytes[])",
-          "getRelayProofNonce(address)",
-          "setRelayRewardPerMessage(uint256)",
-          "claimDailyPoolReward(uint256)",
-          "getClaimableReward(address,uint256)",
-          "getTodayPoolInfo()",
-          "getMyTodayStats()",
-          "setDailyPoolAmount(uint256)",
-          "isRegistered(address)",
-          "getPublicKey(address)",
-          "getIdentity(address)",
-          "getActiveRelayNodes()",
-          "getRelayNode(address)",
-          "getTierRequirements()",
-          "setMinRelayStake(uint256)",
-          "setMCTToken(address)",
-          "withdrawExcessMCT(uint256)",
-          "reportViolation(address,string)",
-          "slashNode(address,string)",
-          "blacklistNode(address,string)",
-          "increaseReputation(address)",
-          "checkRateLimit(address)",
-          "updateMessageTime(address)",
-          "getNodeSecurityInfo(address)",
-          "blockUser(address)",
-          "unblockUser(address)",
-          "isBlocked(address,address)",
-          "getBlockedUsers(address)",
-          "getBlockedUsersCount(address)",
-          "canSendMessage(address,address)",
-          "version()"
-        ],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [
-            {
-              "label": "identities",
-              "offset": 0,
-              "slot": "0",
-              "type": "t_mapping(t_address,t_struct(Identity)1593_storage)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:82"
-            },
-            {
-              "label": "relayNodes",
-              "offset": 0,
-              "slot": "1",
-              "type": "t_mapping(t_address,t_struct(RelayNode)1621_storage)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:85"
-            },
-            {
-              "label": "registeredAddresses",
-              "offset": 0,
-              "slot": "2",
-              "type": "t_array(t_address)dyn_storage",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:88"
-            },
-            {
-              "label": "activeRelayNodes",
-              "offset": 0,
-              "slot": "3",
-              "type": "t_array(t_address)dyn_storage",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:92"
-            },
-            {
-              "label": "minRelayStake",
-              "offset": 0,
-              "slot": "4",
-              "type": "t_uint256",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:97"
-            },
-            {
-              "label": "totalUsers",
-              "offset": 0,
-              "slot": "5",
-              "type": "t_uint256",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:99"
-            },
-            {
-              "label": "totalRelayNodes",
-              "offset": 0,
-              "slot": "6",
-              "type": "t_uint256",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:100"
-            },
-            {
-              "label": "mctToken",
-              "offset": 0,
-              "slot": "7",
-              "type": "t_address",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:101"
-            },
-            {
-              "label": "relayProofClaimed",
-              "offset": 0,
-              "slot": "8",
-              "type": "t_mapping(t_bytes32,t_bool)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:550"
-            },
-            {
-              "label": "relayProofNonce",
-              "offset": 0,
-              "slot": "9",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:553"
-            },
-            {
-              "label": "lastRelayProofTime",
-              "offset": 0,
-              "slot": "10",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:556"
-            },
-            {
-              "label": "relayRewardPerMessage",
-              "offset": 0,
-              "slot": "11",
-              "type": "t_uint256",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:560"
-            },
-            {
-              "label": "currentDayPool",
-              "offset": 0,
-              "slot": "12",
-              "type": "t_struct(DailyPool)3460_storage",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:826"
-            },
-            {
-              "label": "dailyPools",
-              "offset": 0,
-              "slot": "17",
-              "type": "t_mapping(t_uint256,t_struct(DailyPool)3460_storage)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:829"
-            },
-            {
-              "label": "nodeDailyStats",
-              "offset": 0,
-              "slot": "18",
-              "type": "t_mapping(t_address,t_mapping(t_uint256,t_struct(NodeDailyStats)3467_storage))",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:832"
-            },
-            {
-              "label": "todayContributors",
-              "offset": 0,
-              "slot": "19",
-              "type": "t_array(t_address)dyn_storage",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:836"
-            },
-            {
-              "label": "isContributorToday",
-              "offset": 0,
-              "slot": "20",
-              "type": "t_mapping(t_address,t_bool)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:836"
-            },
-            {
-              "label": "dailyPoolAmount",
-              "offset": 0,
-              "slot": "21",
-              "type": "t_uint256",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:837"
-            },
-            {
-              "label": "reputationScore",
-              "offset": 0,
-              "slot": "22",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1148"
-            },
-            {
-              "label": "violationCount",
-              "offset": 0,
-              "slot": "23",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1151"
-            },
-            {
-              "label": "isBlacklisted",
-              "offset": 0,
-              "slot": "24",
-              "type": "t_mapping(t_address,t_bool)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1152"
-            },
-            {
-              "label": "lastMessageTime",
-              "offset": 0,
-              "slot": "25",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1154"
-            },
-            {
-              "label": "blockedUsers",
-              "offset": 0,
-              "slot": "26",
-              "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1309"
-            },
-            {
-              "label": "blockedUsersList",
-              "offset": 0,
-              "slot": "27",
-              "type": "t_mapping(t_address,t_array(t_address)dyn_storage)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1310"
-            }
-          ],
-          "types": {
-            "t_address": {
-              "label": "address",
-              "numberOfBytes": "20"
-            },
-            "t_bool": {
-              "label": "bool",
-              "numberOfBytes": "1"
-            },
-            "t_struct(InitializableStorage)73_storage": {
-              "label": "struct Initializable.InitializableStorage",
-              "members": [
-                {
-                  "label": "_initialized",
-                  "type": "t_uint64",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "_initializing",
-                  "type": "t_bool",
-                  "offset": 8,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_struct(OwnableStorage)13_storage": {
-              "label": "struct OwnableUpgradeable.OwnableStorage",
-              "members": [
-                {
-                  "label": "_owner",
-                  "type": "t_address",
-                  "offset": 0,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_struct(ReentrancyGuardStorage)226_storage": {
-              "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
-              "members": [
-                {
-                  "label": "_status",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_uint256": {
-              "label": "uint256",
-              "numberOfBytes": "32"
-            },
-            "t_uint64": {
-              "label": "uint64",
-              "numberOfBytes": "8"
-            },
-            "t_array(t_address)dyn_storage": {
-              "label": "address[]",
-              "numberOfBytes": "32"
-            },
-            "t_bytes32": {
-              "label": "bytes32",
-              "numberOfBytes": "32"
-            },
-            "t_enum(NodeTier)1580": {
-              "label": "enum MumbleChatRegistry.NodeTier",
-              "members": [
-                "Bronze",
-                "Silver",
-                "Gold",
-                "Platinum"
-              ],
-              "numberOfBytes": "1"
-            },
-            "t_mapping(t_address,t_array(t_address)dyn_storage)": {
-              "label": "mapping(address => address[])",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_address,t_bool)": {
-              "label": "mapping(address => bool)",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_address,t_mapping(t_address,t_bool))": {
-              "label": "mapping(address => mapping(address => bool))",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_address,t_mapping(t_uint256,t_struct(NodeDailyStats)3467_storage))": {
-              "label": "mapping(address => mapping(uint256 => struct MumbleChatRegistry.NodeDailyStats))",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_address,t_struct(Identity)1593_storage)": {
-              "label": "mapping(address => struct MumbleChatRegistry.Identity)",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_address,t_struct(RelayNode)1621_storage)": {
-              "label": "mapping(address => struct MumbleChatRegistry.RelayNode)",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_address,t_uint256)": {
-              "label": "mapping(address => uint256)",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_bytes32,t_bool)": {
-              "label": "mapping(bytes32 => bool)",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_uint256,t_struct(DailyPool)3460_storage)": {
-              "label": "mapping(uint256 => struct MumbleChatRegistry.DailyPool)",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_uint256,t_struct(NodeDailyStats)3467_storage)": {
-              "label": "mapping(uint256 => struct MumbleChatRegistry.NodeDailyStats)",
-              "numberOfBytes": "32"
-            },
-            "t_string_storage": {
-              "label": "string",
-              "numberOfBytes": "32"
-            },
-            "t_struct(DailyPool)3460_storage": {
-              "label": "struct MumbleChatRegistry.DailyPool",
-              "members": [
-                {
-                  "label": "dayId",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "totalRelays",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "1"
-                },
-                {
-                  "label": "totalWeightedRelays",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "2"
-                },
-                {
-                  "label": "poolAmount",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "3"
-                },
-                {
-                  "label": "distributed",
-                  "type": "t_bool",
-                  "offset": 0,
-                  "slot": "4"
-                }
-              ],
-              "numberOfBytes": "160"
-            },
-            "t_struct(Identity)1593_storage": {
-              "label": "struct MumbleChatRegistry.Identity",
-              "members": [
-                {
-                  "label": "publicKeyX",
-                  "type": "t_bytes32",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "publicKeyY",
-                  "type": "t_bytes32",
-                  "offset": 0,
-                  "slot": "1"
-                },
-                {
-                  "label": "registeredAt",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "2"
-                },
-                {
-                  "label": "lastUpdated",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "3"
-                },
-                {
-                  "label": "isActive",
-                  "type": "t_bool",
-                  "offset": 0,
-                  "slot": "4"
-                },
-                {
-                  "label": "displayName",
-                  "type": "t_string_storage",
-                  "offset": 0,
-                  "slot": "5"
-                }
-              ],
-              "numberOfBytes": "192"
-            },
-            "t_struct(NodeDailyStats)3467_storage": {
-              "label": "struct MumbleChatRegistry.NodeDailyStats",
-              "members": [
-                {
-                  "label": "relayCount",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "weightedRelayCount",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "1"
-                },
-                {
-                  "label": "claimed",
-                  "type": "t_bool",
-                  "offset": 0,
-                  "slot": "2"
-                }
-              ],
-              "numberOfBytes": "96"
-            },
-            "t_struct(RelayNode)1621_storage": {
-              "label": "struct MumbleChatRegistry.RelayNode",
-              "members": [
-                {
-                  "label": "endpoint",
-                  "type": "t_string_storage",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "stakedAmount",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "1"
-                },
-                {
-                  "label": "registeredAt",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "2"
-                },
-                {
-                  "label": "messagesRelayed",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "3"
-                },
-                {
-                  "label": "rewardsEarned",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "4"
-                },
-                {
-                  "label": "isActive",
-                  "type": "t_bool",
-                  "offset": 0,
-                  "slot": "5"
-                },
-                {
-                  "label": "totalUptimeSeconds",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "6"
-                },
-                {
-                  "label": "lastHeartbeat",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "7"
-                },
-                {
-                  "label": "currentSessionStart",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "8"
-                },
-                {
-                  "label": "storageMB",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "9"
-                },
-                {
-                  "label": "dailyUptimeSeconds",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "10"
-                },
-                {
-                  "label": "lastDayReset",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "11"
-                },
-                {
-                  "label": "tier",
-                  "type": "t_enum(NodeTier)1580",
-                  "offset": 0,
-                  "slot": "12"
-                }
-              ],
-              "numberOfBytes": "416"
-            }
-          },
-          "layoutVersion": "1.2",
-          "flat": true,
-          "namespaces": {
-            "erc7201:openzeppelin.storage.ReentrancyGuard": [
-              {
-                "contract": "ReentrancyGuardUpgradeable",
-                "label": "_status",
-                "type": "t_uint256",
-                "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:43",
-                "offset": 0,
-                "slot": "0"
-              }
-            ],
-            "erc7201:openzeppelin.storage.Ownable": [
-              {
-                "contract": "OwnableUpgradeable",
-                "label": "_owner",
-                "type": "t_address",
-                "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
-                "offset": 0,
-                "slot": "0"
-              }
-            ],
-            "erc7201:openzeppelin.storage.Initializable": [
-              {
-                "contract": "Initializable",
-                "label": "_initialized",
-                "type": "t_uint64",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "contract": "Initializable",
-                "label": "_initializing",
-                "type": "t_bool",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
-                "offset": 8,
-                "slot": "0"
-              }
-            ]
-          }
-        },
-        "solcVersion": "0.8.22"
-      }
-    },
-    {
-      "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:OwnableUpgradeable": {
-        "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:21",
-        "inherit": [
-          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
-          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
-        ],
-        "libraries": [],
-        "methods": [
-          "owner()",
-          "renounceOwnership()",
-          "transferOwnership(address)"
-        ],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {
-            "t_address": {
-              "label": "address",
-              "numberOfBytes": "20"
-            },
-            "t_bool": {
-              "label": "bool",
-              "numberOfBytes": "1"
-            },
-            "t_struct(InitializableStorage)73_storage": {
-              "label": "struct Initializable.InitializableStorage",
-              "members": [
-                {
-                  "label": "_initialized",
-                  "type": "t_uint64",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "_initializing",
-                  "type": "t_bool",
-                  "offset": 8,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_struct(OwnableStorage)13_storage": {
-              "label": "struct OwnableUpgradeable.OwnableStorage",
-              "members": [
-                {
-                  "label": "_owner",
-                  "type": "t_address",
-                  "offset": 0,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_uint64": {
-              "label": "uint64",
-              "numberOfBytes": "8"
-            }
-          },
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {
-            "erc7201:openzeppelin.storage.Ownable": [
-              {
-                "contract": "OwnableUpgradeable",
-                "label": "_owner",
-                "type": "t_address",
-                "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
-                "offset": 0,
-                "slot": "0"
-              }
-            ],
-            "erc7201:openzeppelin.storage.Initializable": [
-              {
-                "contract": "Initializable",
-                "label": "_initialized",
-                "type": "t_uint64",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "contract": "Initializable",
-                "label": "_initializing",
-                "type": "t_bool",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
-                "offset": 8,
-                "slot": "0"
-              }
-            ]
-          }
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable": {
-        "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:56",
-        "inherit": [],
-        "libraries": [],
-        "methods": [],
-        "linkReferences": [],
-        "errors": [],
-        "layout": {
-          "storage": [],
-          "types": {
-            "t_bool": {
-              "label": "bool",
-              "numberOfBytes": "1"
-            },
-            "t_struct(InitializableStorage)73_storage": {
-              "label": "struct Initializable.InitializableStorage",
-              "members": [
-                {
-                  "label": "_initialized",
-                  "type": "t_uint64",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "_initializing",
-                  "type": "t_bool",
-                  "offset": 8,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_uint64": {
-              "label": "uint64",
-              "numberOfBytes": "8"
-            }
-          },
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {
-            "erc7201:openzeppelin.storage.Initializable": [
-              {
-                "contract": "Initializable",
-                "label": "_initialized",
-                "type": "t_uint64",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "contract": "Initializable",
-                "label": "_initializing",
-                "type": "t_bool",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
-                "offset": 8,
-                "slot": "0"
-              }
-            ]
-          }
-        },
-        "solcVersion": "0.8.22"
-      },
-      "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable": {
-        "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:20",
-        "inherit": [
-          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
-          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
-        ],
-        "libraries": [
-          "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:ERC1967Utils"
-        ],
-        "methods": [
-          "proxiableUUID()",
-          "upgradeToAndCall(address,bytes)"
-        ],
-        "linkReferences": [],
-        "errors": [
-          {
-            "kind": "delegatecall",
-            "src": "@openzeppelin/contracts/utils/Address.sol:97"
-          }
-        ],
-        "layout": {
-          "storage": [],
-          "types": {
-            "t_bool": {
-              "label": "bool",
-              "numberOfBytes": "1"
-            },
-            "t_struct(InitializableStorage)73_storage": {
-              "label": "struct Initializable.InitializableStorage",
-              "members": [
-                {
-                  "label": "_initialized",
-                  "type": "t_uint64",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "_initializing",
-                  "type": "t_bool",
-                  "offset": 8,
-                  "slot": "0"
-                }
-              ],
-              "numberOfBytes": "32"
-            },
-            "t_uint64": {
-              "label": "uint64",
-              "numberOfBytes": "8"
-            }
-          },
-          "layoutVersion": "1.2",
-          "flat": false,
-          "namespaces": {
-            "erc7201:openzeppelin.storage.Initializable": [
-              {
-                "contract": "Initializable",
-                "label": "_initialized",
-                "type": "t_uint64",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "contract": "Initializable",
-                "label": "_initializing",
-                "type": "t_bool",
-                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
-                "offset": 8,
-                "slot": "0"
-              }
-            ]
-          }
-        },
-        "solcVersion": "0.8.22"
-      },
       "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:ERC20Upgradeable": {
         "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:30",
         "inherit": [
@@ -2017,7 +819,7 @@
       "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:ERC1967Utils": {
         "src": "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol:15",
         "version": {
-          "withMetadata": "b896719c755c299135f32dbd37f0c16bb2aed3ff414a38c3d36dfac5405c55c6",
+          "withMetadata": "8982cf12eed9186d25c686050e3fe550220af203a01098c05afb02c731fd3651",
           "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
           "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
         },
@@ -2113,7 +915,7 @@
       "@openzeppelin/contracts/utils/Address.sol:Address": {
         "src": "@openzeppelin/contracts/utils/Address.sol:11",
         "version": {
-          "withMetadata": "2de0fcb78fa368cc66b1ab0af38b4f2d75da6b8dad8886cb75a121f504829aec",
+          "withMetadata": "9d9bebe55456e962bb8d39493ccf085ffe3061b89a32201478d4ff33e1fe1919",
           "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
           "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
         },
@@ -2141,7 +943,7 @@
       "@openzeppelin/contracts/utils/Errors.sol:Errors": {
         "src": "@openzeppelin/contracts/utils/Errors.sol:14",
         "version": {
-          "withMetadata": "473d60c0451a5db8c737caf5fa65b6c6bd0f4a946a43fd052a6204a641b40854",
+          "withMetadata": "5d3dc056d3f1e21cb70cb4fd6b55f27f24a74a29a2694774371eb986b33ba971",
           "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
           "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
         },
@@ -2162,7 +964,7 @@
       "@openzeppelin/contracts/utils/StorageSlot.sol:StorageSlot": {
         "src": "@openzeppelin/contracts/utils/StorageSlot.sol:34",
         "version": {
-          "withMetadata": "e85c0d8abaf275d0aed943cf4804f4d1746226744376f5126f3e5378de017d3a",
+          "withMetadata": "e411b9c92770002ec22ec07d147a0a43b56b7dfb13454d50271e61ea602d52ab",
           "withoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a",
           "linkedWithoutMetadata": "e2a89a66865458f0d9fedd4bc7faf0ee62e4c341d176ab79d29bd77a1bdfc32a"
         },
@@ -2183,9 +985,9 @@
       "src/MCTToken.sol:MCTToken": {
         "src": "src/MCTToken.sol:39",
         "version": {
-          "withMetadata": "5ee459c0bd6b4fe6ae290a6c139744a6688463f04170b21835f2617ff8a301b0",
-          "withoutMetadata": "eb55f790d231d76e7f5ed7f32c7ca89521b0124d07f7e3fc5b87b63c9a5c6538",
-          "linkedWithoutMetadata": "eb55f790d231d76e7f5ed7f32c7ca89521b0124d07f7e3fc5b87b63c9a5c6538"
+          "withMetadata": "276fcb57928aa7e4043283c89fda9be75b762afe3310061e958c1a6ff3d230e3",
+          "withoutMetadata": "662a3b9a9d33b8cbcf150fc35cc6233ccffebe7911d7df60376edf8700afebec",
+          "linkedWithoutMetadata": "662a3b9a9d33b8cbcf150fc35cc6233ccffebe7911d7df60376edf8700afebec"
         },
         "inherit": [
           "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
@@ -2532,7 +1334,7 @@
         "solcVersion": "0.8.22"
       },
       "src/MumbleChatRegistry.sol:IERC20": {
-        "src": "src/MumbleChatRegistry.sol:1414",
+        "src": "src/MumbleChatRegistry.sol:599",
         "inherit": [],
         "libraries": [],
         "methods": [
@@ -2552,7 +1354,7 @@
         "solcVersion": "0.8.22"
       },
       "src/MumbleChatRegistry.sol:IMCTToken": {
-        "src": "src/MumbleChatRegistry.sol:1421",
+        "src": "src/MumbleChatRegistry.sol:605",
         "inherit": [],
         "libraries": [],
         "methods": [
@@ -2571,11 +1373,11 @@
         "solcVersion": "0.8.22"
       },
       "src/MumbleChatRegistry.sol:MumbleChatRegistry": {
-        "src": "src/MumbleChatRegistry.sol:42",
+        "src": "src/MumbleChatRegistry.sol:23",
         "version": {
-          "withMetadata": "dfe8f7da6a0961f724973f5909d05b6c617f97de5746a89c5ab2969b8b2b5761",
-          "withoutMetadata": "9c6e85425a55afd21a1c35a55361829bb90019a9114fa9475529fe3ba63d9eb9",
-          "linkedWithoutMetadata": "9c6e85425a55afd21a1c35a55361829bb90019a9114fa9475529fe3ba63d9eb9"
+          "withMetadata": "4615df02d16bccbdf75d2911863cc30a24ff524ac0116199134f626bab556b4f",
+          "withoutMetadata": "1f3843394fbb58b4a9ff53d68a6624a30cacbe7cd562ebd9011efff91df7cdcd",
+          "linkedWithoutMetadata": "1f3843394fbb58b4a9ff53d68a6624a30cacbe7cd562ebd9011efff91df7cdcd"
         },
         "inherit": [
           "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:ReentrancyGuardUpgradeable",
@@ -2589,7 +1391,7 @@
         "methods": [
           "()",
           "initialize(address)",
-          "initializeV3_1()",
+          "initializeV4(address)",
           "register(bytes32,string)",
           "updatePublicKey(bytes32)",
           "updateDisplayName(string)",
@@ -2598,42 +1400,26 @@
           "registerAsRelay(string)",
           "deactivateRelay()",
           "heartbeat()",
-          "updateStorage(uint256)",
-          "getRewardMultiplier(address)",
-          "isNodeOnline(address)",
-          "recordRelayedMessage(address,bytes32,uint256)",
-          "claimFeeReward()",
-          "submitRelayProof(bytes32,address,address,uint256,bytes)",
-          "submitBatchRelayProofs(bytes32[],address[],address[],uint256[],bytes[])",
-          "getRelayProofNonce(address)",
-          "setRelayRewardPerMessage(uint256)",
-          "claimDailyPoolReward(uint256)",
-          "getClaimableReward(address,uint256)",
-          "getTodayPoolInfo()",
-          "getMyTodayStats()",
-          "setDailyPoolAmount(uint256)",
-          "isRegistered(address)",
-          "getPublicKey(address)",
-          "getIdentity(address)",
-          "getActiveRelayNodes()",
-          "getRelayNode(address)",
-          "getTierRequirements()",
-          "setMinRelayStake(uint256)",
-          "setMCTToken(address)",
-          "withdrawExcessMCT(uint256)",
-          "reportViolation(address,string)",
-          "slashNode(address,string)",
-          "blacklistNode(address,string)",
-          "increaseReputation(address)",
-          "checkRateLimit(address)",
-          "updateMessageTime(address)",
-          "getNodeSecurityInfo(address)",
           "blockUser(address)",
           "unblockUser(address)",
           "isBlocked(address,address)",
           "getBlockedUsers(address)",
           "getBlockedUsersCount(address)",
           "canSendMessage(address,address)",
+          "isRegistered(address)",
+          "getPublicKey(address)",
+          "getIdentity(address)",
+          "getRewardMultiplier(address)",
+          "isNodeOnline(address)",
+          "getActiveRelayNodes()",
+          "getRelayNode(address)",
+          "getTierRequirements()",
+          "setMinRelayStake(uint256)",
+          "setMCTToken(address)",
+          "setRelayManager(address)",
+          "withdrawExcessMCT(uint256)",
+          "blacklistAddress(address)",
+          "removeFromBlacklist(address)",
           "version()"
         ],
         "linkReferences": [],
@@ -2646,7 +1432,7 @@
               "slot": "0",
               "type": "t_mapping(t_address,t_struct(Identity)3799_storage)",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:82"
+              "src": "src/MumbleChatRegistry.sol:62"
             },
             {
               "label": "relayNodes",
@@ -2654,7 +1440,7 @@
               "slot": "1",
               "type": "t_mapping(t_address,t_struct(RelayNode)3827_storage)",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:85"
+              "src": "src/MumbleChatRegistry.sol:63"
             },
             {
               "label": "registeredAddresses",
@@ -2662,7 +1448,7 @@
               "slot": "2",
               "type": "t_array(t_address)dyn_storage",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:88"
+              "src": "src/MumbleChatRegistry.sol:64"
             },
             {
               "label": "activeRelayNodes",
@@ -2670,7 +1456,7 @@
               "slot": "3",
               "type": "t_array(t_address)dyn_storage",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:92"
+              "src": "src/MumbleChatRegistry.sol:65"
             },
             {
               "label": "minRelayStake",
@@ -2678,7 +1464,7 @@
               "slot": "4",
               "type": "t_uint256",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:97"
+              "src": "src/MumbleChatRegistry.sol:67"
             },
             {
               "label": "totalUsers",
@@ -2686,7 +1472,7 @@
               "slot": "5",
               "type": "t_uint256",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:99"
+              "src": "src/MumbleChatRegistry.sol:68"
             },
             {
               "label": "totalRelayNodes",
@@ -2694,7 +1480,7 @@
               "slot": "6",
               "type": "t_uint256",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:101"
+              "src": "src/MumbleChatRegistry.sol:69"
             },
             {
               "label": "mctToken",
@@ -2702,135 +1488,47 @@
               "slot": "7",
               "type": "t_address",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:102"
+              "src": "src/MumbleChatRegistry.sol:70"
             },
             {
-              "label": "relayProofClaimed",
+              "label": "relayManager",
               "offset": 0,
               "slot": "8",
-              "type": "t_mapping(t_bytes32,t_bool)",
+              "type": "t_address",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:549"
-            },
-            {
-              "label": "relayProofNonce",
-              "offset": 0,
-              "slot": "9",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:552"
-            },
-            {
-              "label": "lastRelayProofTime",
-              "offset": 0,
-              "slot": "10",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:555"
-            },
-            {
-              "label": "relayRewardPerMessage",
-              "offset": 0,
-              "slot": "11",
-              "type": "t_uint256",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:559"
-            },
-            {
-              "label": "currentDayPool",
-              "offset": 0,
-              "slot": "12",
-              "type": "t_struct(DailyPool)5666_storage",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:825"
-            },
-            {
-              "label": "dailyPools",
-              "offset": 0,
-              "slot": "17",
-              "type": "t_mapping(t_uint256,t_struct(DailyPool)5666_storage)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:828"
-            },
-            {
-              "label": "nodeDailyStats",
-              "offset": 0,
-              "slot": "18",
-              "type": "t_mapping(t_address,t_mapping(t_uint256,t_struct(NodeDailyStats)5673_storage))",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:831"
-            },
-            {
-              "label": "todayContributors",
-              "offset": 0,
-              "slot": "19",
-              "type": "t_array(t_address)dyn_storage",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:835"
-            },
-            {
-              "label": "isContributorToday",
-              "offset": 0,
-              "slot": "20",
-              "type": "t_mapping(t_address,t_bool)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:835"
-            },
-            {
-              "label": "dailyPoolAmount",
-              "offset": 0,
-              "slot": "21",
-              "type": "t_uint256",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:836"
-            },
-            {
-              "label": "reputationScore",
-              "offset": 0,
-              "slot": "22",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1147"
-            },
-            {
-              "label": "violationCount",
-              "offset": 0,
-              "slot": "23",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1150"
-            },
-            {
-              "label": "isBlacklisted",
-              "offset": 0,
-              "slot": "24",
-              "type": "t_mapping(t_address,t_bool)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1151"
-            },
-            {
-              "label": "lastMessageTime",
-              "offset": 0,
-              "slot": "25",
-              "type": "t_mapping(t_address,t_uint256)",
-              "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1153"
+              "src": "src/MumbleChatRegistry.sol:73"
             },
             {
               "label": "blockedUsers",
               "offset": 0,
-              "slot": "26",
+              "slot": "9",
               "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1308"
+              "src": "src/MumbleChatRegistry.sol:96"
             },
             {
               "label": "blockedUsersList",
               "offset": 0,
-              "slot": "27",
+              "slot": "10",
               "type": "t_mapping(t_address,t_array(t_address)dyn_storage)",
               "contract": "MumbleChatRegistry",
-              "src": "src/MumbleChatRegistry.sol:1309"
+              "src": "src/MumbleChatRegistry.sol:97"
+            },
+            {
+              "label": "reputationScore",
+              "offset": 0,
+              "slot": "11",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "MumbleChatRegistry",
+              "src": "src/MumbleChatRegistry.sol:101"
+            },
+            {
+              "label": "isBlacklisted",
+              "offset": 0,
+              "slot": "12",
+              "type": "t_mapping(t_address,t_bool)",
+              "contract": "MumbleChatRegistry",
+              "src": "src/MumbleChatRegistry.sol:102"
             }
           ],
           "types": {
@@ -2922,10 +1620,6 @@
               "label": "mapping(address => mapping(address => bool))",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_mapping(t_uint256,t_struct(NodeDailyStats)5673_storage))": {
-              "label": "mapping(address => mapping(uint256 => struct MumbleChatRegistry.NodeDailyStats))",
-              "numberOfBytes": "32"
-            },
             "t_mapping(t_address,t_struct(Identity)3799_storage)": {
               "label": "mapping(address => struct MumbleChatRegistry.Identity)",
               "numberOfBytes": "32"
@@ -2938,57 +1632,9 @@
               "label": "mapping(address => uint256)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_bytes32,t_bool)": {
-              "label": "mapping(bytes32 => bool)",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_uint256,t_struct(DailyPool)5666_storage)": {
-              "label": "mapping(uint256 => struct MumbleChatRegistry.DailyPool)",
-              "numberOfBytes": "32"
-            },
-            "t_mapping(t_uint256,t_struct(NodeDailyStats)5673_storage)": {
-              "label": "mapping(uint256 => struct MumbleChatRegistry.NodeDailyStats)",
-              "numberOfBytes": "32"
-            },
             "t_string_storage": {
               "label": "string",
               "numberOfBytes": "32"
-            },
-            "t_struct(DailyPool)5666_storage": {
-              "label": "struct MumbleChatRegistry.DailyPool",
-              "members": [
-                {
-                  "label": "dayId",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "totalRelays",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "1"
-                },
-                {
-                  "label": "totalWeightedRelays",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "2"
-                },
-                {
-                  "label": "poolAmount",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "3"
-                },
-                {
-                  "label": "distributed",
-                  "type": "t_bool",
-                  "offset": 0,
-                  "slot": "4"
-                }
-              ],
-              "numberOfBytes": "160"
             },
             "t_struct(Identity)3799_storage": {
               "label": "struct MumbleChatRegistry.Identity",
@@ -3031,30 +1677,6 @@
                 }
               ],
               "numberOfBytes": "192"
-            },
-            "t_struct(NodeDailyStats)5673_storage": {
-              "label": "struct MumbleChatRegistry.NodeDailyStats",
-              "members": [
-                {
-                  "label": "relayCount",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "0"
-                },
-                {
-                  "label": "weightedRelayCount",
-                  "type": "t_uint256",
-                  "offset": 0,
-                  "slot": "1"
-                },
-                {
-                  "label": "claimed",
-                  "type": "t_bool",
-                  "offset": 0,
-                  "slot": "2"
-                }
-              ],
-              "numberOfBytes": "96"
             },
             "t_struct(RelayNode)3827_storage": {
               "label": "struct MumbleChatRegistry.RelayNode",
@@ -3134,6 +1756,752 @@
                 {
                   "label": "tier",
                   "type": "t_enum(NodeTier)3786",
+                  "offset": 0,
+                  "slot": "12"
+                }
+              ],
+              "numberOfBytes": "416"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {
+            "erc7201:openzeppelin.storage.ReentrancyGuard": [
+              {
+                "contract": "ReentrancyGuardUpgradeable",
+                "label": "_status",
+                "type": "t_uint256",
+                "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:43",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Ownable": [
+              {
+                "contract": "OwnableUpgradeable",
+                "label": "_owner",
+                "type": "t_address",
+                "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "erc7201:openzeppelin.storage.Initializable": [
+              {
+                "contract": "Initializable",
+                "label": "_initialized",
+                "type": "t_uint64",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "contract": "Initializable",
+                "label": "_initializing",
+                "type": "t_bool",
+                "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+                "offset": 8,
+                "slot": "0"
+              }
+            ]
+          }
+        },
+        "solcVersion": "0.8.22"
+      },
+      "src/MumbleChatRelayManager.sol:IERC20": {
+        "src": "src/MumbleChatRelayManager.sol:960",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "transfer(address,uint256)",
+          "transferFrom(address,address,uint256)",
+          "balanceOf(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.22"
+      },
+      "src/MumbleChatRelayManager.sol:IMCTToken": {
+        "src": "src/MumbleChatRelayManager.sol:967",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "setActiveRelayCount(uint256)",
+          "claimFeeReward(address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.22"
+      },
+      "src/MumbleChatRelayManager.sol:IMumbleChatRegistry": {
+        "src": "src/MumbleChatRelayManager.sol:967",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "isRegistered(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.22"
+      },
+      "src/MumbleChatRelayManager.sol:MumbleChatRelayManager": {
+        "src": "src/MumbleChatRelayManager.sol:44",
+        "version": {
+          "withMetadata": "290f60aa9092ae9a17fd4bc4a7871bef4580d84ee10f072b1091d8b154d80e34",
+          "withoutMetadata": "28a1fda2a0ddbe2501a97171bf02099c75af7020971468038a989a724c4d1aa7",
+          "linkedWithoutMetadata": "28a1fda2a0ddbe2501a97171bf02099c75af7020971468038a989a724c4d1aa7"
+        },
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:ReentrancyGuardUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:UUPSUpgradeable",
+          "@openzeppelin/contracts/interfaces/draft-IERC1822.sol:IERC1822Proxiable",
+          "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:OwnableUpgradeable",
+          "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:ContextUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [
+          "()",
+          "initialize(address,address)",
+          "registerNodeWithId(bytes32,bytes32,bytes32,string,uint256,uint8)",
+          "heartbeatByNodeId(bytes32)",
+          "deactivateNodeById(bytes32)",
+          "submitRelayProof(bytes32,bytes32,address,address,uint256,bytes)",
+          "claimDailyPoolReward(uint256)",
+          "calculateTierRewardWithUptime(bytes32,uint256,uint256)",
+          "distributeMissedRewards(uint256)",
+          "reportViolation(bytes32,string)",
+          "slashNode(bytes32,string)",
+          "blacklistNode(address,string)",
+          "getStakeForTier(uint8)",
+          "getUptimeForTier(uint8)",
+          "getFeePercentForTier(uint8)",
+          "getRewardMultiplierByNodeId(bytes32)",
+          "isNodeOnlineByNodeId(bytes32)",
+          "getNodeByNodeId(bytes32)",
+          "getNodeIdentity(bytes32)",
+          "getWalletNodeIds(address)",
+          "getNodeIdsByMachine(bytes32)",
+          "getTotalNodeIds()",
+          "getNodesOnMachine(bytes32)",
+          "getActiveNodeIds()",
+          "getNodeDailyReward(bytes32,uint256)",
+          "getDailyMissedPool(uint256)",
+          "getTierInfo()",
+          "getTodayPoolInfo()",
+          "getClaimableReward(address,uint256)",
+          "getNodeSecurityInfo(address)",
+          "getRelayProofNonce(address)",
+          "setRegistry(address)",
+          "setMCTToken(address)",
+          "setDailyPoolAmount(uint256)",
+          "setRelayRewardPerMessage(uint256)",
+          "withdrawExcessMCT(uint256)",
+          "version()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "mctToken",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:107"
+            },
+            {
+              "label": "registry",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_address",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:108"
+            },
+            {
+              "label": "totalRelayNodes",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_uint256",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:109"
+            },
+            {
+              "label": "nodeIdentities",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_mapping(t_bytes32,t_struct(NodeIdentity)5583_storage)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:111"
+            },
+            {
+              "label": "nodeIdToWallet",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_mapping(t_bytes32,t_address)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:113"
+            },
+            {
+              "label": "walletNodeIds",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_mapping(t_address,t_array(t_bytes32)dyn_storage)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:115"
+            },
+            {
+              "label": "machineNodeIds",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_mapping(t_bytes32,t_array(t_bytes32)dyn_storage)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:116"
+            },
+            {
+              "label": "nodeRelayData",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_mapping(t_bytes32,t_struct(RelayNode)5568_storage)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:117"
+            },
+            {
+              "label": "allNodeIds",
+              "offset": 0,
+              "slot": "8",
+              "type": "t_array(t_bytes32)dyn_storage",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:118"
+            },
+            {
+              "label": "dailyMissedPool",
+              "offset": 0,
+              "slot": "9",
+              "type": "t_mapping(t_uint256,t_uint256)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:150"
+            },
+            {
+              "label": "dailyFullUptimeNodes",
+              "offset": 0,
+              "slot": "10",
+              "type": "t_mapping(t_uint256,t_uint256)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:150"
+            },
+            {
+              "label": "nodeDailyRewards",
+              "offset": 0,
+              "slot": "11",
+              "type": "t_mapping(t_bytes32,t_mapping(t_uint256,t_struct(DailyNodeReward)5596_storage))",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:153"
+            },
+            {
+              "label": "currentDayPool",
+              "offset": 0,
+              "slot": "12",
+              "type": "t_struct(DailyPool)5607_storage",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:155"
+            },
+            {
+              "label": "dailyPools",
+              "offset": 0,
+              "slot": "17",
+              "type": "t_mapping(t_uint256,t_struct(DailyPool)5607_storage)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:156"
+            },
+            {
+              "label": "nodeDailyStats",
+              "offset": 0,
+              "slot": "18",
+              "type": "t_mapping(t_address,t_mapping(t_uint256,t_struct(NodeDailyStats)5614_storage))",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:158"
+            },
+            {
+              "label": "todayContributors",
+              "offset": 0,
+              "slot": "19",
+              "type": "t_array(t_address)dyn_storage",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:161"
+            },
+            {
+              "label": "isContributorToday",
+              "offset": 0,
+              "slot": "20",
+              "type": "t_mapping(t_address,t_bool)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:161"
+            },
+            {
+              "label": "dailyPoolAmount",
+              "offset": 0,
+              "slot": "21",
+              "type": "t_uint256",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:162"
+            },
+            {
+              "label": "relayRewardPerMessage",
+              "offset": 0,
+              "slot": "22",
+              "type": "t_uint256",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:163"
+            },
+            {
+              "label": "relayProofClaimed",
+              "offset": 0,
+              "slot": "23",
+              "type": "t_mapping(t_bytes32,t_bool)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:167"
+            },
+            {
+              "label": "relayProofNonce",
+              "offset": 0,
+              "slot": "24",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:168"
+            },
+            {
+              "label": "lastRelayProofTime",
+              "offset": 0,
+              "slot": "25",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:169"
+            },
+            {
+              "label": "reputationScore",
+              "offset": 0,
+              "slot": "26",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:173"
+            },
+            {
+              "label": "violationCount",
+              "offset": 0,
+              "slot": "27",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:174"
+            },
+            {
+              "label": "isBlacklisted",
+              "offset": 0,
+              "slot": "28",
+              "type": "t_mapping(t_address,t_bool)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:175"
+            },
+            {
+              "label": "lastMessageTime",
+              "offset": 0,
+              "slot": "29",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "MumbleChatRelayManager",
+              "src": "src/MumbleChatRelayManager.sol:177"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_struct(InitializableStorage)73_storage": {
+              "label": "struct Initializable.InitializableStorage",
+              "members": [
+                {
+                  "label": "_initialized",
+                  "type": "t_uint64",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "_initializing",
+                  "type": "t_bool",
+                  "offset": 8,
+                  "slot": "0"
+                }
+              ],
+              "numberOfBytes": "32"
+            },
+            "t_struct(OwnableStorage)13_storage": {
+              "label": "struct OwnableUpgradeable.OwnableStorage",
+              "members": [
+                {
+                  "label": "_owner",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "0"
+                }
+              ],
+              "numberOfBytes": "32"
+            },
+            "t_struct(ReentrancyGuardStorage)452_storage": {
+              "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+              "members": [
+                {
+                  "label": "_status",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "0"
+                }
+              ],
+              "numberOfBytes": "32"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint64": {
+              "label": "uint64",
+              "numberOfBytes": "8"
+            },
+            "t_array(t_address)dyn_storage": {
+              "label": "address[]",
+              "numberOfBytes": "32"
+            },
+            "t_array(t_bytes32)dyn_storage": {
+              "label": "bytes32[]",
+              "numberOfBytes": "32"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_enum(NodeTier)5540": {
+              "label": "enum MumbleChatRelayManager.NodeTier",
+              "members": [
+                "Bronze",
+                "Silver",
+                "Gold",
+                "Platinum"
+              ],
+              "numberOfBytes": "1"
+            },
+            "t_mapping(t_address,t_array(t_bytes32)dyn_storage)": {
+              "label": "mapping(address => bytes32[])",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_mapping(t_uint256,t_struct(NodeDailyStats)5614_storage))": {
+              "label": "mapping(address => mapping(uint256 => struct MumbleChatRelayManager.NodeDailyStats))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_uint256)": {
+              "label": "mapping(address => uint256)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_address)": {
+              "label": "mapping(bytes32 => address)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_array(t_bytes32)dyn_storage)": {
+              "label": "mapping(bytes32 => bytes32[])",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_bool)": {
+              "label": "mapping(bytes32 => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_mapping(t_uint256,t_struct(DailyNodeReward)5596_storage))": {
+              "label": "mapping(bytes32 => mapping(uint256 => struct MumbleChatRelayManager.DailyNodeReward))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(NodeIdentity)5583_storage)": {
+              "label": "mapping(bytes32 => struct MumbleChatRelayManager.NodeIdentity)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_struct(RelayNode)5568_storage)": {
+              "label": "mapping(bytes32 => struct MumbleChatRelayManager.RelayNode)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_struct(DailyNodeReward)5596_storage)": {
+              "label": "mapping(uint256 => struct MumbleChatRelayManager.DailyNodeReward)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_struct(DailyPool)5607_storage)": {
+              "label": "mapping(uint256 => struct MumbleChatRelayManager.DailyPool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_struct(NodeDailyStats)5614_storage)": {
+              "label": "mapping(uint256 => struct MumbleChatRelayManager.NodeDailyStats)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_uint256)": {
+              "label": "mapping(uint256 => uint256)",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_struct(DailyNodeReward)5596_storage": {
+              "label": "struct MumbleChatRelayManager.DailyNodeReward",
+              "members": [
+                {
+                  "label": "potentialReward",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "actualReward",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "missedReward",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "bonusReceived",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "3"
+                },
+                {
+                  "label": "uptimePercent",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "4"
+                },
+                {
+                  "label": "claimed",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "5"
+                }
+              ],
+              "numberOfBytes": "192"
+            },
+            "t_struct(DailyPool)5607_storage": {
+              "label": "struct MumbleChatRelayManager.DailyPool",
+              "members": [
+                {
+                  "label": "dayId",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "totalRelays",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "totalWeightedRelays",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "poolAmount",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "3"
+                },
+                {
+                  "label": "distributed",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "4"
+                }
+              ],
+              "numberOfBytes": "160"
+            },
+            "t_struct(NodeDailyStats)5614_storage": {
+              "label": "struct MumbleChatRelayManager.NodeDailyStats",
+              "members": [
+                {
+                  "label": "relayCount",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "weightedRelayCount",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "claimed",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "2"
+                }
+              ],
+              "numberOfBytes": "96"
+            },
+            "t_struct(NodeIdentity)5583_storage": {
+              "label": "struct MumbleChatRelayManager.NodeIdentity",
+              "members": [
+                {
+                  "label": "nodeId",
+                  "type": "t_bytes32",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "machineIdHash",
+                  "type": "t_bytes32",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "serialHash",
+                  "type": "t_bytes32",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "walletAddress",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "3"
+                },
+                {
+                  "label": "instanceNumber",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "4"
+                },
+                {
+                  "label": "registeredAt",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "5"
+                },
+                {
+                  "label": "isActive",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "6"
+                }
+              ],
+              "numberOfBytes": "224"
+            },
+            "t_struct(RelayNode)5568_storage": {
+              "label": "struct MumbleChatRelayManager.RelayNode",
+              "members": [
+                {
+                  "label": "endpoint",
+                  "type": "t_string_storage",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "stakedAmount",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "registeredAt",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "messagesRelayed",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "3"
+                },
+                {
+                  "label": "rewardsEarned",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "4"
+                },
+                {
+                  "label": "isActive",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "5"
+                },
+                {
+                  "label": "totalUptimeSeconds",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "6"
+                },
+                {
+                  "label": "lastHeartbeat",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "7"
+                },
+                {
+                  "label": "currentSessionStart",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "8"
+                },
+                {
+                  "label": "storageMB",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "9"
+                },
+                {
+                  "label": "dailyUptimeSeconds",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "10"
+                },
+                {
+                  "label": "lastDayReset",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "11"
+                },
+                {
+                  "label": "tier",
+                  "type": "t_enum(NodeTier)5540",
                   "offset": 0,
                   "slot": "12"
                 }

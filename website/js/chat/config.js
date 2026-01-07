@@ -113,10 +113,10 @@ export const MESSAGE_TYPES = {
 };
 
 export const RELAY_TIERS = {
-    BRONZE: { name: 'Bronze', minStake: 100, rewardMultiplier: 1.0, storage: '1GB' },
-    SILVER: { name: 'Silver', minStake: 500, rewardMultiplier: 1.5, storage: '5GB' },
-    GOLD: { name: 'Gold', minStake: 1000, rewardMultiplier: 2.0, storage: '10GB' },
-    PLATINUM: { name: 'Platinum', minStake: 5000, rewardMultiplier: 3.0, storage: '50GB' }
+    BRONZE: { name: 'Bronze', minStake: 100, rewardMultiplier: 1.0, storage: '1GB', uptimeHours: 4 },
+    SILVER: { name: 'Silver', minStake: 100, rewardMultiplier: 1.5, storage: '2GB', uptimeHours: 8 },
+    GOLD: { name: 'Gold', minStake: 100, rewardMultiplier: 2.0, storage: '4GB', uptimeHours: 12 },
+    PLATINUM: { name: 'Platinum', minStake: 100, rewardMultiplier: 3.0, storage: '8GB', uptimeHours: 16 }
 };
 
 export const STORAGE_KEYS = {

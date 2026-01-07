@@ -32,7 +32,16 @@ body {
                 radial-gradient(circle at 80% 0%, rgba(45, 212, 191, 0.12), transparent 30%),
                 #0a1424;
     color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* Lock scroll only when app is loaded */
+body.app-loaded {
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
 }
 

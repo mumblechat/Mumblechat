@@ -2,7 +2,7 @@
   "name": "MumbleChat - Decentralized Messaging",
   "short_name": "MumbleChat",
   "description": "Secure decentralized messaging on Ramestta blockchain",
-  "start_url": "/chat2.html",
+  "start_url": "/conversations.html",
   "display": "standalone",
   "background_color": "#0c1729",
   "theme_color": "#1b8cff",

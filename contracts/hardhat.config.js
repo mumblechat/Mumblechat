@@ -11,9 +11,10 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
+        runs: 1  // Minimum runs for smallest contract size
       },
-      viaIR: true
+      viaIR: true,  // Use IR-based code generation for better optimization
+      evmVersion: "paris"
     }
   },
   networks: {

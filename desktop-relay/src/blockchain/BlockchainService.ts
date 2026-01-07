@@ -18,7 +18,8 @@ const REGISTRY_ABI = [
   'function register(bytes32 publicKeyX, string displayName)',
   'function registerAsRelay(string endpoint, uint256 storageMB)',
   'function deactivateRelay()',
-  'function heartbeat(uint256 storageMB)',
+  'function heartbeat()',
+  'function updateStorage(uint256 storageMB)',
   'function updateEndpoint(string endpoint)',
   'function claimRewards()',
   'function claimDailyPoolReward()',
@@ -222,11 +223,22 @@ export class BlockchainService {
   /**
    * Send heartbeat to update uptime
    */
-  async sendHeartbeat(storageMB: number): Promise<string> {
-    this.logger.debug(`Sending heartbeat: ${storageMB}MB storage`);
-    const tx = await this.registry.heartbeat(storageMB);
+  async sendHeartbeat(_storageMB?: number): Promise<string> {
+    this.logger.debug('Sending heartbeat...');
+    const tx = await this.registry.heartbeat();
     await tx.wait();
     this.logger.debug(`Heartbeat sent: ${tx.hash}`);
+    return tx.hash;
+  }
+
+  /**
+   * Update storage capacity
+   */
+  async updateStorage(storageMB: number): Promise<string> {
+    this.logger.info(`Updating storage to: ${storageMB}MB`);
+    const tx = await this.registry.updateStorage(storageMB);
+    await tx.wait();
+    this.logger.info(`Storage updated: ${tx.hash}`);
     return tx.hash;
   }
 

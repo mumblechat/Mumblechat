@@ -3,24 +3,32 @@
  * Run a relay node directly in your browser and earn MCT tokens
  */
 
+// Contract Addresses (Ramestta Mainnet)
+const MCT_ADDRESS = '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE';
+const REGISTRY_ADDRESS = '0x4f8D4955F370881B05b68D2344345E749d8632e3';
+
 // MCT Token ABI (minimal)
 const MCT_ABI = [
     'function balanceOf(address account) external view returns (uint256)',
-    'function decimals() external view returns (uint8)'
+    'function decimals() external view returns (uint8)',
+    'function allowance(address owner, address spender) external view returns (uint256)'
 ];
 
-// MCT Token Contract
-const MCT_ADDRESS = '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE';
+// Registry ABI (for checking relay node status)
+const REGISTRY_ABI = [
+    'function getRelayNode(address node) external view returns (string endpoint, uint256 stakedAmount, uint256 messagesRelayed, uint256 rewardsEarned, bool isActive, uint256 dailyUptimeSeconds, uint256 storageMB, uint8 tier, uint256 rewardMultiplier, bool isOnline)',
+    'function isRegistered(address wallet) external view returns (bool)',
+    'function getIdentity(address wallet) external view returns (bytes32 publicKeyX, uint256 registeredAt, uint256 lastUpdated, bool isActive, string displayName)',
+    'function isNodeOnline(address node) external view returns (bool)',
+    'function minRelayStake() external view returns (uint256)',
+    'function totalRelayNodes() external view returns (uint256)'
+];
 
-// MCT Requirements by Tier (from contract)
-const MCT_REQUIREMENTS = {
-    'bronze': 100,
-    'silver': 500,
-    'gold': 1000,
-    'platinum': 2500
-};
+// MCT Stake Requirement: SAME FOR ALL TIERS (100 MCT)
+// Tier is determined by UPTIME + STORAGE, not stake amount
+const MCT_STAKE_REQUIRED = 100;
 
-// Storage Tiers (from Android RelayConfig.kt)
+// Storage Tiers (GB) - determines tier level
 const STORAGE_TIERS = {
     'bronze': 1024,    // 1 GB
     'silver': 2048,    // 2 GB
@@ -28,7 +36,7 @@ const STORAGE_TIERS = {
     'platinum': 8192   // 8 GB
 };
 
-// Uptime Requirements in hours/day
+// Uptime Requirements in hours/day - determines tier level
 const UPTIME_TIERS = {
     'bronze': 4,       // 4+ hours/day
     'silver': 8,       // 8+ hours/day
@@ -36,13 +44,17 @@ const UPTIME_TIERS = {
     'platinum': 16     // 16+ hours/day
 };
 
-// Fee Pool Multipliers
+// Fee Pool Multipliers (based on tier)
 const FEE_MULTIPLIERS = {
     'bronze': 1.0,
     'silver': 1.5,
     'gold': 2.0,
     'platinum': 3.0
 };
+
+// Tier names for display
+const TIER_NAMES = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+const TIER_ICONS = ['🥉', '🥈', '🥇', '💎'];
 
 class BrowserRelayNode {
     constructor() {
@@ -59,6 +71,11 @@ class BrowserRelayNode {
         this.statsInterval = null;
         this.earnings = 0;
         this.osType = this.detectOS();
+        
+        // Blockchain relay node status
+        this.isRegisteredRelay = false;
+        this.relayNodeInfo = null;
+        this.isIdentityRegistered = false;
     }
 
     /**
@@ -102,17 +119,208 @@ class BrowserRelayNode {
             // Update UI
             document.getElementById('walletAddressDisplay').textContent = this.wallet.slice(0, 6) + '...' + this.wallet.slice(-4);
             document.getElementById('walletInfo').style.display = 'block';
-            document.getElementById('desktopNodeSection').style.display = 'block';
-            this.showOSDownloadOptions();
             
             // Check MCT balance
             await this.checkMCTBalance();
+            
+            // Check blockchain for existing relay registration
+            await this.checkRelayNodeStatus();
             
             return true;
         } catch (error) {
             this.log(`❌ Failed to connect wallet: ${error.message}`, 'error');
             return false;
         }
+    }
+
+    /**
+     * Check if wallet is already registered as relay node on blockchain
+     */
+    async checkRelayNodeStatus() {
+        try {
+            this.log('🔍 Checking blockchain for relay node status...', 'info');
+            
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const registry = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, provider);
+            
+            // Check if identity is registered first
+            try {
+                this.isIdentityRegistered = await registry.isRegistered(this.wallet);
+                if (this.isIdentityRegistered) {
+                    this.log('✅ Identity registered on-chain', 'success');
+                } else {
+                    this.log('⚠️ Identity NOT registered on-chain', 'warning');
+                }
+            } catch (e) {
+                this.log('⚠️ Could not check identity status', 'warning');
+            }
+            
+            // Get relay node info
+            const relayInfo = await registry.getRelayNode(this.wallet);
+            
+            // Parse the response
+            this.relayNodeInfo = {
+                endpoint: relayInfo[0],
+                stakedAmount: parseFloat(ethers.formatEther(relayInfo[1])),
+                messagesRelayed: Number(relayInfo[2]),
+                rewardsEarned: parseFloat(ethers.formatEther(relayInfo[3])),
+                isActive: relayInfo[4],
+                dailyUptimeSeconds: Number(relayInfo[5]),
+                storageMB: Number(relayInfo[6]),
+                tier: Number(relayInfo[7]),
+                rewardMultiplier: Number(relayInfo[8]) / 100,
+                isOnline: relayInfo[9]
+            };
+            
+            this.isRegisteredRelay = this.relayNodeInfo.isActive;
+            
+            if (this.isRegisteredRelay) {
+                this.log(`✅ ALREADY REGISTERED as relay node!`, 'success');
+                this.log(`📊 Tier: ${TIER_ICONS[this.relayNodeInfo.tier]} ${TIER_NAMES[this.relayNodeInfo.tier]}`, 'info');
+                this.log(`📨 Messages Relayed: ${this.relayNodeInfo.messagesRelayed.toLocaleString()}`, 'info');
+                this.log(`💰 Rewards Earned: ${this.relayNodeInfo.rewardsEarned.toFixed(4)} MCT`, 'info');
+                this.log(`🟢 Node Online: ${this.relayNodeInfo.isOnline ? 'YES' : 'NO'}`, this.relayNodeInfo.isOnline ? 'success' : 'warning');
+                
+                // Show the registered node dashboard
+                this.showRegisteredNodeDashboard();
+            } else {
+                this.log('ℹ️ Not registered as relay node yet', 'info');
+                this.log('💡 Follow setup wizard to become a relay node', 'info');
+                
+                // Show setup options
+                document.getElementById('desktopNodeSection').style.display = 'block';
+                this.showOSDownloadOptions();
+            }
+            
+            return this.relayNodeInfo;
+        } catch (error) {
+            this.log(`⚠️ Could not fetch relay status: ${error.message}`, 'warning');
+            this.log('💡 Blockchain might be slow. You can proceed with setup.', 'info');
+            
+            // Show setup options anyway
+            document.getElementById('desktopNodeSection').style.display = 'block';
+            this.showOSDownloadOptions();
+            
+            return null;
+        }
+    }
+
+    /**
+     * Show dashboard for already registered relay nodes
+     */
+    showRegisteredNodeDashboard() {
+        // Hide setup wizard
+        const setupWizard = document.getElementById('setupWizardContainer');
+        if (setupWizard) setupWizard.style.display = 'none';
+        
+        // Create registered node dashboard
+        const dashboardHTML = `
+            <div class="registered-node-dashboard" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(27, 140, 255, 0.1)); border: 2px solid var(--success); border-radius: 20px; padding: 32px; margin-bottom: 30px;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
+                    <h2 style="color: var(--success); margin: 0 0 8px;">You're Already a Relay Node!</h2>
+                    <p style="color: var(--text-muted); margin: 0;">Your wallet is registered as an active relay node on the blockchain</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div class="stat-card" style="background: var(--bg-card); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">${TIER_ICONS[this.relayNodeInfo.tier]}</div>
+                        <div style="font-size: 24px; font-weight: bold; color: var(--primary);">${TIER_NAMES[this.relayNodeInfo.tier]}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Current Tier (${this.relayNodeInfo.rewardMultiplier}x)</div>
+                    </div>
+                    <div class="stat-card" style="background: var(--bg-card); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">📨</div>
+                        <div style="font-size: 24px; font-weight: bold; color: var(--primary);">${this.relayNodeInfo.messagesRelayed.toLocaleString()}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Messages Relayed</div>
+                    </div>
+                    <div class="stat-card" style="background: var(--bg-card); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">💰</div>
+                        <div style="font-size: 24px; font-weight: bold; color: var(--success);">${this.relayNodeInfo.rewardsEarned.toFixed(2)}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">MCT Earned</div>
+                    </div>
+                    <div class="stat-card" style="background: var(--bg-card); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">${this.relayNodeInfo.isOnline ? '🟢' : '🔴'}</div>
+                        <div style="font-size: 24px; font-weight: bold; color: ${this.relayNodeInfo.isOnline ? 'var(--success)' : 'var(--error)'};">${this.relayNodeInfo.isOnline ? 'ONLINE' : 'OFFLINE'}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Node Status</div>
+                    </div>
+                </div>
+                
+                <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                    <h4 style="margin: 0 0 16px; color: var(--text-primary);">📊 Node Details</h4>
+                    <div style="display: grid; gap: 12px; font-size: 14px;">
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-muted);">Staked Amount</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">${this.relayNodeInfo.stakedAmount} MCT</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-muted);">Storage Capacity</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">${(this.relayNodeInfo.storageMB / 1024).toFixed(1)} GB</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-muted);">Today's Uptime</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">${Math.floor(this.relayNodeInfo.dailyUptimeSeconds / 3600)}h ${Math.floor((this.relayNodeInfo.dailyUptimeSeconds % 3600) / 60)}m</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                            <span style="color: var(--text-muted);">Endpoint</span>
+                            <span style="color: var(--primary); font-family: monospace; font-size: 12px;">${this.relayNodeInfo.endpoint || 'Not configured'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                ${!this.relayNodeInfo.isOnline ? `
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); padding: 16px; border-radius: 12px; margin-bottom: 24px;">
+                    <h4 style="margin: 0 0 8px; color: var(--error);">⚠️ Your Node is Offline</h4>
+                    <p style="margin: 0 0 12px; color: var(--text-secondary); font-size: 13px;">
+                        Your relay node hasn't sent a heartbeat recently. Make sure your desktop relay is running to earn rewards.
+                    </p>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        💡 Download and run the desktop relay on your ${this.osType.name} machine to start earning.
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button onclick="relayNode.showDesktopDownload()" class="btn-primary" style="flex: 1; min-width: 200px; padding: 14px 24px; font-size: 14px; border: none; border-radius: 10px; cursor: pointer; background: var(--primary); color: white;">
+                        💻 ${this.relayNodeInfo.isOnline ? 'Manage Desktop Node' : 'Download Desktop Node'}
+                    </button>
+                    <button onclick="relayNode.refreshStatus()" class="btn-secondary" style="padding: 14px 24px; font-size: 14px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; background: transparent; color: var(--text-primary);">
+                        🔄 Refresh Status
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Insert after wallet info
+        const walletInfo = document.getElementById('walletInfo');
+        if (walletInfo) {
+            const existingDashboard = document.querySelector('.registered-node-dashboard');
+            if (existingDashboard) existingDashboard.remove();
+            walletInfo.insertAdjacentHTML('afterend', dashboardHTML);
+        }
+        
+        // Hide new registration options
+        const tierSelector = document.querySelector('.tier-selector');
+        if (tierSelector) tierSelector.style.display = 'none';
+    }
+
+    /**
+     * Show desktop download section
+     */
+    showDesktopDownload() {
+        const desktopSection = document.getElementById('desktopNodeSection');
+        if (desktopSection) {
+            desktopSection.style.display = 'block';
+            this.showOSDownloadOptions();
+            desktopSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    /**
+     * Refresh relay node status from blockchain
+     */
+    async refreshStatus() {
+        this.log('🔄 Refreshing status from blockchain...', 'info');
+        await this.checkRelayNodeStatus();
     }
 
     /**
@@ -147,23 +355,26 @@ class BrowserRelayNode {
     }
 
     /**
-     * Validate if wallet has enough MCT for selected tier
+     * Validate if wallet has enough MCT for staking (100 MCT for ALL tiers)
      */
     validateTierRequirements() {
-        const requiredMCT = MCT_REQUIREMENTS[this.tier];
+        // All tiers require only 100 MCT stake
+        // Tier is determined by UPTIME + STORAGE, not stake amount
+        const requiredMCT = MCT_STAKE_REQUIRED; // 100 MCT for all tiers
         const hasEnoughMCT = this.mctBalance >= requiredMCT;
         
         const statusEl = document.getElementById('mctStatus');
         const startBtn = document.getElementById('startNodeBtn');
         
         if (hasEnoughMCT) {
-            this.log(`✅ You have enough MCT (${requiredMCT} required) for ${this.tier.toUpperCase()} tier`, 'success');
-            if (statusEl) statusEl.innerHTML = `✅ Ready to register (${this.mctBalance.toFixed(2)} MCT)`;
+            this.log(`✅ You have enough MCT (${requiredMCT} required for staking)`, 'success');
+            this.log(`💡 Tier is based on uptime + storage, not stake amount`, 'info');
+            if (statusEl) statusEl.innerHTML = `✅ Ready to stake (${this.mctBalance.toFixed(2)} MCT available)`;
             if (startBtn) startBtn.disabled = false;
         } else {
             const needed = (requiredMCT - this.mctBalance).toFixed(2);
-            this.log(`❌ Need ${needed} more MCT for ${this.tier.toUpperCase()} tier (${requiredMCT} required)`, 'error');
-            if (statusEl) statusEl.innerHTML = `❌ Need ${needed} more MCT for ${this.tier.toUpperCase()} tier`;
+            this.log(`❌ Need ${needed} more MCT for staking (${requiredMCT} MCT required)`, 'error');
+            if (statusEl) statusEl.innerHTML = `❌ Need ${needed} more MCT (100 MCT required to stake)`;
             if (startBtn) startBtn.disabled = true;
         }
     }

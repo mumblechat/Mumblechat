@@ -6,7 +6,7 @@
 
 const CACHE_NAME = 'mumblechat-v2';
 const STATIC_ASSETS = [
-    '/chat2.html',
+    '/conversations.html',
     '/css/chat-styles.css',
     '/js/chat/app.js',
     '/js/chat/config.js',

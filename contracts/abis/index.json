@@ -1,0 +1,29 @@
+{
+  "network": "ramestta",
+  "chainId": 1370,
+  "rpcUrl": "https://blockchain.ramestta.com",
+  "blockExplorer": "https://ramascan.com",
+  "contracts": {
+    "MCTToken": {
+      "name": "MCTToken",
+      "proxy": "0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE",
+      "implementation": "0xC76ea6934D24615E9A348C5eF5Aed54E638A5AAD",
+      "version": "3.0.0",
+      "abi": "./MCTToken.json"
+    },
+    "MumbleChatRegistry": {
+      "name": "MumbleChatRegistry",
+      "proxy": "0x4f8D4955F370881B05b68D2344345E749d8632e3",
+      "implementation": "0x912B6B9917B04f5466b1dc35086FB64aba63C7cD",
+      "version": "4.0.0",
+      "abi": "./MumbleChatRegistry.json"
+    },
+    "MumbleChatRelayManager": {
+      "name": "MumbleChatRelayManager",
+      "proxy": "0xF78F840eF0e321512b09e98C76eA0229Affc4b73",
+      "implementation": "0xb9E673952e25E6E86745264B90FBC82b50ffb067",
+      "version": "1.0.0",
+      "abi": "./MumbleChatRelayManager.json"
+    }
+  }
+}

@@ -36,21 +36,22 @@ export function renderRelayView(container) {
                         <h4>Available Tiers</h4>
                         <div class="tier-card">
                             <div class="tier-name">🥉 Bronze</div>
-                            <div class="tier-info">1000 MCT stake • 10 GB storage</div>
+                            <div class="tier-info">1 GB storage • 4h+/day • 1.0x</div>
                         </div>
                         <div class="tier-card">
                             <div class="tier-name">🥈 Silver</div>
-                            <div class="tier-info">5000 MCT stake • 50 GB storage</div>
+                            <div class="tier-info">2 GB storage • 8h+/day • 1.5x</div>
                         </div>
                         <div class="tier-card">
                             <div class="tier-name">🥇 Gold</div>
-                            <div class="tier-info">10000 MCT stake • 100 GB storage</div>
+                            <div class="tier-info">4 GB storage • 12h+/day • 2.0x</div>
                         </div>
                         <div class="tier-card">
                             <div class="tier-name">💎 Platinum</div>
-                            <div class="tier-info">25000 MCT stake • 500 GB storage</div>
+                            <div class="tier-info">8 GB storage • 16h+/day • 3.0x</div>
                         </div>
                     </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">💡 All tiers: 100 MCT stake. Tier based on uptime + storage.</p>
                     
                     <button class="btn-primary" id="activateRelayBtn">
                         Activate Relay Node

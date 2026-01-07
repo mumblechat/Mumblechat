@@ -5,7 +5,7 @@
     "maxConnections": 200,
     "maxStorageGB": 8,
     "messageTTLDays": 7,
-    "heartbeatIntervalMs": 300000
+    "heartbeatIntervalMs": 60000
   },
   "blockchain": {
     "rpcUrl": "https://blockchain.ramestta.com",
