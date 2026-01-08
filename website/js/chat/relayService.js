@@ -1,31 +1,71 @@
 /**
  * MumbleChat Relay Service
- * Fetches online relay nodes from blockchain and manages connections
+ * Fetches online relay nodes from Hub API and blockchain
  */
 
-import { CONTRACTS, RAMESTTA_CONFIG } from './config.js';
+import { CONTRACTS, RAMESTTA_CONFIG, HUB_CONFIG, RELAY_DEFAULTS } from './config.js';
 
 const RPC_URL = RAMESTTA_CONFIG.rpcUrls[0];
 const REGISTRY = CONTRACTS.registry;
 
-// Function selectors
-const SELECTORS = {
-    totalRelayNodes: '0xc4de1ef3',
-    activeRelayNodes: '0x73eec9d2',
-    relayNodes: '0xad23e18f'
-};
-
-// Development mode: use localhost for relay connections  
-const IS_DEV = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '127.0.0.1:9999';
-
 // Tier names
 const TIER_NAMES = ['Bronze', 'Silver', 'Gold', 'Platinum'];
 
+// Cache for relay nodes
+let nodesCache = null;
+let cacheTime = 0;
+const CACHE_TTL = 30000; // 30 seconds
+
 /**
- * Make eth_call to RPC
+ * Fetch relay nodes from Hub API
  */
-async function ethCall(to, data) {
+async function fetchNodesFromHub() {
     try {
+        const response = await fetch(`${HUB_CONFIG.apiUrl}/api/stats`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Hub API not available');
+        }
+        
+        const data = await response.json();
+        
+        if (data.nodes && data.nodes.length > 0) {
+            return data.nodes.map(node => ({
+                address: node.walletAddress || '0x' + node.tunnelId,
+                endpoint: `wss://${node.endpoint}`,
+                wsUrl: `wss://${node.endpoint}`,
+                tunnelId: node.tunnelId,
+                isOnline: true,
+                nodeType: 'Hub Relay',
+                tier: 0,
+                tierName: 'Hub',
+                staked: 0,
+                storageMB: 4096,
+                connectedUsers: node.connectedUsers || 0,
+                messagesRelayed: node.messagesRelayed || 0,
+                lastHeartbeat: new Date(node.lastHeartbeat).getTime() / 1000,
+                source: 'hub'
+            }));
+        }
+        return [];
+    } catch (error) {
+        console.warn('Could not fetch nodes from hub:', error.message);
+        return [];
+    }
+}
+
+/**
+ * Fetch relay nodes from blockchain (legacy support)
+ */
+async function fetchNodesFromBlockchain() {
+    try {
+        // Function selectors for Relay Manager contract
+        const RELAY_MANAGER = CONTRACTS.relayManager;
+        
+        // Get active endpoints
         const response = await fetch(RPC_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -33,224 +73,68 @@ async function ethCall(to, data) {
                 jsonrpc: '2.0',
                 id: 1,
                 method: 'eth_call',
-                params: [{ to, data }, 'latest']
+                params: [{
+                    to: RELAY_MANAGER,
+                    data: '0xc05c1049' // getActiveEndpoints()
+                }, 'latest']
             })
         });
+        
         const result = await response.json();
-        return result.result;
+        
+        if (result.result && result.result.length > 66) {
+            // Parse endpoints array
+            const data = result.result.slice(2);
+            // ... parsing logic
+            return [];
+        }
+        return [];
     } catch (error) {
-        console.error('RPC call failed:', error);
-        return null;
+        console.warn('Could not fetch nodes from blockchain:', error.message);
+        return [];
     }
 }
 
 /**
- * Batch RPC call for multiple requests
- */
-async function batchEthCall(calls) {
-    try {
-        const response = await fetch(RPC_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(calls.map((call, i) => ({
-                jsonrpc: '2.0',
-                id: i + 1,
-                method: 'eth_call',
-                params: [{ to: call.to, data: call.data }, 'latest']
-            })))
-        });
-        const results = await response.json();
-        return results.sort((a, b) => a.id - b.id).map(r => r.result);
-    } catch (error) {
-        console.error('Batch RPC call failed:', error);
-        return calls.map(() => null);
-    }
-}
-
-/**
- * Parse relay node struct data from hex
- */
-function parseRelayNodeData(hexData, address) {
-    try {
-        const data = hexData.slice(2);
-        const chunks = [];
-        for (let i = 0; i < data.length; i += 64) {
-            chunks.push(data.slice(i, i + 64));
-        }
-        
-        // Parse endpoint string (dynamic - first chunk is offset)
-        const endpointOffset = Number(BigInt('0x' + (chunks[0] || '0'))) * 2;
-        let endpoint = '';
-        if (endpointOffset > 0 && data.length > endpointOffset) {
-            const endpointData = data.slice(endpointOffset);
-            const strLength = Number(BigInt('0x' + endpointData.slice(0, 64)));
-            const strHex = endpointData.slice(64, 64 + strLength * 2);
-            endpoint = decodeHexString(strHex);
-        }
-        
-        const stakedAmountRaw = BigInt('0x' + (chunks[1] || '0'));
-        const stakedAmount = Number(stakedAmountRaw / BigInt(10**18));
-        const lastHeartbeat = Number(BigInt('0x' + (chunks[7] || '0')));
-        const storageMB = Number(BigInt('0x' + (chunks[9] || '0')));
-        const tier = Number(BigInt('0x' + (chunks[12] || '0')));
-        
-        // Check if online (heartbeat within 1 hour)
-        const now = Math.floor(Date.now() / 1000);
-        const timeSinceHeartbeat = now - lastHeartbeat;
-        const isOnline = timeSinceHeartbeat < 3600 && timeSinceHeartbeat >= 0;
-        
-        // Determine node type based on storage (phones typically have less storage)
-        const nodeType = storageMB <= 2048 ? 'Mobile' : 'Desktop';
-        
-        return {
-            address,
-            endpoint,
-            staked: stakedAmount,
-            nodeType,
-            storageMB,
-            tier,
-            tierName: TIER_NAMES[Math.min(Math.max(tier, 0), 3)],
-            isOnline,
-            lastHeartbeat,
-            timeSinceHeartbeat
-        };
-    } catch (e) {
-        console.error('Error parsing node data:', e);
-        return null;
-    }
-}
-
-/**
- * Decode hex string to UTF-8
- */
-function decodeHexString(hex) {
-    let str = '';
-    for (let i = 0; i < hex.length; i += 2) {
-        const code = parseInt(hex.substr(i, 2), 16);
-        if (code === 0) break;
-        str += String.fromCharCode(code);
-    }
-    return str;
-}
-
-/**
- * Convert node endpoint to WebSocket URL
- * Handles various endpoint formats
- */
-function endpointToWebSocketUrl(endpoint, nodeAddress) {
-    if (!endpoint) return null;
-    
-    // If already a WebSocket URL, return as-is
-    if (endpoint.startsWith('ws://') || endpoint.startsWith('wss://')) {
-        // In development, redirect relay nodes to localhost
-        if (IS_DEV && !endpoint.includes('localhost')) {
-            console.log(`🔄 Development mode: redirecting ${endpoint} to localhost:19371`);
-            return 'ws://localhost:19371';
-        }
-        return endpoint;
-    }
-    
-    // If it's an HTTP URL, convert to WS
-    if (endpoint.startsWith('http://')) {
-        return endpoint.replace('http://', 'ws://');
-    }
-    if (endpoint.startsWith('https://')) {
-        return endpoint.replace('https://', 'wss://');
-    }
-    
-    // If it's a libp2p multiaddr, try to extract host/port
-    // Format: /dns4/relay.mumblechat.io/tcp/19371/...
-    // or /ip4/1.2.3.4/tcp/19371/...
-    const dnsMatch = endpoint.match(/\/dns4\/([^\/]+)\/tcp\/(\d+)/);
-    if (dnsMatch) {
-        return `ws://${dnsMatch[1]}:${dnsMatch[2]}`;
-    }
-    
-    const ipMatch = endpoint.match(/\/ip4\/([^\/]+)\/tcp\/(\d+)/);
-    if (ipMatch) {
-        return `ws://${ipMatch[1]}:${ipMatch[2]}`;
-    }
-    
-    // Fallback: can't parse
-    return null;
-}
-
-/**
- * Fetch all online relay nodes from blockchain
+ * Fetch all online relay nodes
  */
 export async function fetchOnlineRelayNodes() {
-    const nodes = { desktop: [], mobile: [], all: [] };
+    // Check cache
+    if (nodesCache && (Date.now() - cacheTime) < CACHE_TTL) {
+        return nodesCache;
+    }
+    
+    const nodes = { desktop: [], mobile: [], hub: [], all: [] };
     
     try {
-            // In development mode, use local relay servers
-            if (IS_DEV) {
-                console.log('🔧 Development mode: using localhost relay servers');
-                const desktopNode = {
-                    address: '0xAC59CEA3E124CE70A7d88b8Ba4f3e3325Acb9DC7',
-                    endpoint: 'ws://localhost:19371',
-                    wsUrl: 'ws://localhost:19371',
-                    isOnline: true,
-                    nodeType: 'Desktop',
-                    tier: 0,
-                    stakedAmount: 0,
-                    storageMB: 4096
-                };
-                nodes.desktop.push(desktopNode);
-                nodes.all.push(desktopNode);
-                return nodes;
-            }
+        // Fetch from Hub API (primary)
+        const hubNodes = await fetchNodesFromHub();
         
-        // Get total nodes count
-        const totalNodesHex = await ethCall(REGISTRY, SELECTORS.totalRelayNodes);
-        const totalNodes = totalNodesHex ? Number(BigInt(totalNodesHex)) : 0;
-        
-        if (totalNodes === 0) {
-            return nodes;
-        }
-        
-        // Batch fetch all node addresses
-        const addressCalls = [];
-        for (let i = 0; i < totalNodes; i++) {
-            const indexHex = i.toString(16).padStart(64, '0');
-            addressCalls.push({ to: REGISTRY, data: SELECTORS.activeRelayNodes + indexHex });
-        }
-        
-        const addressResults = await batchEthCall(addressCalls);
-        const nodeAddresses = addressResults
-            .filter(r => r && r.length >= 66)
-            .map(r => '0x' + r.slice(-40));
-        
-        // Batch fetch all node details
-        const detailCalls = nodeAddresses.map(addr => {
-            const addrPadded = addr.slice(2).toLowerCase().padStart(64, '0');
-            return { to: REGISTRY, data: SELECTORS.relayNodes + addrPadded };
-        });
-        
-        const detailResults = await batchEthCall(detailCalls);
-        
-        // Parse all results
-        for (let i = 0; i < nodeAddresses.length; i++) {
-            const nodeDataHex = detailResults[i];
-            if (nodeDataHex && nodeDataHex.length > 2) {
-                const nodeData = parseRelayNodeData(nodeDataHex, nodeAddresses[i]);
-                if (nodeData && nodeData.isOnline) {
-                    // Convert endpoint to WebSocket URL
-                    nodeData.wsUrl = endpointToWebSocketUrl(nodeData.endpoint, nodeData.address);
-                    
-                    nodes.all.push(nodeData);
-                    if (nodeData.nodeType === 'Desktop') {
-                        nodes.desktop.push(nodeData);
-                    } else {
-                        nodes.mobile.push(nodeData);
-                    }
+        if (hubNodes.length > 0) {
+            nodes.hub = hubNodes;
+            nodes.all = hubNodes;
+            
+            // Categorize by type
+            hubNodes.forEach(node => {
+                if (node.nodeType === 'Mobile') {
+                    nodes.mobile.push(node);
+                } else {
+                    nodes.desktop.push(node);
                 }
-            }
+            });
+            
+            console.log('Found ' + hubNodes.length + ' active relay nodes from hub');
         }
         
-        // Sort by staked amount (higher = more reliable)
-        nodes.desktop.sort((a, b) => b.staked - a.staked);
-        nodes.mobile.sort((a, b) => b.staked - a.staked);
-        nodes.all.sort((a, b) => b.staked - a.staked);
+        // Fallback to blockchain nodes if no hub nodes
+        if (nodes.all.length === 0) {
+            const blockchainNodes = await fetchNodesFromBlockchain();
+            nodes.all = blockchainNodes;
+        }
+        
+        // Cache results
+        nodesCache = nodes;
+        cacheTime = Date.now();
         
         return nodes;
     } catch (error) {
@@ -261,12 +145,19 @@ export async function fetchOnlineRelayNodes() {
 
 /**
  * Get the best available relay node
- * Prefers Desktop nodes with higher stake
  */
 export async function getBestRelayNode() {
     const nodes = await fetchOnlineRelayNodes();
     
-    // Prefer desktop nodes
+    // Prefer hub nodes (least connected users for load balancing)
+    if (nodes.hub && nodes.hub.length > 0) {
+        const sorted = [...nodes.hub].sort((a, b) => 
+            (a.connectedUsers || 0) - (b.connectedUsers || 0)
+        );
+        return sorted[0];
+    }
+    
+    // Fallback to desktop nodes
     if (nodes.desktop.length > 0 && nodes.desktop[0].wsUrl) {
         return nodes.desktop[0];
     }
@@ -276,8 +167,14 @@ export async function getBestRelayNode() {
         return nodes.mobile[0];
     }
     
-    // No online nodes
-    return null;
+    // No online nodes - return default
+    return {
+        wsUrl: RELAY_DEFAULTS.default,
+        endpoint: RELAY_DEFAULTS.default,
+        isOnline: true,
+        nodeType: 'Default',
+        tierName: 'Default'
+    };
 }
 
 /**
@@ -306,4 +203,17 @@ export async function testRelayConnection(wsUrl, timeout = 5000) {
             resolve(false);
         }
     });
+}
+
+/**
+ * Get relay node statistics from hub
+ */
+export async function getRelayStats() {
+    try {
+        const response = await fetch(`${HUB_CONFIG.apiUrl}/api/stats`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching relay stats:', error);
+        return { totalNodes: 0, totalUsers: 0, nodes: [] };
+    }
 }

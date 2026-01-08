@@ -11,7 +11,7 @@ import { fetchOnlineRelayNodes, getBestRelayNode, testRelayConnection } from '..
 import { detectWallets, getRecommendedWallets, connectToWallet, hasAnyWallet, isMobile, getPlatform, initEIP6963 } from '../walletDetection.js';
 
 // Cached relay nodes
-let cachedNodes = { desktop: [], mobile: [], all: [] };
+let cachedNodes = { desktop: [], mobile: [], hub: [], all: [] };
 let nodesLoading = false;
 let selectedWalletId = null;
 let detectedWalletsList = [];
@@ -244,7 +244,7 @@ async function loadRelayNodes() {
     nodesLoading = true;
     
     try {
-        cachedNodes = await fetchOnlineRelayNodes();
+        cachedNodes = await fetchOnlineRelayNodes(); console.log("Fetched nodes from hub:", JSON.stringify(cachedNodes));
         renderRelayOptions();
     } catch (error) {
         console.error('Failed to load relay nodes:', error);
@@ -262,13 +262,99 @@ function renderRelayOptions() {
     const connectBtn = document.getElementById('connectBtn');
     const customInput = document.getElementById('customRelayUrl');
     
-    const desktopCount = cachedNodes.desktop.length;
-    const mobileCount = cachedNodes.mobile.length;
-    const totalOnline = cachedNodes.all.length;
+    const hubCount = cachedNodes.hub?.length || 0;
+    const desktopCount = cachedNodes.desktop?.length || 0;
+    const mobileCount = cachedNodes.mobile?.length || 0;
+    const totalOnline = cachedNodes.all?.length || 0;
     
-    if (totalOnline === 0) {
+    console.log('🔍 renderRelayOptions called - hub:', hubCount, 'desktop:', desktopCount, 'total:', totalOnline);
+    console.log('🔍 cachedNodes:', JSON.stringify(cachedNodes));
+    
+    let html = '';
+    
+    if (totalOnline > 0) {
+        // Show hub relay nodes first (most reliable)
+        if (hubCount > 0) {
+            const bestNode = cachedNodes.hub[0];
+            html += `
+                <div class="relay-option selected available" 
+                     data-type="hub" 
+                     data-url="${bestNode.wsUrl}">
+                    <div class="relay-option-icon">🌐</div>
+                    <div class="relay-option-info">
+                        <div class="relay-option-title">Hub Relay Network</div>
+                        <div class="relay-option-status online">
+                            <span class="status-dot online"></span>
+                            ${hubCount} node${hubCount > 1 ? 's' : ''} online
+                        </div>
+                    </div>
+                    <div class="relay-option-check">✓</div>
+                </div>
+            `;
+            
+            // Show individual hub nodes if more than 1
+            if (hubCount > 1) {
+                cachedNodes.hub.forEach((node, i) => {
+                    html += `
+                        <div class="relay-option available hub-node" 
+                             data-type="hub-node" 
+                             data-url="${node.wsUrl}"
+                             data-tunnel="${node.tunnelId}">
+                            <div class="relay-option-icon">📡</div>
+                            <div class="relay-option-info">
+                                <div class="relay-option-title">Node ${node.tunnelId.slice(0, 8)}</div>
+                                <div class="relay-option-status online">
+                                    <span class="status-dot online"></span>
+                                    ${node.connectedUsers || 0} users • ${node.messagesRelayed || 0} msgs
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+        
+        // Desktop nodes (blockchain registered)
+        if (desktopCount > 0) {
+            const desktopNode = cachedNodes.desktop[0];
+            html += `
+                <div class="relay-option ${hubCount === 0 ? 'selected' : ''} available"
+                     data-type="desktop" 
+                     data-url="${desktopNode.wsUrl}">
+                    <div class="relay-option-icon">🖥️</div>
+                    <div class="relay-option-info">
+                        <div class="relay-option-title">Desktop Nodes</div>
+                        <div class="relay-option-status online">
+                            <span class="status-dot online"></span>
+                            ${desktopCount} online
+                        </div>
+                    </div>
+                    ${hubCount === 0 ? '<div class="relay-option-check">✓</div>' : ''}
+                </div>
+            `;
+        }
+        
+        // Mobile nodes
+        if (mobileCount > 0) {
+            const mobileNode = cachedNodes.mobile[0];
+            html += `
+                <div class="relay-option available"
+                     data-type="mobile" 
+                     data-url="${mobileNode.wsUrl}">
+                    <div class="relay-option-icon">📱</div>
+                    <div class="relay-option-info">
+                        <div class="relay-option-title">Mobile Nodes</div>
+                        <div class="relay-option-status online">
+                            <span class="status-dot online"></span>
+                            ${mobileCount} online
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
         // No online nodes - show fallback with local options
-        container.innerHTML = `
+        html += `
             <div class="relay-option selected" data-type="desktop" data-url="${RELAY_DEFAULTS.desktop}">
                 <div class="relay-option-icon">🖥️</div>
                 <div class="relay-option-info">
@@ -289,74 +375,24 @@ function renderRelayOptions() {
                     </div>
                 </div>
             </div>
-            <div class="relay-option" data-type="custom">
-                <div class="relay-option-icon">⚙️</div>
-                <div class="relay-option-info">
-                    <div class="relay-option-title">Custom Relay URL</div>
-                    <div class="relay-option-status">Enter your own relay</div>
-                </div>
-            </div>
             <div class="relay-no-nodes-hint">
-                ⚠️ No online relay nodes found on blockchain. Using local fallback.
+                ⚠️ No online relay nodes found. Using local fallback.
             </div>
         `;
-    } else {
-        // Show online nodes from blockchain
-        let html = '';
-        
-        // Desktop nodes option
-        const desktopNode = cachedNodes.desktop[0];
-        const desktopUrl = desktopNode?.wsUrl || RELAY_DEFAULTS.desktop;
-        html += `
-            <div class="relay-option ${desktopCount > 0 ? 'selected available' : ''}" 
-                 data-type="desktop" 
-                 data-url="${desktopUrl}"
-                 ${desktopCount === 0 ? 'data-disabled="true"' : ''}>
-                <div class="relay-option-icon">🖥️</div>
-                <div class="relay-option-info">
-                    <div class="relay-option-title">Desktop Nodes</div>
-                    <div class="relay-option-status ${desktopCount > 0 ? 'online' : 'offline'}">
-                        <span class="status-dot ${desktopCount > 0 ? 'online' : 'offline'}"></span>
-                        ${desktopCount > 0 ? `${desktopCount} online` : 'None available'}
-                    </div>
-                </div>
-                ${desktopCount > 0 ? '<div class="relay-option-check">✓</div>' : ''}
-            </div>
-        `;
-        
-        // Mobile nodes option
-        const mobileNode = cachedNodes.mobile[0];
-        const mobileUrl = mobileNode?.wsUrl || RELAY_DEFAULTS.mobile;
-        html += `
-            <div class="relay-option ${mobileCount > 0 && desktopCount === 0 ? 'selected available' : (mobileCount > 0 ? 'available' : '')}" 
-                 data-type="mobile" 
-                 data-url="${mobileUrl}"
-                 ${mobileCount === 0 ? 'data-disabled="true"' : ''}>
-                <div class="relay-option-icon">📱</div>
-                <div class="relay-option-info">
-                    <div class="relay-option-title">Mobile Nodes</div>
-                    <div class="relay-option-status ${mobileCount > 0 ? 'online' : 'offline'}">
-                        <span class="status-dot ${mobileCount > 0 ? 'online' : 'offline'}"></span>
-                        ${mobileCount > 0 ? `${mobileCount} online` : 'None available'}
-                    </div>
-                </div>
-                ${mobileCount > 0 && desktopCount === 0 ? '<div class="relay-option-check">✓</div>' : ''}
-            </div>
-        `;
-        
-        // Custom option
-        html += `
-            <div class="relay-option" data-type="custom">
-                <div class="relay-option-icon">⚙️</div>
-                <div class="relay-option-info">
-                    <div class="relay-option-title">Custom Relay URL</div>
-                    <div class="relay-option-status">Enter your own relay</div>
-                </div>
-            </div>
-        `;
-        
-        container.innerHTML = html;
     }
+    
+    // Custom option always available
+    html += `
+        <div class="relay-option" data-type="custom">
+            <div class="relay-option-icon">⚙️</div>
+            <div class="relay-option-info">
+                <div class="relay-option-title">Custom Relay URL</div>
+                <div class="relay-option-status">Enter your own relay</div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
     
     // Enable connect button
     connectBtn.disabled = false;
@@ -390,9 +426,6 @@ function renderRelayOptions() {
     });
 }
 
-/**
- * Render fallback options when blockchain fetch fails
- */
 function renderRelayOptionsFallback() {
     const container = document.getElementById('relayOptions');
     const connectBtn = document.getElementById('connectBtn');
