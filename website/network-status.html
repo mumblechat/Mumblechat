@@ -708,6 +708,23 @@
                     }
                 }
                 
+                // STEP 4: BONUS - Enrich hub nodes with live user counts
+                const hubStats = await fetchHubStats();
+                if (hubStats && hubStats.nodes && hubStats.nodes.length > 0) {
+                    console.log(`✨ Enriching ${hubStats.nodes.length} hub nodes with live data`);
+                    nodes.forEach(node => {
+                        if (node.endpoint && node.endpoint.includes('hub.mumblechat.com/node/')) {
+                            const tunnelId = node.endpoint.split('/').pop();
+                            const hubNode = hubStats.nodes.find(h => h.tunnelId === tunnelId);
+                            if (hubNode) {
+                                node.connectedUsers = hubNode.connectedUsers;
+                                node.isHubNode = true;
+                                console.log(`  ✓ Node ${tunnelId}: ${hubNode.connectedUsers} users`);
+                            }
+                        }
+                    });
+                }
+                
                 // Sort by messages relayed descending
                 nodes.sort((a, b) => b.messagesRelayed - a.messagesRelayed);
                 
@@ -715,6 +732,20 @@
             } catch (error) {
                 console.error('Error fetching nodes:', error);
                 return { nodes: [], tierCounts, totalNodes: 0 };
+            }
+        }
+        
+        // Fetch hub stats (bonus data for hub nodes)
+        async function fetchHubStats() {
+            try {
+                const response = await fetch(HUB_API_URL);
+                if (!response.ok) return null;
+                const data = await response.json();
+                console.log('📡 Hub stats fetched:', data);
+                return data;
+            } catch (error) {
+                console.warn('Hub API unavailable:', error);
+                return null;
             }
         }
         
@@ -743,6 +774,25 @@
                 // 10: dailyUptimeSeconds (uint256)
                 // 11: lastDayReset (uint256)
                 // 12: tier (NodeTier enum = uint8)
+                
+                // Extract endpoint (dynamic string)
+                const endpointOffset = Number(BigInt('0x' + (chunks[0] || '0')));
+                let endpoint = '';
+                if (endpointOffset > 0 && chunks.length > endpointOffset / 32) {
+                    const lengthChunk = chunks[Math.floor(endpointOffset / 32)];
+                    const stringLength = Number(BigInt('0x' + lengthChunk));
+                    if (stringLength > 0 && stringLength < 1000) { // Sanity check
+                        const startIdx = Math.floor(endpointOffset / 32) + 1;
+                        let hexStr = '';
+                        for (let i = 0; i < Math.ceil(stringLength / 32); i++) {
+                            if (chunks[startIdx + i]) {
+                                hexStr += chunks[startIdx + i];
+                            }
+                        }
+                        const endpointBytes = hexStr.slice(0, stringLength * 2);
+                        endpoint = decodeURIComponent(endpointBytes.match(/.{2}/g).map(h => '%' + h).join(''));
+                    }
+                }
                 
                 const stakedAmountRaw = BigInt('0x' + (chunks[1] || '0'));
                 const stakedAmount = Number(stakedAmountRaw / BigInt(10**18));
@@ -776,6 +826,7 @@
                 
                 return {
                     address: address,
+                    endpoint: endpoint,
                     status: isOnline ? 'online' : 'offline',
                     tier: Math.min(Math.max(tier, 0), 3), // Ensure tier is 0-3
                     tierName: TIER_NAMES[Math.min(Math.max(tier, 0), 3)],
@@ -788,7 +839,9 @@
                     lastHeartbeat: lastHeartbeat,
                     registeredAt: registeredAt,
                     isActive: isActive,
-                    timeSinceHeartbeat: timeSinceHeartbeat
+                    timeSinceHeartbeat: timeSinceHeartbeat,
+                    connectedUsers: 0, // Will be filled from hub API if it's a hub node
+                    isHubNode: false
                 };
             } catch (e) {
                 console.error('Error parsing node data:', e);
@@ -842,6 +895,14 @@
                 lastSeenText = `${Math.floor(node.timeSinceHeartbeat / 86400)}d ago`;
             }
             
+            // Hub node indicator
+            const hubBadge = node.isHubNode ? 
+                `<div style="font-size: 10px; color: #10b981; margin-top: 2px;">🌐 Hub Node</div>` : '';
+            
+            // User count for hub nodes
+            const userCount = node.isHubNode && node.connectedUsers > 0 ?
+                `<div style="font-size: 10px; color: var(--primary); margin-top: 2px;">👥 ${node.connectedUsers} user${node.connectedUsers !== 1 ? 's' : ''}</div>` : '';
+            
             return `
                 <tr>
                     <td style="color: var(--text-muted);">${index + 1}</td>
@@ -851,6 +912,8 @@
                             ${node.status === 'online' ? '🟢' : '🔴'} ${node.status}
                         </span>
                         <div style="font-size: 10px; color: var(--text-muted);">${lastSeenText}</div>
+                        ${hubBadge}
+                        ${userCount}
                     </td>
                     <td>
                         <span class="node-type-badge ${node.nodeType.toLowerCase()}">
