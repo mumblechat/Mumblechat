@@ -36,6 +36,7 @@
                     <div class="dropdown-menu">
                         <a href="relay-nodes.html" class="active">📋 Relay Nodes</a>
                         <a href="network-status.html">📡 Network Status</a>
+                        <a href="https://relay.mumblechat.com" target="_blank">🎯 My Node</a>
                         <div class="dropdown-divider"></div>
                         <a href="relay-node.html" style="color: #4bc0c8;">🚀 Run a Node</a>
                     </div>
@@ -752,25 +753,39 @@ Missed rewards are pooled and redistributed to nodes with 100% uptime.
                 // Get total relay nodes from blockchain
                 const totalNodesHex = await ethCall(REGISTRY, getFunctionSelector('totalRelayNodes'));
                 const totalNodes = parseUint256(totalNodesHex);
-                document.getElementById('activeNodesCount').textContent = totalNodes.toString();
                 
                 // Get today's pool info from blockchain
                 const poolInfoHex = await ethCall(REGISTRY, getFunctionSelector('getTodayPoolInfo'));
+                let blockchainMessages = 0;
+                let blockchainContributors = 0;
                 if (poolInfoHex && poolInfoHex.length > 2) {
                     const cleanHex = poolInfoHex.slice(2);
-                    const totalRelays = BigInt('0x' + cleanHex.slice(64, 128));
-                    const numContributors = BigInt('0x' + cleanHex.slice(256, 320));
-                    
-                    document.getElementById('todayRelaysCount').textContent = totalRelays.toLocaleString();
-                    document.getElementById('dailyRelaysDisplay').textContent = totalRelays.toLocaleString();
-                    document.getElementById('contributorsDisplay').textContent = `${numContributors} nodes`;
+                    blockchainMessages = Number(BigInt('0x' + cleanHex.slice(64, 128)));
+                    blockchainContributors = Number(BigInt('0x' + cleanHex.slice(256, 320)));
                 }
                 
                 // BONUS: Get hub data for live hub nodes (optional enhancement)
                 const hubStats = await fetchHubStats();
-                if (hubStats && hubStats.totalNodes > 0) {
-                    console.log(`✨ Bonus: ${hubStats.totalNodes} hub nodes online with ${hubStats.totalUsers} users`);
-                    // Hub data available for future use
+                
+                // Display strategy: Show hub data if blockchain has 0 nodes, otherwise show blockchain
+                if (totalNodes === 0n && hubStats && hubStats.totalNodes > 0) {
+                    // Use hub data when blockchain is empty
+                    console.log(`✨ Using hub data: ${hubStats.totalNodes} hub nodes online with ${hubStats.totalUsers} users`);
+                    document.getElementById('activeNodesCount').textContent = hubStats.totalNodes + ' (Hub)';
+                    const hubMessages = hubStats.nodes.reduce((sum, n) => sum + (n.messagesRelayed || 0), 0);
+                    document.getElementById('todayRelaysCount').textContent = hubMessages.toLocaleString();
+                    document.getElementById('dailyRelaysDisplay').textContent = hubMessages.toLocaleString();
+                    document.getElementById('contributorsDisplay').textContent = `${hubStats.totalNodes} hub nodes`;
+                } else {
+                    // Use blockchain data
+                    document.getElementById('activeNodesCount').textContent = totalNodes.toString();
+                    document.getElementById('todayRelaysCount').textContent = blockchainMessages.toLocaleString();
+                    document.getElementById('dailyRelaysDisplay').textContent = blockchainMessages.toLocaleString();
+                    document.getElementById('contributorsDisplay').textContent = `${blockchainContributors} nodes`;
+                    
+                    if (hubStats && hubStats.totalNodes > 0) {
+                        console.log(`✨ Bonus: ${hubStats.totalNodes} hub nodes online with ${hubStats.totalUsers} users (blockchain shows ${totalNodes} registered)`);
+                    }
                 }
                 
             } catch (error) {

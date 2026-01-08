@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Status - MumbleChat Live Network</title>
-    <meta name="description" content="Real-time view of MumbleChat relay network. Monitor active nodes, live connections, messages, and network health.">
+    <title>Active Relay Nodes - MumbleChat Live Network</title>
+    <meta name="description" content="Real-time view of active MumbleChat hub relay nodes. Monitor live connections, messages, and network health.">
     
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
     <link rel="manifest" href="manifest.json">
@@ -25,100 +25,6 @@
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: #e2e8f0;
             min-height: 100vh;
-            padding: 0;
-        }
-        
-        nav {
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 16px 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        nav .container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-        }
-        
-        .nav-brand {
-            font-size: 20px;
-            font-weight: 700;
-            color: #10b981;
-            text-decoration: none;
-        }
-        
-        .nav-links {
-            display: flex;
-            gap: 24px;
-            list-style: none;
-        }
-        
-        .nav-links a {
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        
-        .nav-links a:hover,
-        .nav-links a.active {
-            color: #10b981;
-        }
-        
-        main {
-            padding: 40px 20px;
-        }
-        
-        nav {
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 16px 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        nav .container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-        }
-        
-        .nav-brand {
-            font-size: 20px;
-            font-weight: 700;
-            color: #10b981;
-            text-decoration: none;
-        }
-        
-        .nav-links {
-            display: flex;
-            gap: 24px;
-            list-style: none;
-        }
-        
-        .nav-links a {
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        
-        .nav-links a:hover,
-        .nav-links a.active {
-            color: #10b981;
-        }
-        
-        main {
             padding: 40px 20px;
         }
         
@@ -377,32 +283,15 @@
             .nodes-grid {
                 grid-template-columns: 1fr;
             }
-            .nav-links {
-                display: none;
-            }
         }
     </style>
 </head>
 <body>
-    <nav>
-        <div class="container">
-            <a href="index.html" class="nav-brand">MumbleChat</a>
-            <ul class="nav-links">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="relay-nodes.html">Relay Nodes</a></li>
-                <li><a href="network-status.html" class="active">Network Status</a></li>
-                <li><a href="https://relay.mumblechat.com" target="_blank">My Node</a></li>
-                <li><a href="relay-node.html">Run Node</a></li>
-            </ul>
-        </div>
-    </nav>
-    
-    <main>
-        <div class="container">
-            <header>
-                <h1>🔗 Network Status</h1>
-                <p style="color: #94a3b8; font-size: 16px;">Real-time view of the MumbleChat relay network</p>
-            </header>
+    <div class="container">
+        <header>
+            <h1>🌐 Active Relay Nodes</h1>
+            <p class="subtitle">Real-time view of the MumbleChat relay network</p>
+        </header>
         
         <!-- Network Stats -->
         <div class="stats-grid">
@@ -453,19 +342,6 @@
         const HUB_API_URL = 'https://hub.mumblechat.com/api/stats';
         let soundEnabled = true;
         let previousMessageCount = 0;
-        let audioContext = null;
-        
-        // Initialize AudioContext on first user interaction
-        function initAudio() {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                console.log('Audio context initialized');
-            }
-        }
-        
-        // Add click listener to initialize audio
-        document.addEventListener('click', initAudio, { once: true });
-        document.addEventListener('touchstart', initAudio, { once: true });
         
         // Fetch and display hub stats
         async function loadNetworkData() {
@@ -557,28 +433,19 @@
         
         // Play notification sound
         function playNotification() {
-            if (!audioContext) {
-                initAudio();
-            }
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
             
-            if (audioContext && audioContext.state !== 'running') {
-                audioContext.resume();
-            }
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
             
-            if (audioContext) {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                gainNode.gain.value = 0.1;
-                
-                oscillator.start();
-                oscillator.stop(audioContext.currentTime + 0.1);
-            }
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.1;
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
         }
         
         // Toggle sound
@@ -594,6 +461,5 @@
         // Auto-refresh every 10 seconds
         setInterval(loadNetworkData, 10000);
     </script>
-    </main>
 </body>
 </html>

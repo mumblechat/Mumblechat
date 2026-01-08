@@ -7,19 +7,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6C63FF;
-            --primary-dark: #5B54E6;
+            --primary: #10b981;
+            --primary-dark: #059669;
             --success: #10B981;
             --warning: #F59E0B;
             --danger: #EF4444;
             --bg-dark: #0F172A;
-            --bg-card: #1E293B;
-            --bg-card-hover: #334155;
-            --text-primary: #F8FAFC;
+            --bg-card: rgba(30, 41, 59, 0.6);
+            --bg-card-hover: rgba(30, 41, 59, 0.8);
+            --text-primary: #e2e8f0;
             --text-secondary: #94A3B8;
             --text-muted: #64748B;
-            --border: #334155;
-            --gradient: linear-gradient(135deg, #6C63FF 0%, #9D4EDD 100%);
+            --border: rgba(255, 255, 255, 0.08);
+            --gradient: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
         }
 
         * {
@@ -30,25 +30,63 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-dark);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: var(--text-primary);
             min-height: 100vh;
+            padding: 0;
         }
 
         /* Header */
         .header {
-            background: var(--bg-card);
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border);
-            padding: 16px 24px;
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
 
+        .nav-section {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+        
         .logo {
             display: flex;
             align-items: center;
             gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--primary);
         }
 
         .logo-icon {
@@ -127,15 +165,17 @@
 
         .stat-card {
             background: var(--bg-card);
+            backdrop-filter: blur(10px);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 20px;
-            transition: all 0.2s;
+            padding: 28px 24px;
+            transition: all 0.3s ease;
+            text-align: center;
         }
 
         .stat-card:hover {
-            background: var(--bg-card-hover);
             transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
         }
 
         .stat-label {
@@ -148,16 +188,15 @@
         }
 
         .stat-value {
-            font-size: 28px;
+            font-size: 48px;
             font-weight: 700;
-            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 10px;
+            color: var(--primary);
         }
 
         .stat-value.highlight {
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--primary);
         }
 
         .stat-change {
@@ -733,41 +772,64 @@
 <body>
     <!-- Header -->
     <header class="header">
-        <div class="logo">
-            <div class="logo-icon">📡</div>
-            <div>
-                <h1>MumbleChat Relay</h1>
-                <span>Desktop Node Dashboard</span>
+        <div class="header-content">
+            <div class="nav-section">
+                <a href="https://mumblechat.com" class="logo">
+                    <div class="logo-icon">📡</div>
+                    <div>
+                        <h1>MumbleChat</h1>
+                    </div>
+                </a>
+                <nav>
+                    <ul class="nav-links">
+                        <li><a href="https://mumblechat.com/index.html">Home</a></li>
+                        <li><a href="https://mumblechat.com/relay-nodes.html">Relay Nodes</a></li>
+                        <li><a href="https://mumblechat.com/network-status.html">Network Status</a></li>
+                        <li><a href="https://relay.mumblechat.com" class="active">My Node</a></li>
+                    </ul>
+                </nav>
             </div>
-        </div>
-        <div class="status-badge" id="statusBadge">
-            <div class="status-dot"></div>
-            <span id="statusText">Connecting...</span>
+            <div class="status-badge" id="statusBadge">
+                <div class="status-dot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="main">
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">📊 Messages Relayed</div>
-                <div class="stat-value highlight" id="messagesRelayed">0</div>
-                <div class="stat-change" id="messagesChange">+0 today</div>
+    <main class="main" id="mainContent">
+        <div id="connectWallet" style="text-align: center; padding: 80px 20px;">
+            <div style="background: var(--bg-card); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 16px; padding: 60px 40px; max-width: 600px; margin: 0 auto;">
+                <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+                <h2 style="font-size: 28px; margin-bottom: 16px; color: var(--primary);">Connect Wallet Required</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 16px;">Please connect your wallet to view your relay node dashboard</p>
+                <button class="btn btn-primary" style="padding: 16px 40px; font-size: 16px;" onclick="connectWallet()">
+                    <span>🔐 Connect Wallet</span>
+                </button>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">👥 Connected Peers</div>
-                <div class="stat-value" id="connectedPeers">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">⏱️ Uptime</div>
-                <div class="stat-value" id="uptime">0h 0m</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">🏆 Tier</div>
-                <div class="stat-value">
-                    <span class="tier-badge bronze" id="tierBadge">🥉 Bronze</span>
+        </div>
+        
+        <div id="dashboardContent" style="display: none;">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">📊 Messages Relayed</div>
+                    <div class="stat-value" id="messagesRelayed">0</div>
+                    <div class="stat-change" id="messagesChange">+0 today</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-label">👥 Connected Peers</div>
+                    <div class="stat-value" id="connectedPeers">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">⏱️ Uptime</div>
+                    <div class="stat-value" id="uptime">0h 0m</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">🏆 Tier</div>
+                    <div class="stat-value" style="font-size: 24px;">
+                        <span class="tier-badge bronze" id="tierBadge">🥉 Bronze</span>
+                    </div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">📈 Uptime Score</div>
@@ -775,7 +837,17 @@
             </div>
             <div class="stat-card">
                 <div class="stat-label">🔄 Pending Messages</div>
-                <div class="stat-value" id="pendingMessages">0</div>
+                <div class="stat-value" id="pendingMessages">0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">💰 Earnings Today</div>
+                <div class="stat-value" id="earningsToday">0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">💚 Network Health</div>
+                <div class="stat-value" style="font-size: 36px;">
+                    <span style="color: var(--primary);">💚</span>
+                </div>
             </div>
         </div>
 
@@ -1436,6 +1508,105 @@
             } catch (e) {
                 console.error('Failed to load stored data:', e);
             }
+        }
+
+        // Wallet Connection
+        async function connectWallet() {
+            if (typeof window.ethereum === 'undefined') {
+                showToast('Please install MetaMask to connect your wallet', 'error');
+                return;
+            }
+
+            try {
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (accounts && accounts.length > 0) {
+                    state.walletAddress = accounts[0];
+                    document.getElementById('connectWallet').style.display = 'none';
+                    document.getElementById('dashboardContent').style.display = 'block';
+                    
+                    // Update wallet display
+                    document.getElementById('walletAddress').textContent = 
+                        accounts[0].slice(0, 10) + '...' + accounts[0].slice(-8);
+                    
+                    // Fetch balances
+                    await fetchBalances();
+                    
+                    // Initialize WebSocket connection
+                    initWebSocket();
+                    
+                    showToast('Wallet connected successfully!', 'success');
+                } else {
+                    showToast('No accounts found', 'error');
+                }
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                showToast('Failed to connect wallet', 'error');
+            }
+        }
+
+        async function fetchBalances() {
+            try {
+                // Fetch RAMA balance
+                const ramaBalance = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [state.walletAddress, 'latest']
+                });
+                state.ramaBalance = (parseInt(ramaBalance, 16) / 1e18).toFixed(4);
+                document.getElementById('ramaBalance').textContent = state.ramaBalance;
+
+                // TODO: Fetch MCT balance from contract
+                // For now, set to 0
+                state.mctBalance = '0.0';
+                document.getElementById('mctBalance').textContent = state.mctBalance;
+            } catch (error) {
+                console.error('Error fetching balances:', error);
+            }
+        }
+
+        // Check if wallet is already connected on page load
+        window.addEventListener('load', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts && accounts.length > 0) {
+                        // Wallet already connected
+                        state.walletAddress = accounts[0];
+                        document.getElementById('connectWallet').style.display = 'none';
+                        document.getElementById('dashboardContent').style.display = 'block';
+                        
+                        document.getElementById('walletAddress').textContent = 
+                            accounts[0].slice(0, 10) + '...' + accounts[0].slice(-8);
+                        
+                        await fetchBalances();
+                        initWebSocket();
+                    }
+                } catch (error) {
+                    console.error('Error checking wallet connection:', error);
+                }
+            }
+            
+            loadStoredData();
+        });
+
+        // Listen for account changes
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    // User disconnected wallet
+                    document.getElementById('dashboardContent').style.display = 'none';
+                    document.getElementById('connectWallet').style.display = 'block';
+                    state.walletAddress = null;
+                } else {
+                    // User switched account
+                    state.walletAddress = accounts[0];
+                    document.getElementById('walletAddress').textContent = 
+                        accounts[0].slice(0, 10) + '...' + accounts[0].slice(-8);
+                    fetchBalances();
+                }
+            });
         }
 
         // Click outside modal to close
