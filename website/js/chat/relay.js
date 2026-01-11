@@ -56,6 +56,7 @@ function handleRelayOpen() {
     sendToRelay({
         type: 'authenticate',
         walletAddress: state.address,
+        address: state.address,
         displayName: state.displayName || state.username,
         timestamp: Date.now()
     });
@@ -79,11 +80,12 @@ function handleRelayMessage(event) {
         switch (data.type) {
             case 'authenticated':
             case 'auth_success':
+            case 'CONNECTED':
                 console.log('✅ Relay authenticated');
+                updateRelayStatus(true);
                 break;
 
             case 'message':
-                // Extract the actual content from payload if present
                 const messageContent = data.payload || data.encryptedBlob || data.content;
                 receiveMessage({
                     from: data.from || data.senderAddress,
@@ -103,11 +105,14 @@ function handleRelayMessage(event) {
                 break;
 
             case 'pong':
-                // Heartbeat response
+                break;
+
+            case 'relay_ack':
+            case 'delivery_receipt':
+                console.log('Message delivered:', data.messageId);
                 break;
 
             case 'sync_response':
-                // Handle pending messages
                 if (data.messages && Array.isArray(data.messages)) {
                     data.messages.forEach(msg => {
                         receiveMessage(msg);
@@ -199,24 +204,25 @@ export function sendMessageViaRelay(to, content) {
 }
 
 /**
- * Update relay connection status in UI
+ * Update relay connection status in UI - FIXED to use correct IDs
  */
 export function updateRelayStatus(connected, statusText = null) {
     state.relayConnected = connected;
     
-    const statusEl = document.querySelector('.relay-status');
-    if (statusEl) {
-        const dot = statusEl.querySelector('.status-dot');
-        const text = statusEl.querySelector('.status-text') || statusEl;
-        
-        if (dot) {
-            dot.style.background = connected ? '#22c55e' : '#ef4444';
-        }
-        
+    // Update by ID (matches app.js status bar)
+    const relayDot = document.getElementById('relayDot');
+    const relayStatusText = document.getElementById('relayStatus');
+    
+    if (relayDot) {
+        relayDot.style.background = connected ? '#22c55e' : '#ef4444';
+        relayDot.classList.toggle('connected', connected);
+    }
+    
+    if (relayStatusText) {
         if (statusText) {
-            text.textContent = `Relay: ${statusText}`;
+            relayStatusText.textContent = `Relay: ${statusText}`;
         } else {
-            text.textContent = connected ? 'Relay: Connected' : 'Relay: Disconnected';
+            relayStatusText.textContent = connected ? 'Relay: Connected' : 'Relay: Disconnected';
         }
     }
 
