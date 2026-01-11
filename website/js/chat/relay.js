@@ -6,24 +6,30 @@
 import { state, updateState } from './state.js';
 import { receiveMessage } from './messages.js';
 import { updateContactStatus } from './contacts.js';
+import { getBestRelayEndpoint, RELAY_DEFAULTS } from './config.js';
 
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const RECONNECT_DELAY = 5000;
 
 /**
- * Connect to relay node
+ * Connect to relay node - ALWAYS fetches fresh endpoint
  */
-export function connectToRelay() {
+export async function connectToRelay() {
     if (!state.address) {
         console.warn('Cannot connect to relay: No wallet address');
         return;
     }
 
-    const relayUrl = state.settings.relayUrl || state.relayUrl;
-    console.log('Connecting to relay:', relayUrl);
-
     try {
+        // ALWAYS fetch fresh endpoint (tunnel IDs change on restart)
+        const relayUrl = await getBestRelayEndpoint();
+        console.log('Connecting to relay:', relayUrl);
+        
+        // Update state with fresh URL
+        state.relayUrl = relayUrl;
+        state.settings.relayUrl = relayUrl;
+
         state.relaySocket = new WebSocket(relayUrl);
 
         state.relaySocket.onopen = handleRelayOpen;
@@ -58,79 +64,73 @@ function handleRelayOpen() {
     setTimeout(() => {
         sendToRelay({
             type: 'sync',
-            walletAddress: state.address,
-            lastSyncTime: 0
+            address: state.address
         });
-    }, 1000);
+    }, 500);
 }
 
 /**
- * Handle incoming relay messages
+ * Handle incoming relay message
  */
 function handleRelayMessage(event) {
     try {
         const data = JSON.parse(event.data);
         
         switch (data.type) {
-            case 'message':
-            case 'relay':
-                receiveMessage(data);
-                break;
-                
             case 'authenticated':
-                console.log('✅ Authenticated with relay node');
-                updateRelayStatus(true);
+            case 'auth_success':
+                console.log('✅ Relay authenticated');
                 break;
-                
-            case 'sync_response':
-                if (data.messages && data.messages.length > 0) {
-                    console.log(`📥 Received ${data.messages.length} pending messages`);
-                    data.messages.forEach(msg => receiveMessage(msg));
+
+            case 'message':
+                // Extract the actual content from payload if present
+                const messageContent = data.payload || data.encryptedBlob || data.content;
+                receiveMessage({
+                    from: data.from || data.senderAddress,
+                    to: data.to || state.address,
+                    content: messageContent,
+                    payload: messageContent,
+                    timestamp: data.timestamp || Date.now(),
+                    messageId: data.messageId
+                });
+                break;
+
+            case 'presence':
+            case 'status':
+                if (data.address) {
+                    updateContactStatus(data.address, data.status || data.online);
                 }
                 break;
-                
-            case 'delivery_receipt':
-                console.log('✅ Message delivered:', data.messageId);
-                markMessageDelivered(data.messageId);
+
+            case 'pong':
+                // Heartbeat response
                 break;
-                
-            case 'read_receipt':
-                console.log('👁️ Message read:', data.messageId);
-                markMessageRead(data.messageId);
+
+            case 'sync_response':
+                // Handle pending messages
+                if (data.messages && Array.isArray(data.messages)) {
+                    data.messages.forEach(msg => {
+                        receiveMessage(msg);
+                    });
+                }
                 break;
-                
-            case 'typing':
-                handleTypingIndicator(data);
-                break;
-                
-            case 'user_online':
-                updateContactStatus(data.address, true);
-                break;
-                
-            case 'user_offline':
-                updateContactStatus(data.address, false);
-                break;
-                
-            case 'group_message':
-                receiveGroupMessage(data);
-                break;
-                
+
             case 'error':
-                console.error('❌ Relay error:', data.message);
+                console.error('Relay error:', data.message || data.error);
                 break;
-                
+
             default:
                 console.log('Unknown message type:', data.type);
         }
     } catch (error) {
-        console.error('Error parsing relay message:', error);
+        console.error('Error handling relay message:', error);
     }
 }
 
 /**
  * Handle relay connection closed
  */
-function handleRelayClose() {
+function handleRelayClose(event) {
     console.log('Relay connection closed');
     state.relayConnected = false;
     updateRelayStatus(false);
@@ -138,26 +138,29 @@ function handleRelayClose() {
 }
 
 /**
- * Handle relay connection error
+ * Handle relay error
  */
 function handleRelayError(error) {
     console.error('Relay error:', error);
+    state.relayConnected = false;
     updateRelayStatus(false);
 }
 
 /**
- * Schedule reconnection attempt
+ * Schedule reconnection
  */
 function scheduleReconnect() {
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         console.error('Max reconnection attempts reached');
+        updateRelayStatus(false, 'Failed');
         return;
     }
 
     reconnectAttempts++;
-    const delay = RECONNECT_DELAY * Math.min(reconnectAttempts, 5);
+    const delay = RECONNECT_DELAY * Math.min(reconnectAttempts, 3);
+    console.log(`Reconnecting in ${delay/1000}s (attempt ${reconnectAttempts})`);
     
-    console.log(`Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempts})`);
+    updateRelayStatus(false, 'Reconnecting...');
     setTimeout(connectToRelay, delay);
 }
 
@@ -166,7 +169,7 @@ function scheduleReconnect() {
  */
 export function sendToRelay(message) {
     if (!state.relaySocket || state.relaySocket.readyState !== WebSocket.OPEN) {
-        console.warn('Relay not connected');
+        console.warn('⚠ Relay not connected');
         return false;
     }
 
@@ -174,92 +177,53 @@ export function sendToRelay(message) {
         state.relaySocket.send(JSON.stringify(message));
         return true;
     } catch (error) {
-        console.error('Error sending to relay:', error);
+        console.error('Failed to send to relay:', error);
         return false;
     }
 }
 
 /**
- * Send a direct message via relay
+ * Send chat message via relay
  */
-export function sendMessageViaRelay(recipientAddress, text, messageId) {
-    return sendToRelay({
+export function sendMessageViaRelay(to, content) {
+    const message = {
         type: 'relay',
-        messageId: messageId,
-        senderAddress: state.address,
-        recipientAddress: recipientAddress,
-        encryptedBlob: btoa(text), // TODO: Implement proper encryption
-        timestamp: Date.now(),
-        ttlDays: 7
-    });
-}
-
-/**
- * Send a group message via relay
- */
-export function sendGroupMessageViaRelay(groupId, text, messageId) {
-    return sendToRelay({
-        type: 'group_message',
-        messageId: messageId,
-        senderAddress: state.address,
-        groupId: groupId,
-        encryptedBlob: btoa(text),
+        to: to.toLowerCase(),
+        from: state.address.toLowerCase(),
+        payload: content,
+        messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: Date.now()
-    });
+    };
+
+    return sendToRelay(message);
 }
 
 /**
- * Send typing indicator
+ * Update relay connection status in UI
  */
-export function sendTypingIndicator(recipientAddress, isTyping) {
-    if (!state.settings.typingIndicators) return;
+export function updateRelayStatus(connected, statusText = null) {
+    state.relayConnected = connected;
     
-    return sendToRelay({
-        type: 'typing',
-        senderAddress: state.address,
-        recipientAddress: recipientAddress,
-        isTyping: isTyping
-    });
-}
-
-/**
- * Send read receipt
- */
-export function sendReadReceipt(messageId, senderAddress) {
-    if (!state.settings.readReceipts) return;
-    
-    return sendToRelay({
-        type: 'read_receipt',
-        messageId: messageId,
-        senderAddress: senderAddress,
-        readerAddress: state.address,
-        timestamp: Date.now()
-    });
-}
-
-/**
- * Update relay status in UI
- */
-export function updateRelayStatus(connected) {
-    const relayDot = document.getElementById('relayDot');
-    const relayStatus = document.getElementById('relayStatus');
-    
-    if (relayDot && relayStatus) {
-        if (connected) {
-            relayDot.classList.add('connected');
-            relayStatus.textContent = 'Relay: Connected';
+    const statusEl = document.querySelector('.relay-status');
+    if (statusEl) {
+        const dot = statusEl.querySelector('.status-dot');
+        const text = statusEl.querySelector('.status-text') || statusEl;
+        
+        if (dot) {
+            dot.style.background = connected ? '#22c55e' : '#ef4444';
+        }
+        
+        if (statusText) {
+            text.textContent = `Relay: ${statusText}`;
         } else {
-            relayDot.classList.remove('connected');
-            relayStatus.textContent = 'Relay: Reconnecting...';
+            text.textContent = connected ? 'Relay: Connected' : 'Relay: Disconnected';
         }
     }
-    
-    // Update send button state
-    const sendBtn = document.getElementById('sendBtn');
-    if (sendBtn) {
-        const messageInput = document.getElementById('messageInput');
-        sendBtn.disabled = !connected || !messageInput?.value.trim();
-    }
+
+    // Dispatch event for UI updates
+    window.dispatchEvent(new CustomEvent('relayStatusChanged', { 
+        detail: { connected, status: statusText } 
+    }));
 }
 
 /**
@@ -275,89 +239,24 @@ export function disconnectRelay() {
 }
 
 /**
- * Handle typing indicator from other users
+ * Send typing indicator
  */
-function handleTypingIndicator(data) {
-    const typingIndicator = document.getElementById('typingIndicator');
-    if (typingIndicator && state.activeChat === data.senderAddress) {
-        if (data.isTyping) {
-            typingIndicator.style.display = 'block';
-            typingIndicator.textContent = 'typing...';
-        } else {
-            typingIndicator.style.display = 'none';
-        }
-    }
-}
-
-/**
- * Mark message as delivered
- */
-function markMessageDelivered(messageId) {
-    // Find and update message status
-    for (const address in state.messages) {
-        const messages = state.messages[address];
-        const msg = messages.find(m => m.id === messageId);
-        if (msg) {
-            msg.status = 'delivered';
-            break;
-        }
-    }
-}
-
-/**
- * Mark message as read
- */
-function markMessageRead(messageId) {
-    for (const address in state.messages) {
-        const messages = state.messages[address];
-        const msg = messages.find(m => m.id === messageId);
-        if (msg) {
-            msg.status = 'read';
-            break;
-        }
-    }
-}
-
-/**
- * Receive group message
- */
-function receiveGroupMessage(data) {
-    const groupId = data.groupId;
-    const group = state.groups.find(g => g.id === groupId);
-    
-    if (!group) {
-        console.warn('Received message for unknown group:', groupId);
-        return;
-    }
-    
-    // Decode message
-    let text = data.text;
-    if (data.encryptedBlob && !text) {
-        try {
-            text = atob(data.encryptedBlob);
-        } catch (e) {
-            text = data.encryptedBlob;
-        }
-    }
-    
-    if (!state.messages[`group_${groupId}`]) {
-        state.messages[`group_${groupId}`] = [];
-    }
-    
-    state.messages[`group_${groupId}`].push({
-        id: data.messageId || Date.now(),
-        text,
-        sent: data.senderAddress === state.address,
-        senderAddress: data.senderAddress,
-        senderName: data.senderName || data.senderAddress.slice(0, 8),
-        time: new Date(data.timestamp || Date.now()).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        })
+export function sendTypingIndicator(to) {
+    sendToRelay({
+        type: 'typing',
+        to: to.toLowerCase(),
+        from: state.address.toLowerCase()
     });
-    
-    // Trigger UI update
-    if (state.activeGroup === groupId) {
-        window.dispatchEvent(new CustomEvent('messagesUpdated', { detail: { groupId } }));
-    }
+}
+
+/**
+ * Send read receipt
+ */
+export function sendReadReceipt(to, messageId) {
+    sendToRelay({
+        type: 'read',
+        to: to.toLowerCase(),
+        from: state.address.toLowerCase(),
+        messageId
+    });
 }
