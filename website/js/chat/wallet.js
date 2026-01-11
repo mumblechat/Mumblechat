@@ -31,23 +31,35 @@ function getProvider() {
 export function setupWalletListeners() {
     const provider = getProvider();
     if (provider) {
-        provider.on('accountsChanged', handleAccountChange);
-        provider.on('chainChanged', () => location.reload());
+        try {
+            provider.on('accountsChanged', handleAccountChange);
+            provider.on('chainChanged', () => location.reload());
+        } catch (e) {
+            console.warn('Could not setup wallet listeners:', e);
+        }
     }
 }
 
 /**
- * Check if wallet is already connected
+ * Check if wallet is already connected - with fast timeout
  */
 export async function checkWalletConnection() {
     const provider = getProvider();
     if (!provider) {
+        console.log('No wallet provider found');
         return { connected: false, error: 'No wallet found' };
     }
 
     try {
-        const accounts = await provider.request({ method: 'eth_accounts' });
-        if (accounts.length > 0 && state.username) {
+        // Fast timeout to prevent hanging on wallet check
+        const timeoutPromise = new Promise((resolve) => 
+            setTimeout(() => resolve([]), 2000)
+        );
+        
+        const accountsPromise = provider.request({ method: 'eth_accounts' });
+        const accounts = await Promise.race([accountsPromise, timeoutPromise]);
+        
+        if (accounts && accounts.length > 0 && state.username) {
             state.address = accounts[0];
             return { connected: true, address: accounts[0] };
         }
@@ -102,7 +114,13 @@ export async function ensureCorrectNetwork() {
             if (switchError.code === 4902) {
                 await provider.request({
                     method: 'wallet_addEthereumChain',
-                    params: [RAMESTTA_CONFIG]
+                    params: [{
+                        chainId: RAMESTTA_CONFIG.chainId,
+                        chainName: RAMESTTA_CONFIG.chainName,
+                        nativeCurrency: RAMESTTA_CONFIG.nativeCurrency,
+                        rpcUrls: RAMESTTA_CONFIG.rpcUrls,
+                        blockExplorerUrls: RAMESTTA_CONFIG.blockExplorerUrls
+                    }]
                 });
             } else {
                 throw switchError;
@@ -112,140 +130,81 @@ export async function ensureCorrectNetwork() {
 }
 
 /**
- * Check if address is registered on contract
+ * Handle account changes
  */
-export async function checkContractRegistration(address = state.address) {
-    if (!state.contract || !address) return null;
-
-    try {
-        const identity = await state.contract.identities(address);
-        
-        if (identity && identity.isActive) {
-            return {
-                isActive: true,
-                displayName: identity.displayName || '',
-                publicKeyX: identity.publicKeyX,
-                publicKeyY: identity.publicKeyY,
-                registeredAt: Number(identity.registeredAt),
-                lastUpdated: Number(identity.lastUpdated),
-                keyVersion: Number(identity.keyVersion || 0)
-            };
-        }
-        return null;
-    } catch (error) {
-        console.error('Check registration error:', error);
-        return null;
+function handleAccountChange(accounts) {
+    if (accounts.length === 0) {
+        clearAllData();
+        location.reload();
+    } else if (accounts[0] !== state.address) {
+        state.address = accounts[0];
+        location.reload();
     }
 }
 
 /**
- * Register on smart contract
+ * Disconnect wallet
  */
-export async function registerOnContract(displayName) {
+export function disconnectWallet() {
+    clearAllData();
+    selectedProvider = null;
+    location.reload();
+}
+
+/**
+ * Check if user is registered on chain
+ */
+export async function checkRegistration(address) {
+    try {
+        const provider = new ethers.JsonRpcProvider(RAMESTTA_CONFIG.rpcUrls[0]);
+        const contract = new ethers.Contract(CONTRACTS.registry, REGISTRY_ABI, provider);
+        const identity = await contract.identities(address);
+        
+        return {
+            isRegistered: identity.isActive,
+            displayName: identity.displayName || '',
+            publicKeyX: identity.publicKeyX
+        };
+    } catch (error) {
+        console.error('Check registration error:', error);
+        return { isRegistered: false };
+    }
+}
+
+/**
+ * Register user on chain
+ */
+export async function registerUser(displayName) {
+    if (!state.contract || !state.signer) {
+        throw new Error('Wallet not connected');
+    }
+
+    // Generate a placeholder public key for registration
+    const publicKeyX = ethers.keccak256(ethers.toUtf8Bytes(state.address + Date.now()));
+    
+    const tx = await state.contract.register(publicKeyX, displayName);
+    await tx.wait();
+    
+    state.isRegistered = true;
+    state.username = displayName;
+    saveUserData();
+    
+    return tx;
+}
+
+/**
+ * Update display name on chain
+ */
+export async function updateDisplayName(newName) {
     if (!state.contract) {
         throw new Error('Contract not initialized');
     }
 
-    // Generate public key (in production, use actual X25519 key)
-    const publicKeyX = ethers.id('mumblechat-' + state.address).substring(0, 66);
-
-    const tx = await state.contract.register(publicKeyX, displayName);
-    const receipt = await tx.wait();
-
-    state.isOnChainRegistered = true;
-    state.displayName = displayName;
-    state.registeredAt = Date.now();
-    state.lastUpdated = Date.now();
-    state.publicKey = publicKeyX;
-    
-    saveUserData();
-
-    return receipt;
-}
-
-/**
- * Update display name on contract
- */
-export async function updateDisplayName(newDisplayName) {
-    if (!state.contract || !state.isOnChainRegistered) {
-        throw new Error('Not registered on contract');
-    }
-
-    const tx = await state.contract.updateDisplayName(newDisplayName);
+    const tx = await state.contract.updateDisplayName(newName);
     await tx.wait();
-
-    state.displayName = newDisplayName;
-    state.lastUpdated = Date.now();
-    saveUserData();
-
-    return true;
-}
-
-/**
- * Rotate identity keys (security feature)
- */
-export async function rotateKeys() {
-    if (!state.contract || !state.isOnChainRegistered) {
-        throw new Error('Not registered on contract');
-    }
-
-    // Generate new keypair
-    const newPublicKeyX = ethers.id('mumblechat-v' + (state.keyVersion + 1) + '-' + state.address).substring(0, 66);
-    const newPublicKeyY = ethers.id('mumblechat-y' + (state.keyVersion + 1) + '-' + state.address).substring(0, 66);
-    const newKeyVersion = state.keyVersion + 1;
-
-    const tx = await state.contract.updateIdentity(newPublicKeyX, newPublicKeyY, newKeyVersion);
-    await tx.wait();
-
-    state.publicKey = newPublicKeyX;
-    state.keyVersion = newKeyVersion;
-    state.lastUpdated = Date.now();
-    saveUserData();
-
-    return { keyVersion: newKeyVersion };
-}
-
-/**
- * Handle account change event
- */
-function handleAccountChange(accounts) {
-    if (accounts.length === 0) {
-        disconnectWallet();
-    } else {
-        state.address = accounts[0];
-        updateState('address', accounts[0]);
-    }
-}
-
-/**
- * Disconnect wallet and clear data
- */
-export function disconnectWallet() {
-    if (state.relaySocket) {
-        state.relaySocket.close();
-    }
-    clearAllData();
-}
-
-/**
- * Get wallet balance
- */
-export async function getWalletBalance() {
-    if (!state.wallet || !state.address) return '0';
     
-    try {
-        const balance = await state.wallet.getBalance(state.address);
-        return ethers.formatEther(balance);
-    } catch (error) {
-        console.error('Get balance error:', error);
-        return '0';
-    }
-}
-
-/**
- * Shorten address for display
- */
-export function shortenAddress(address) {
-    if (!address) return '';
-    return address.slice(0, 6) + '...' + address.slice(-4);
+    state.username = newName;
+    saveUserData();
+    
+    return tx;
 }
