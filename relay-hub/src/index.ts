@@ -353,8 +353,8 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
             const payload = JSON.parse(data.toString());
             
             // *** NEW: Handle authentication to register user address ***
-            if (payload.type === 'authenticate' && payload.address) {
-                const addr = payload.address.toLowerCase();
+            if (payload.type === 'authenticate' && payload.address || payload.walletAddress) {
+                const addr = payload.address || payload.walletAddress.toLowerCase();
                 user.walletAddress = addr;
                 
                 // Register in global user registry
