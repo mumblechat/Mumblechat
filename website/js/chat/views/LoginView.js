@@ -532,7 +532,7 @@ async function handleConnect() {
         // Check if already registered on-chain (optional - not required to use chat)
         const registration = await checkContractRegistration();
         
-        if (registration) {
+        if (registration && registration.isRegistered) {
             // Already registered on-chain - use that data
             state.isOnChainRegistered = true;
             state.displayName = registration.displayName;
@@ -540,21 +540,22 @@ async function handleConnect() {
             state.lastUpdated = registration.lastUpdated;
             state.publicKey = registration.publicKeyX;
             state.keyVersion = registration.keyVersion;
+            state.username = registration.displayName || state.address.slice(0, 6);
+            state.isRegistered = true;
+            
+            saveUserData();
+            
+            // Go to main app
+            window.dispatchEvent(new CustomEvent('userAuthenticated'));
         } else {
-            // Not registered on-chain - that's OK, use address as display name
+            // Not registered on-chain - show registration dialog
             state.isOnChainRegistered = false;
-            state.displayName = shortenAddress(state.address);
-            console.log('ℹ️ User not registered on-chain, using address as display name');
+            console.log('ℹ️ User not registered on-chain, showing registration dialog');
+            
+            // Hide spinner and show registration form
+            spinner.style.display = 'none';
+            renderRegistrationView();
         }
-        
-        // Set common user data and proceed to chat
-        state.username = state.address.slice(0, 6);
-        state.isRegistered = true;
-        
-        saveUserData();
-        
-        // Redirect to main app - skip registration screen
-        window.dispatchEvent(new CustomEvent('userAuthenticated'));
     } catch (error) {
         console.error('Connection failed:', error);
         showToast('Connection failed: ' + error.message, 'error');

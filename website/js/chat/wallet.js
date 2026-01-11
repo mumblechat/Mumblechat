@@ -154,11 +154,13 @@ export function disconnectWallet() {
 /**
  * Check if user is registered on chain
  */
-export async function checkRegistration(address) {
+export async function checkRegistration(address = null) {
+    const addr = address || state.address;
+    if (!addr) return { isRegistered: false };
     try {
         const provider = new ethers.JsonRpcProvider(RAMESTTA_CONFIG.rpcUrls[0]);
         const contract = new ethers.Contract(CONTRACTS.registry, REGISTRY_ABI, provider);
-        const identity = await contract.identities(address);
+        const identity = await contract.identities(addr);
         
         return {
             isRegistered: identity.isActive,
