@@ -572,40 +572,68 @@ export function renderRegistrationView() {
         <div class="login-container">
             <div class="login-card">
                 <div class="login-logo">📝</div>
-                <h1 class="login-title">Set Display Name</h1>
-                <p class="login-subtitle">Choose how others will see you</p>
+                <h1 class="login-title">Complete Registration</h1>
+                <p class="login-subtitle">Register on blockchain to use MumbleChat</p>
+                
+                <div class="wallet-info" style="background: rgba(99, 102, 241, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                    <small style="color: #94a3b8;">Wallet Connected</small>
+                    <p style="font-family: monospace; font-size: 12px; color: #e2e8f0; margin: 4px 0;">${state.address}</p>
+                </div>
                 
                 <div id="registrationForm" class="login-form">
                     <div class="form-group">
+                        <label style="color: #94a3b8; font-size: 13px; margin-bottom: 8px; display: block;">Display Name</label>
                         <input type="text" id="displayNameInput" class="form-input" 
-                            placeholder="Enter display name" autofocus>
+                            placeholder="Enter your display name" autofocus
+                            style="width: 100%; padding: 14px; border-radius: 8px; border: 1px solid #374151; background: #1f2937; color: white; font-size: 16px;">
                     </div>
                     
-                    <button id="registerBtn" class="btn-connect">
-                        Register & Enter Chat
+                    <button id="registerBtn" class="btn-connect" style="width: 100%; padding: 14px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-weight: 600; border: none; cursor: pointer; margin-top: 16px;">
+                        🚀 Register on Blockchain
+                    </button>
+                    
+                    <button id="skipBtn" class="btn-skip" style="width: 100%; padding: 12px; border-radius: 8px; background: transparent; color: #94a3b8; border: 1px solid #374151; cursor: pointer; margin-top: 12px; font-size: 14px;">
+                        Skip for now (limited features)
                     </button>
                 </div>
                 
-                <div id="regSpinner" class="login-spinner" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Registering on blockchain...</p>
+                <div id="regSpinner" class="login-spinner" style="display: none; text-align: center; padding: 40px;">
+                    <div class="spinner" style="border: 3px solid #374151; border-top: 3px solid #6366f1; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                    <p style="color: #94a3b8; margin-top: 16px;">Registering on blockchain...</p>
+                    <p style="color: #64748b; font-size: 12px;">Please confirm the transaction in your wallet</p>
                 </div>
             </div>
         </div>
+        <style>
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            .form-input:focus { outline: none; border-color: #6366f1; }
+            .btn-connect:hover { opacity: 0.9; transform: translateY(-1px); }
+            .btn-skip:hover { background: rgba(255,255,255,0.05); }
+        </style>
     `;
     
     const displayNameInput = document.getElementById('displayNameInput');
     const registerBtn = document.getElementById('registerBtn');
+    const skipBtn = document.getElementById('skipBtn');
     
     registerBtn.addEventListener('click', handleRegistration);
     displayNameInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleRegistration();
     });
+    
+    // Skip registration for testing
+    skipBtn.addEventListener('click', () => {
+        state.displayName = shortenAddress(state.address);
+        state.username = state.address.slice(0, 6);
+        state.isRegistered = true;
+        state.isOnChainRegistered = false;
+        saveUserData();
+        showToast('Continuing without on-chain registration', 'info');
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('userAuthenticated'));
+        }, 500);
+    });
 }
-
-/**
- * Handle registration submission
- */
 async function handleRegistration() {
     const displayNameInput = document.getElementById('displayNameInput');
     const registrationForm = document.getElementById('registrationForm');
