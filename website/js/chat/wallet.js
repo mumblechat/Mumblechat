@@ -221,3 +221,17 @@ export function shortenAddress(address, chars = 4) {
     if (!address) return '';
     return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
 }
+
+/**
+ * Alias for registerUser (for backward compatibility)
+ */
+export const registerOnContract = registerUser;
+
+/**
+ * Rotate encryption keys (placeholder for future implementation)
+ */
+export async function rotateKeys() {
+    // TODO: Implement key rotation
+    console.log('Key rotation not yet implemented');
+    throw new Error('Key rotation not yet implemented');
+}
