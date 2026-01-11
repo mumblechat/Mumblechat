@@ -1,30 +1,13 @@
 /**
- * MumbleChat Relay Hub
+ * MumbleChat Relay Hub - WITH CROSS-NODE MESSAGING
  * 
- * Managed endpoint service for node operators who don't want to deal with
- * IPs, domains, port forwarding, or any technical configuration.
- * 
- * How it works:
- * 1. Node operator downloads desktop app
- * 2. App connects to this hub (outbound connection - works behind any NAT)
- * 3. Hub assigns a unique endpoint: hub.mumblechat.io/node/{nodeId}
- * 4. Users connect to hub, hub tunnels traffic to the node
- * 5. Hub takes 10% fee from node rewards
- * 
- * Architecture:
- * 
- *   Node Owner                    Hub                         Users
- *   ──────────                   ────                        ─────
- *   [Desktop App] ─────────────► [This Server] ◄─────────── [Mobile/Web App]
- *   (outbound tunnel)            (public endpoint)           (users connect)
- *   
- *   No port forwarding needed!   We handle everything!
+ * Managed endpoint service for node operators.
+ * Now supports cross-node message relay!
  */
 
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
-import { ethers } from 'ethers';
 import { v4 as uuidv4 } from 'uuid';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -50,7 +33,7 @@ interface ConnectedNode {
     socket: WebSocket;
     connectedAt: Date;
     lastHeartbeat: Date;
-    connectedUsers: Map<string, WebSocket>;  // userId -> user socket
+    connectedUsers: Map<string, WebSocket>;  // sessionId -> user socket
     stats: {
         messagesRelayed: number;
         bytesTransferred: number;
@@ -60,7 +43,7 @@ interface ConnectedNode {
 interface ConnectedUser {
     sessionId: string;
     walletAddress?: string;
-    nodeId: string;  // Which node they're connected through
+    nodeId: string;  // Which node they're connected through (tunnelId)
     socket: WebSocket;
     connectedAt: Date;
 }
@@ -68,8 +51,11 @@ interface ConnectedUser {
 // ============ State ============
 
 const connectedNodes: Map<string, ConnectedNode> = new Map();  // tunnelId -> node
-const nodeByWallet: Map<string, string> = new Map();  // wallet -> tunnelId
+const nodeByWallet: Map<string, string> = new Map();  // node wallet -> tunnelId
 const connectedUsers: Map<string, ConnectedUser> = new Map();  // sessionId -> user
+
+// *** NEW: Global user registry for cross-node routing ***
+const usersByAddress: Map<string, { sessionId: string, tunnelId: string }> = new Map();  // user wallet -> session info
 
 // ============ Express App ============
 
@@ -83,6 +69,7 @@ app.get('/health', (req, res) => {
         status: 'ok',
         nodes: connectedNodes.size,
         users: connectedUsers.size,
+        registeredUsers: usersByAddress.size,
         uptime: process.uptime()
     });
 });
@@ -101,6 +88,7 @@ app.get('/api/stats', (req, res) => {
     res.json({
         totalNodes: connectedNodes.size,
         totalUsers: connectedUsers.size,
+        registeredUsers: usersByAddress.size,
         hubFeePercent: config.hubFeePercent,
         nodes: nodeStats
     });
@@ -109,16 +97,33 @@ app.get('/api/stats', (req, res) => {
 // Get available endpoints for users
 app.get('/api/endpoints', (req, res) => {
     const endpoints = Array.from(connectedNodes.values())
-        .filter(node => Date.now() - node.lastHeartbeat.getTime() < 60000)  // Active in last minute
+        .filter(node => Date.now() - node.lastHeartbeat.getTime() < 60000)
         .map(node => ({
             endpoint: `wss://${config.domain}/node/${node.tunnelId}`,
             tunnelId: node.tunnelId,
             users: node.connectedUsers.size,
-            load: node.connectedUsers.size / 100  // Assume max 100 users per node for load balancing
+            load: node.connectedUsers.size / 100
         }))
-        .sort((a, b) => a.load - b.load);  // Sort by load (least loaded first)
+        .sort((a, b) => a.load - b.load);
 
     res.json({ endpoints });
+});
+
+// *** NEW: Check if a user is online (for cross-node status) ***
+app.get('/api/user/:address', (req, res) => {
+    const address = req.params.address.toLowerCase();
+    const userInfo = usersByAddress.get(address);
+    
+    if (userInfo) {
+        const node = connectedNodes.get(userInfo.tunnelId);
+        res.json({
+            online: true,
+            nodeId: userInfo.tunnelId,
+            nodeEndpoint: node ? `${config.domain}/node/${node.tunnelId}` : null
+        });
+    } else {
+        res.json({ online: false });
+    }
 });
 
 // ============ HTTP Server ============
@@ -134,16 +139,12 @@ wss.on('connection', (ws: WebSocket, req) => {
     
     console.log(`[Hub] New connection: ${url}`);
 
-    // Route based on URL
     if (url === '/node/connect') {
-        // This is a NODE connecting to establish tunnel
         handleNodeConnection(ws);
     } else if (url.startsWith('/node/')) {
-        // This is a USER connecting to a specific node
         const tunnelId = url.replace('/node/', '');
         handleUserConnection(ws, tunnelId);
     } else if (url === '/user/connect') {
-        // User wants to connect to best available node
         handleAutoUserConnection(ws);
     } else {
         ws.close(4000, 'Invalid endpoint');
@@ -154,7 +155,7 @@ wss.on('connection', (ws: WebSocket, req) => {
 
 function handleNodeConnection(ws: WebSocket) {
     let node: ConnectedNode | null = null;
-    const tunnelId = uuidv4().slice(0, 8);  // Short unique ID
+    const tunnelId = uuidv4().slice(0, 8);
 
     ws.on('message', async (data: Buffer) => {
         try {
@@ -162,11 +163,7 @@ function handleNodeConnection(ws: WebSocket) {
 
             switch (message.type) {
                 case 'NODE_AUTH':
-                    // Node authenticating with wallet signature
                     const { walletAddress, signature, nodeId } = message;
-                    
-                    // TODO: Verify signature
-                    // For now, just accept
                     
                     node = {
                         nodeId: nodeId || tunnelId,
@@ -185,14 +182,13 @@ function handleNodeConnection(ws: WebSocket) {
                     connectedNodes.set(tunnelId, node);
                     nodeByWallet.set(walletAddress, tunnelId);
                     
-                    // Send endpoint to node
                     ws.send(JSON.stringify({
                         type: 'TUNNEL_ESTABLISHED',
                         tunnelId,
                         endpoint: `wss://${config.domain}/node/${tunnelId}`,
                         httpEndpoint: `https://${config.domain}/node/${tunnelId}`,
                         hubFeePercent: config.hubFeePercent,
-                        message: 'Your node is now accessible! Share this endpoint or register it on blockchain.'
+                        message: 'Your node is now accessible!'
                     }));
                     
                     console.log(`[Hub] Node connected: ${tunnelId} (wallet: ${walletAddress})`);
@@ -206,19 +202,67 @@ function handleNodeConnection(ws: WebSocket) {
                     break;
 
                 case 'MESSAGE_TO_USER':
-                    // Node sending message to a user
+                    // Node sending message to a user - CHECK CROSS-NODE
                     if (node) {
-                        const userSocket = node.connectedUsers.get(message.userId);
+                        const { userId, payload } = message;
+                        let delivered = false;
+                        
+                        // First try local user (on same node)
+                        const userSocket = node.connectedUsers.get(userId);
                         if (userSocket && userSocket.readyState === WebSocket.OPEN) {
-                            userSocket.send(JSON.stringify(message.payload));
+                            userSocket.send(JSON.stringify(payload));
                             node.stats.messagesRelayed++;
-                            node.stats.bytesTransferred += data.length;
+                            delivered = true;
+                        }
+                        
+                        // *** NEW: Cross-node delivery ***
+                        if (!delivered && payload.to) {
+                            const targetAddr = payload.to.toLowerCase();
+                            const targetUser = usersByAddress.get(targetAddr);
+                            
+                            if (targetUser && targetUser.tunnelId !== node.tunnelId) {
+                                // User is on DIFFERENT node - route through that node
+                                const targetNode = connectedNodes.get(targetUser.tunnelId);
+                                if (targetNode && targetNode.socket.readyState === WebSocket.OPEN) {
+                                    // Forward to target node
+                                    targetNode.socket.send(JSON.stringify({
+                                        type: 'CROSS_NODE_MESSAGE',
+                                        targetSessionId: targetUser.sessionId,
+                                        payload: payload
+                                    }));
+                                    node.stats.messagesRelayed++;
+                                    console.log(`[Hub] Cross-node relay: ${node.tunnelId} -> ${targetUser.tunnelId} for ${targetAddr.slice(0,8)}...`);
+                                    delivered = true;
+                                }
+                            }
                         }
                     }
                     break;
 
+                // *** NEW: Handle cross-node message from other node ***
+                case 'CROSS_NODE_DELIVERY':
+                    if (node && message.targetSessionId && message.payload) {
+                        const userSocket = node.connectedUsers.get(message.targetSessionId);
+                        if (userSocket && userSocket.readyState === WebSocket.OPEN) {
+                            userSocket.send(JSON.stringify(message.payload));
+                            node.stats.messagesRelayed++;
+                        }
+                    }
+                    break;
+
+                // *** NEW: User registered their address with the node ***
+                case 'USER_AUTHENTICATED':
+                    if (node && message.sessionId && message.address) {
+                        const addr = message.address.toLowerCase();
+                        usersByAddress.set(addr, {
+                            sessionId: message.sessionId,
+                            tunnelId: node.tunnelId
+                        });
+                        console.log(`[Hub] User ${addr.slice(0,8)}... registered on node ${node.tunnelId}`);
+                    }
+                    break;
+
                 case 'BROADCAST':
-                    // Node broadcasting to all connected users
                     if (node) {
                         for (const [userId, userSocket] of node.connectedUsers) {
                             if (userSocket.readyState === WebSocket.OPEN) {
@@ -236,7 +280,14 @@ function handleNodeConnection(ws: WebSocket) {
 
     ws.on('close', () => {
         if (node) {
-            // Notify all users connected through this node
+            // Remove all users registered through this node from global registry
+            for (const [addr, info] of usersByAddress) {
+                if (info.tunnelId === node.tunnelId) {
+                    usersByAddress.delete(addr);
+                }
+            }
+            
+            // Notify all users
             for (const [userId, userSocket] of node.connectedUsers) {
                 userSocket.send(JSON.stringify({
                     type: 'NODE_DISCONNECTED',
@@ -281,7 +332,7 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
     connectedUsers.set(sessionId, user);
     node.connectedUsers.set(sessionId, ws);
 
-    // Notify node of new user
+    // Notify node
     node.socket.send(JSON.stringify({
         type: 'USER_CONNECTED',
         sessionId,
@@ -295,26 +346,103 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
         message: 'Connected to relay node'
     }));
 
-    console.log(`[Hub] User connected to node ${tunnelId}: ${sessionId}`);
+    console.log(`[Hub] User connected to node ${tunnelId}: ${sessionId.slice(0,8)}...`);
 
     ws.on('message', (data: Buffer) => {
-        // Forward all user messages to the node
-        if (node.socket.readyState === WebSocket.OPEN) {
-            node.socket.send(JSON.stringify({
-                type: 'MESSAGE_FROM_USER',
-                sessionId,
-                payload: JSON.parse(data.toString())
-            }));
-            node.stats.messagesRelayed++;
-            node.stats.bytesTransferred += data.length;
+        try {
+            const payload = JSON.parse(data.toString());
+            
+            // *** NEW: Handle authentication to register user address ***
+            if (payload.type === 'authenticate' && payload.address) {
+                const addr = payload.address.toLowerCase();
+                user.walletAddress = addr;
+                
+                // Register in global user registry
+                usersByAddress.set(addr, {
+                    sessionId,
+                    tunnelId
+                });
+                console.log(`[Hub] User ${addr.slice(0,8)}... authenticated on node ${tunnelId}`);
+            }
+            
+            // *** NEW: Direct hub routing for relay messages ***
+            if (payload.type === 'relay' && payload.to) {
+                const targetAddr = payload.to.toLowerCase();
+                const targetInfo = usersByAddress.get(targetAddr);
+                
+                if (targetInfo) {
+                    const targetNode = connectedNodes.get(targetInfo.tunnelId);
+                    if (targetNode) {
+                        if (targetInfo.tunnelId === tunnelId) {
+                            // Same node - forward to node
+                            node.socket.send(JSON.stringify({
+                                type: 'MESSAGE_FROM_USER',
+                                sessionId,
+                                payload
+                            }));
+                        } else {
+                            // Different node - CROSS-NODE RELAY
+                            targetNode.socket.send(JSON.stringify({
+                                type: 'CROSS_NODE_MESSAGE',
+                                targetSessionId: targetInfo.sessionId,
+                                sourceSessionId: sessionId,
+                                payload: {
+                                    type: 'message',
+                                    from: payload.from,
+                                    senderAddress: payload.from,
+                                    to: targetAddr,
+                                    payload: payload.encryptedBlob || payload.payload,
+                                    encryptedBlob: payload.encryptedBlob || payload.payload,
+                                    messageId: payload.messageId,
+                                    timestamp: payload.timestamp || Date.now()
+                                }
+                            }));
+                            node.stats.messagesRelayed++;
+                            console.log(`[Hub] Cross-node: ${tunnelId} -> ${targetInfo.tunnelId} for ${targetAddr.slice(0,8)}...`);
+                            
+                            // Send delivery confirmation
+                            ws.send(JSON.stringify({
+                                type: 'delivery_receipt',
+                                messageId: payload.messageId,
+                                status: 'routed'
+                            }));
+                        }
+                        return;  // Don't forward to node again
+                    }
+                }
+            }
+            
+            // Forward all other messages to the node
+            if (node.socket.readyState === WebSocket.OPEN) {
+                node.socket.send(JSON.stringify({
+                    type: 'MESSAGE_FROM_USER',
+                    sessionId,
+                    payload
+                }));
+                node.stats.messagesRelayed++;
+                node.stats.bytesTransferred += data.length;
+            }
+        } catch (e) {
+            // Forward raw data if not JSON
+            if (node.socket.readyState === WebSocket.OPEN) {
+                node.socket.send(JSON.stringify({
+                    type: 'MESSAGE_FROM_USER',
+                    sessionId,
+                    payload: data.toString()
+                }));
+            }
         }
     });
 
     ws.on('close', () => {
+        // Remove from global registry
+        if (user.walletAddress) {
+            usersByAddress.delete(user.walletAddress);
+        }
+        
         connectedUsers.delete(sessionId);
         node.connectedUsers.delete(sessionId);
         
-        // Notify node
         if (node.socket.readyState === WebSocket.OPEN) {
             node.socket.send(JSON.stringify({
                 type: 'USER_DISCONNECTED',
@@ -322,19 +450,17 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
             }));
         }
         
-        console.log(`[Hub] User disconnected: ${sessionId}`);
+        console.log(`[Hub] User disconnected: ${sessionId.slice(0,8)}...`);
     });
 }
 
-// ============ Auto User Connection (Load Balanced) ============
+// ============ Auto User Connection ============
 
 function handleAutoUserConnection(ws: WebSocket) {
-    // Find least loaded active node
     let bestNode: ConnectedNode | null = null;
     let minLoad = Infinity;
 
     for (const node of connectedNodes.values()) {
-        // Check if node is active (heartbeat in last 60 seconds)
         if (Date.now() - node.lastHeartbeat.getTime() < 60000) {
             const load = node.connectedUsers.size;
             if (load < minLoad) {
@@ -353,7 +479,6 @@ function handleAutoUserConnection(ws: WebSocket) {
         return;
     }
 
-    // Connect user to the best node
     handleUserConnection(ws, bestNode.tunnelId);
 }
 
@@ -361,18 +486,17 @@ function handleAutoUserConnection(ws: WebSocket) {
 
 server.listen(config.port, () => {
     console.log('═'.repeat(70));
-    console.log('   MumbleChat Relay Hub - Managed Endpoint Service');
+    console.log('   MumbleChat Relay Hub - WITH CROSS-NODE MESSAGING');
     console.log('═'.repeat(70));
     console.log(`   Server running on port ${config.port}`);
     console.log(`   Domain: ${config.domain}`);
     console.log(`   Hub fee: ${config.hubFeePercent}%`);
     console.log('');
-    console.log('   Endpoints:');
-    console.log(`   • Node tunnel: ws://localhost:${config.port}/node/connect`);
-    console.log(`   • User connect: ws://localhost:${config.port}/user/connect`);
-    console.log(`   • User to node: ws://localhost:${config.port}/node/{tunnelId}`);
-    console.log(`   • API stats: http://localhost:${config.port}/api/stats`);
-    console.log(`   • API endpoints: http://localhost:${config.port}/api/endpoints`);
+    console.log('   Features:');
+    console.log('   ✓ Multi-node support');
+    console.log('   ✓ Cross-node message relay');
+    console.log('   ✓ Global user registry');
+    console.log('   ✓ Load balancing');
     console.log('═'.repeat(70));
 });
 
@@ -381,7 +505,6 @@ server.listen(config.port, () => {
 process.on('SIGINT', () => {
     console.log('\n[Hub] Shutting down...');
     
-    // Notify all nodes
     for (const node of connectedNodes.values()) {
         node.socket.send(JSON.stringify({
             type: 'HUB_SHUTDOWN',
