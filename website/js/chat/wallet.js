@@ -208,3 +208,16 @@ export async function updateDisplayName(newName) {
     
     return tx;
 }
+
+/**
+ * Alias for checkRegistration (for backward compatibility)
+ */
+export const checkContractRegistration = checkRegistration;
+
+/**
+ * Shorten an Ethereum address for display
+ */
+export function shortenAddress(address, chars = 4) {
+    if (!address) return '';
+    return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
+}
