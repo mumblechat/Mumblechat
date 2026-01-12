@@ -3,6 +3,31 @@
  * One-click installation and setup for browser/desktop nodes
  */
 
+// Contract Addresses (Ramestta Mainnet)
+const CONTRACTS = {
+    MCT_TOKEN: '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE',
+    REGISTRY: '0x4f8D4955F370881B05b68D2344345E749d8632e3'
+};
+
+// Staking amount (100 MCT for all tiers)
+const STAKE_AMOUNT = 100;
+
+// Contract ABIs
+const MCT_ABI = [
+    'function balanceOf(address account) external view returns (uint256)',
+    'function decimals() external view returns (uint8)',
+    'function allowance(address owner, address spender) external view returns (uint256)',
+    'function approve(address spender, uint256 amount) external returns (bool)'
+];
+
+const REGISTRY_ABI = [
+    'function isRegistered(address wallet) external view returns (bool)',
+    'function getIdentity(address wallet) external view returns (bytes32 publicKeyX, uint256 registeredAt, uint256 lastUpdated, bool isActive, string displayName)',
+    'function getRelayNode(address node) external view returns (string endpoint, uint256 stakedAmount, uint256 messagesRelayed, uint256 rewardsEarned, bool isActive, uint256 dailyUptimeSeconds, uint256 storageMB, uint8 tier, uint256 rewardMultiplier, bool isOnline)',
+    'function register(bytes32 publicKeyX, string displayName) external',
+    'function registerAsRelay(string endpoint, uint256 storageMB) external'
+];
+
 // OS Detection and Download URLs
 const DOWNLOAD_URLS = {
     Windows: {
@@ -166,6 +191,13 @@ class SetupWizard {
         this.selectedTier = 'bronze';
         this.consoleLog = [];
         
+        // Staking status
+        this.isIdentityRegistered = false;
+        this.isRelayStaked = false;
+        this.stakedAmount = 0;
+        this.provider = null;
+        this.signer = null;
+        
         this.init();
     }
 
@@ -254,8 +286,19 @@ class SetupWizard {
                 this.log('Please connect wallet first', 'error');
                 return;
             }
-            this.updateWizardStep(3);
+            // Check if already staked - skip to step 4
+            if (this.isRelayStaked) {
+                this.updateWizardStep(4);
+                this.prepareInstallStep();
+            } else {
+                this.updateWizardStep(3);
+            }
         } else if (this.currentStep === 3) {
+            // Must stake before proceeding
+            if (!this.isRelayStaked) {
+                this.log('Please stake MCT first to become a relay node', 'warning');
+                return;
+            }
             this.updateWizardStep(4);
             this.prepareInstallStep();
         }
@@ -277,6 +320,24 @@ class SetupWizard {
             const content = document.getElementById(`step${i}Content`);
             if (content) {
                 content.style.display = i === step ? 'block' : 'none';
+            }
+        }
+
+        // Update staking balance display when entering step 3
+        if (step === 3) {
+            const balanceEl = document.getElementById('stakingBalance');
+            if (balanceEl) {
+                const hasEnough = this.mctBalance >= STAKE_AMOUNT;
+                balanceEl.textContent = `${this.mctBalance.toFixed(2)} MCT`;
+                balanceEl.style.color = hasEnough ? 'var(--success)' : 'var(--error)';
+            }
+            
+            // Disable stake button if not enough MCT
+            const stakeBtn = document.getElementById('stakeBtn');
+            if (stakeBtn && this.mctBalance < STAKE_AMOUNT) {
+                stakeBtn.disabled = true;
+                stakeBtn.innerHTML = `❌ Need ${STAKE_AMOUNT} MCT (have ${this.mctBalance.toFixed(2)})`;
+                stakeBtn.style.background = 'var(--text-muted)';
             }
         }
 
@@ -335,23 +396,157 @@ class SetupWizard {
 
     async checkMCTBalance() {
         try {
-            const MCT_ADDRESS = '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE';
-            const MCT_ABI = [
-                'function balanceOf(address account) external view returns (uint256)',
-                'function decimals() external view returns (uint8)'
-            ];
-
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const mctContract = new ethers.Contract(MCT_ADDRESS, MCT_ABI, provider);
+            this.provider = new ethers.BrowserProvider(window.ethereum);
+            this.signer = await this.provider.getSigner();
+            
+            const mctContract = new ethers.Contract(CONTRACTS.MCT_TOKEN, MCT_ABI, this.provider);
             
             const balance = await mctContract.balanceOf(this.wallet);
             const decimals = await mctContract.decimals();
             this.mctBalance = parseFloat(ethers.formatUnits(balance, decimals));
             
             this.log(`MCT Balance: ${this.mctBalance.toFixed(2)} MCT`, 'success');
+            
+            // Check staking status
+            await this.checkStakingStatus();
+            
         } catch (error) {
             this.log(`Could not fetch MCT balance: ${error.message}`, 'warning');
             this.mctBalance = 0;
+        }
+    }
+
+    async checkStakingStatus() {
+        try {
+            const registry = new ethers.Contract(CONTRACTS.REGISTRY, REGISTRY_ABI, this.provider);
+            
+            // Check if identity is registered
+            this.isIdentityRegistered = await registry.isRegistered(this.wallet);
+            
+            // Check relay node status
+            const relayInfo = await registry.getRelayNode(this.wallet);
+            this.stakedAmount = parseFloat(ethers.formatEther(relayInfo[1]));
+            this.isRelayStaked = relayInfo[4]; // isActive
+            
+            if (this.isRelayStaked) {
+                this.log(`✅ Already staked as relay node: ${this.stakedAmount} MCT`, 'success');
+                this.showAlreadyStakedUI();
+            } else if (this.isIdentityRegistered) {
+                this.log('✅ Identity registered, ready to stake as relay', 'info');
+            } else {
+                this.log('ℹ️ Not yet registered on blockchain', 'info');
+            }
+        } catch (error) {
+            this.log(`Could not check staking status: ${error.message}`, 'warning');
+        }
+    }
+
+    showAlreadyStakedUI() {
+        // Update UI to show already staked status
+        const stakingSection = document.getElementById('stakingSection');
+        if (stakingSection) {
+            stakingSection.innerHTML = `
+                <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid var(--success); border-radius: 12px; padding: 20px; text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
+                    <h3 style="color: var(--success); margin: 0 0 8px;">Already Staked!</h3>
+                    <p style="color: var(--text-muted); margin: 0;">You have ${this.stakedAmount} MCT staked as a relay node.</p>
+                    <p style="color: var(--text-secondary); margin: 12px 0 0; font-size: 14px;">Proceed to download and run the desktop node.</p>
+                </div>
+            `;
+        }
+    }
+
+    async stakeAsRelay() {
+        if (this.isRelayStaked) {
+            this.log('Already staked as relay node!', 'success');
+            return true;
+        }
+
+        if (this.mctBalance < STAKE_AMOUNT) {
+            this.log(`❌ Need at least ${STAKE_AMOUNT} MCT to stake (you have ${this.mctBalance.toFixed(2)})`, 'error');
+            alert(`You need at least ${STAKE_AMOUNT} MCT to become a relay node. You have ${this.mctBalance.toFixed(2)} MCT.`);
+            return false;
+        }
+
+        const btn = document.getElementById('stakeBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Staking...';
+        }
+
+        try {
+            const registry = new ethers.Contract(CONTRACTS.REGISTRY, REGISTRY_ABI, this.signer);
+            const mct = new ethers.Contract(CONTRACTS.MCT_TOKEN, MCT_ABI, this.signer);
+
+            // Step 1: Register identity if not registered
+            if (!this.isIdentityRegistered) {
+                this.log('📝 Step 1/3: Registering identity on blockchain...', 'info');
+                
+                // Generate a simple public key from wallet address
+                const publicKeyX = ethers.keccak256(ethers.toUtf8Bytes(this.wallet + '-relay-node'));
+                const displayName = `Relay-${this.wallet.slice(2, 8)}`;
+                
+                const registerTx = await registry.register(publicKeyX, displayName);
+                this.log('⏳ Waiting for identity registration...', 'info');
+                await registerTx.wait();
+                this.log('✅ Identity registered!', 'success');
+                this.isIdentityRegistered = true;
+            } else {
+                this.log('✅ Step 1/3: Identity already registered', 'success');
+            }
+
+            // Step 2: Approve MCT tokens (101 MCT to cover 0.1% fee)
+            this.log('💰 Step 2/3: Approving MCT tokens...', 'info');
+            const approveAmount = ethers.parseEther('101'); // 101 MCT to cover fee
+            
+            const currentAllowance = await mct.allowance(this.wallet, CONTRACTS.REGISTRY);
+            if (currentAllowance < approveAmount) {
+                const approveTx = await mct.approve(CONTRACTS.REGISTRY, approveAmount);
+                this.log('⏳ Waiting for approval confirmation...', 'info');
+                await approveTx.wait();
+                this.log('✅ MCT tokens approved!', 'success');
+            } else {
+                this.log('✅ MCT already approved', 'success');
+            }
+
+            // Step 3: Register as relay node
+            this.log('🚀 Step 3/3: Staking as relay node...', 'info');
+            const endpoint = `hub.mumblechat.com/node/${this.wallet.slice(2, 14)}`;
+            const storageMB = 1024; // 1 GB default
+            
+            const stakeTx = await registry.registerAsRelay(endpoint, storageMB);
+            this.log('⏳ Waiting for staking confirmation...', 'info');
+            await stakeTx.wait();
+            
+            this.log('🎉 Successfully staked as relay node!', 'success');
+            this.isRelayStaked = true;
+            this.stakedAmount = STAKE_AMOUNT;
+
+            if (btn) {
+                btn.innerHTML = '✅ Staked!';
+                btn.style.background = 'var(--success)';
+            }
+
+            // Show success and auto-advance
+            this.showAlreadyStakedUI();
+            setTimeout(() => this.nextStep(), 1500);
+            
+            return true;
+
+        } catch (error) {
+            this.log(`❌ Staking failed: ${error.message}`, 'error');
+            
+            if (error.message.includes('user rejected')) {
+                this.log('Transaction was cancelled by user', 'warning');
+            } else if (error.message.includes('insufficient funds')) {
+                this.log('Not enough RAMA for gas fees', 'error');
+            }
+            
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '🔒 Stake 100 MCT';
+            }
+            return false;
         }
     }
 

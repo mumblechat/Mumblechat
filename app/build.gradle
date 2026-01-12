@@ -238,6 +238,9 @@ dependencies {
     // Http client
     implementation libs.okhttp
     implementation libs.gson
+    
+    // WebSocket server for mobile relay
+    implementation 'org.java-websocket:Java-WebSocket:1.5.4'
 
     implementation libs.appcompat
     implementation libs.material //'com.google.android.material:material:1.9.0'

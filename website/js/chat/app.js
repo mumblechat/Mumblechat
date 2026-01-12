@@ -1,11 +1,14 @@
 /**
  * MumbleChat Main Application
  * Initializes the app and manages view routing
+ * WITH END-TO-END ENCRYPTION
  */
 
 import { state, loadPersistedData } from './state.js';
 import { setupWalletListeners, checkWalletConnection } from './wallet.js';
 import { connectToRelay, updateRelayStatus } from './relay.js';
+import { refreshAllContactsOnlineStatus, loadPublicKeys } from './contacts.js';
+import { initCrypto } from './crypto.js';
 import { renderLoginView, getLoginStyles } from './views/LoginView.js';
 import { renderChatsView, getChatsStyles } from './views/ChatsView.js';
 import { renderConversationView, getConversationStyles } from './views/ConversationView.js';
@@ -51,16 +54,35 @@ export async function initializeApp() {
     // Load persisted data
     loadPersistedData();
     
+    // Load public keys for E2EE
+    loadPublicKeys();
+    
     // Setup wallet listeners
     setupWalletListeners();
     
     // Check if user is authenticated
     const walletCheck = await checkWalletConnection();
     
+    // Initialize cryptography if wallet connected
+    if (walletCheck && state.address) {
+        console.log('🔐 Initializing E2E encryption...');
+        await initCrypto();
+    }
+    
     if (walletCheck.connected && state.isRegistered) {
         // User is authenticated - show main app
         renderMainApp();
         connectToRelay();
+        
+        // Start periodic online status check (every 15 seconds)
+        setInterval(() => {
+            refreshAllContactsOnlineStatus();
+        }, 15000);
+        
+        // Initial check after 2 seconds
+        setTimeout(() => {
+            refreshAllContactsOnlineStatus();
+        }, 2000);
     } else {
         // Show login screen
         renderLoginView();
@@ -135,18 +157,6 @@ function renderMainApp() {
                     <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
                 </svg>
                 <span>Settings</span>
-            </div>
-        </div>
-
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <div class="status-item">
-                <span class="status-dot connected" id="walletDot"></span>
-                <span id="walletStatus">Wallet: ${state.address?.slice(0, 10)}...</span>
-            </div>
-            <div class="status-item">
-                <span class="status-dot" id="relayDot"></span>
-                <span id="relayStatus">Relay: Connecting...</span>
             </div>
         </div>
     `;

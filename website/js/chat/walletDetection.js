@@ -137,9 +137,20 @@ const LEGACY_WALLET_PROVIDERS = {
     }
 };
 
-// Detect if running on mobile
+// Detect if running on mobile (improved detection)
 export function isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Check user agent
+    const uaCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(navigator.userAgent);
+    
+    // Check for touch capability and small screen
+    const touchCheck = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const screenCheck = window.innerWidth <= 768;
+    
+    // Check for standalone mode (PWA)
+    const standaloneCheck = window.matchMedia('(display-mode: standalone)').matches;
+    
+    // Mobile if UA says so, OR (has touch AND small screen)
+    return uaCheck || (touchCheck && screenCheck) || standaloneCheck;
 }
 
 // Detect if running in a wallet's in-app browser

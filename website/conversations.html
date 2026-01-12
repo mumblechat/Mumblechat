@@ -3,15 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MumbleChat">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0c1729">
+    <meta name="application-name" content="MumbleChat">
+    <meta name="msapplication-TileColor" content="#0c1729">
+    <meta name="msapplication-tap-highlight" content="no">
+    
     <title>MumbleChat - Encrypted Messaging</title>
+    
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="apple-touch-icon" href="icons/icon-152.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.svg">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-152.svg">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.svg">
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-128.svg">
+    
+    <!-- Manifest -->
     <link rel="manifest" href="manifest-mumblechat.json">
-    <link rel="apple-touch-icon" href="icons/icon-192.svg">
-    <link rel="stylesheet" href="css/chat-styles.css?v=4">
+    
+    <!-- Splash screens for iOS -->
+    <meta name="apple-mobile-web-app-title" content="MumbleChat">
+    
+    <link rel="stylesheet" href="css/chat-styles.css?v=5">
+    
     <style>
         .back-to-website {
             position: fixed !important;
@@ -31,12 +51,109 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             box-shadow: 0 2px 12px rgba(0,0,0,0.4);
             transition: all 0.2s;
-            opacity: 1 !important;
-            visibility: visible !important;
         }
         .back-to-website:hover {
             background: #4f46e5 !important;
             transform: translateY(-1px);
+        }
+        
+        /* PWA Install Banner */
+        .pwa-install-banner {
+            position: fixed;
+            bottom: 80px;
+            left: 16px;
+            right: 16px;
+            background: linear-gradient(135deg, #1b8cff, #6366f1);
+            color: white;
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            z-index: 10000;
+            display: none;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .pwa-install-banner.show {
+            display: block;
+        }
+        
+        .pwa-install-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .pwa-install-icon {
+            font-size: 36px;
+            flex-shrink: 0;
+        }
+        
+        .pwa-install-text h3 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+            font-weight: 700;
+        }
+        
+        .pwa-install-text p {
+            margin: 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .pwa-install-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .pwa-install-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .pwa-install-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .pwa-install-btn.primary {
+            background: white;
+            color: #1b8cff;
+        }
+        
+        .pwa-install-btn.secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        /* iOS Install Instructions */
+        .ios-install-steps {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            font-size: 13px;
+        }
+        
+        .ios-install-steps p {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .ios-install-steps p + p {
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -45,6 +162,27 @@
     <a href="index.html" class="back-to-website">
         ← Website
     </a>
+    
+    <!-- PWA Install Banner -->
+    <div class="pwa-install-banner" id="pwaInstallBanner">
+        <div class="pwa-install-content">
+            <div class="pwa-install-icon">💬</div>
+            <div class="pwa-install-text">
+                <h3>Install MumbleChat</h3>
+                <p>Add to home screen for the best experience</p>
+            </div>
+        </div>
+        <div class="pwa-install-actions" id="pwaInstallActions">
+            <button class="pwa-install-btn primary" id="pwaInstallBtn">Install App</button>
+            <button class="pwa-install-btn secondary" id="pwaLaterBtn">Later</button>
+        </div>
+        <!-- iOS specific instructions (hidden by default) -->
+        <div class="ios-install-steps" id="iosInstallSteps" style="display: none;">
+            <p>📤 Tap the <strong>Share</strong> button below</p>
+            <p>➕ Then tap <strong>"Add to Home Screen"</strong></p>
+            <button class="pwa-install-btn secondary" id="iosGotItBtn" style="margin-top: 12px; width: 100%;">Got it!</button>
+        </div>
+    </div>
     
     <div id="app">
         <div class="loading-screen">
@@ -56,7 +194,94 @@
     <!-- Load ethers.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
     
+    <!-- Service Worker & PWA Install -->
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw-chat.js')
+                    .then(reg => {
+                        console.log('✅ Service Worker registered:', reg.scope);
+                    })
+                    .catch(err => {
+                        console.warn('Service Worker registration failed:', err);
+                    });
+            });
+        }
+        
+        // PWA Install prompt handling
+        let deferredPrompt = null;
+        const installBanner = document.getElementById('pwaInstallBanner');
+        const installBtn = document.getElementById('pwaInstallBtn');
+        const laterBtn = document.getElementById('pwaLaterBtn');
+        const iosSteps = document.getElementById('iosInstallSteps');
+        const iosGotItBtn = document.getElementById('iosGotItBtn');
+        const installActions = document.getElementById('pwaInstallActions');
+        
+        // Check if already installed
+        const isInstalled = window.matchMedia('(display-mode: standalone)').matches 
+                          || window.navigator.standalone === true;
+        
+        // Check if dismissed recently
+        const dismissedTime = localStorage.getItem('pwa_install_dismissed');
+        const dismissedRecently = dismissedTime && (Date.now() - parseInt(dismissedTime)) < 24 * 60 * 60 * 1000;
+        
+        // Detect iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        
+        // Android/Desktop: Listen for beforeinstallprompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            if (!isInstalled && !dismissedRecently) {
+                setTimeout(() => {
+                    installBanner.classList.add('show');
+                }, 2000);
+            }
+        });
+        
+        // iOS: Show custom instructions
+        if (isIOS && !isInstalled && !dismissedRecently) {
+            setTimeout(() => {
+                installActions.style.display = 'none';
+                iosSteps.style.display = 'block';
+                installBanner.classList.add('show');
+            }, 3000);
+        }
+        
+        // Install button click
+        installBtn?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log('Install outcome:', outcome);
+                deferredPrompt = null;
+            }
+            installBanner.classList.remove('show');
+        });
+        
+        // Later button click
+        laterBtn?.addEventListener('click', () => {
+            localStorage.setItem('pwa_install_dismissed', Date.now().toString());
+            installBanner.classList.remove('show');
+        });
+        
+        // iOS Got it button
+        iosGotItBtn?.addEventListener('click', () => {
+            localStorage.setItem('pwa_install_dismissed', Date.now().toString());
+            installBanner.classList.remove('show');
+        });
+        
+        // App installed event
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ MumbleChat installed!');
+            installBanner.classList.remove('show');
+            deferredPrompt = null;
+        });
+    </script>
+    
     <!-- Load main app as ES module -->
-    <script type="module" src="js/chat/app.js?v=31"></script>
+    <script type="module" src="js/chat/app.js?v=41"></script>
 </body>
 </html>

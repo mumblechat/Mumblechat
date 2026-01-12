@@ -55,6 +55,18 @@ export function renderConversationView(container, address) {
     
     renderMessages(address);
     setupConversationListeners(address);
+    
+    // Listen for contact status changes to update header
+    const statusHandler = (e) => {
+        if (e.detail.address?.toLowerCase() === address.toLowerCase()) {
+            const chatStatus = document.getElementById('chatStatus');
+            if (chatStatus) {
+                chatStatus.textContent = e.detail.online ? 'Online' : 'Offline';
+                chatStatus.style.color = e.detail.online ? '#22c55e' : '#9ca3af';
+            }
+        }
+    };
+    window.addEventListener('contactStatusChanged', statusHandler);
 }
 
 /**
@@ -93,16 +105,30 @@ export function renderMessages(address) {
 }
 
 /**
- * Get status icon for message
+ * Get status icon for message (WhatsApp-style)
+ * sending: clock ⏳
+ * sent: single gray tick ✓
+ * pending: clock (recipient offline) 🕐
+ * delivered: double gray ticks ✓✓
+ * read: double blue ticks ✓✓ (blue)
+ * failed: red X ❌
  */
 function getStatusIcon(status) {
     switch (status) {
-        case 'sending': return '⏳';
-        case 'sent': return '✓';
-        case 'delivered': return '✓✓';
-        case 'read': return '<span style="color: #1b8cff;">✓✓</span>';
-        case 'failed': return '❌';
-        default: return '';
+        case 'sending': 
+            return '<span class="status-icon sending" title="Sending...">🕐</span>';
+        case 'sent': 
+            return '<span class="status-icon sent" title="Sent">✓</span>';
+        case 'pending': 
+            return '<span class="status-icon pending" title="Recipient offline - queued for delivery">⏳</span>';
+        case 'delivered': 
+            return '<span class="status-icon delivered" title="Delivered">✓✓</span>';
+        case 'read': 
+            return '<span class="status-icon read" title="Read" style="color: #1b8cff;">✓✓</span>';
+        case 'failed': 
+            return '<span class="status-icon failed" title="Failed to send - tap to retry">❌</span>';
+        default: 
+            return '';
     }
 }
 
@@ -191,27 +217,60 @@ function setupConversationListeners(address) {
             renderMessages(address);
         }
     });
+    
+    // Listen for message status updates (sent -> delivered -> read)
+    window.addEventListener('messageStatusUpdated', (e) => {
+        if (e.detail.recipientAddress === address) {
+            // Update just the status icon instead of re-rendering all messages
+            const messageEl = document.querySelector(`.message[data-id="${e.detail.messageId}"]`);
+            if (messageEl) {
+                const statusSpan = messageEl.querySelector('.message-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = getStatusIcon(e.detail.status);
+                }
+            }
+        }
+    });
+    
+    // Listen for message_queued events (recipient offline)
+    window.addEventListener('messageStatusChanged', (e) => {
+        if (e.detail.to?.toLowerCase() === address.toLowerCase()) {
+            const messageEl = document.querySelector(`.message[data-id="${e.detail.messageId}"]`);
+            if (messageEl) {
+                const statusSpan = messageEl.querySelector('.message-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = getStatusIcon(e.detail.status);
+                }
+            }
+        }
+    });
 }
 
 /**
- * Handle sending message
+ * Handle sending message (async for E2EE)
  */
-function handleSendMessage(address) {
+async function handleSendMessage(address) {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     
     if (!text) return;
     
     try {
-        sendMessage(address, text);
+        // Disable input while sending
+        input.disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+        
+        await sendMessage(address, text);
+        
         input.value = '';
         input.style.height = 'auto';
-        document.getElementById('sendBtn').disabled = true;
+        input.disabled = false;
         renderMessages(address);
         
         // Stop typing indicator
         handleTypingInput(address, false);
     } catch (error) {
+        input.disabled = false;
         showToast(error.message, 'error');
     }
 }
@@ -510,9 +569,49 @@ export function getConversationStyles() {
         }
         
         .message-status {
-            font-size: 10px;
+            font-size: 12px;
             margin-left: 8px;
-            opacity: 0.8;
+            opacity: 0.9;
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+        }
+        
+        /* Status icon styles */
+        .status-icon {
+            cursor: help;
+        }
+        
+        .status-icon.sending {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .status-icon.sent {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .status-icon.pending {
+            color: #f59e0b;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-icon.delivered {
+            color: rgba(255, 255, 255, 0.85);
+        }
+        
+        .status-icon.read {
+            color: #1b8cff !important;
+            font-weight: bold;
+        }
+        
+        .status-icon.failed {
+            color: #f43f5e;
+            cursor: pointer;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         
         .message-time {

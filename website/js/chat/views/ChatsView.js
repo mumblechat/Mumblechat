@@ -27,11 +27,39 @@ export function renderChatsView(container) {
             </div>
 
             <div class="contacts-list" id="contactsList"></div>
+            
+            <!-- Status Bar inside sidebar -->
+            <div class="sidebar-status-bar">
+                <div class="status-item">
+                    <span class="status-dot connected" id="sidebarWalletDot"></span>
+                    <span id="sidebarWalletStatus">Wallet: ${state.address?.slice(0, 10)}...</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot" id="sidebarRelayDot"></span>
+                    <span id="sidebarRelayStatus">Relay: ...</span>
+                </div>
+            </div>
         </div>
     `;
     
     renderContactsList();
     setupChatsListeners();
+    
+    // Listen for contact status changes (online/offline updates)
+    window.addEventListener('contactStatusChanged', () => {
+        renderContactsList();
+    });
+    
+    // Listen for new messages to update contacts list
+    window.addEventListener('messageReceived', () => {
+        renderContactsList();
+    });
+    
+    // Listen for offline messages delivered (when user comes online)
+    window.addEventListener('offlineMessagesDelivered', (e) => {
+        console.log(`📬 Received ${e.detail?.count || 0} offline messages - updating contacts list`);
+        renderContactsList();
+    });
 }
 
 /**

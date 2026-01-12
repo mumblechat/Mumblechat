@@ -1000,7 +1000,7 @@
                         </div>
                         <div class="wizard-step" data-step="3">
                             <div class="step-number">3</div>
-                            <div class="step-label">Select Tier</div>
+                            <div class="step-label">Stake MCT</div>
                         </div>
                         <div class="wizard-step" data-step="4">
                             <div class="step-number">4</div>
@@ -1057,41 +1057,55 @@
                             </div>
                         </div>
 
-                        <!-- Step 3: Tier Selection -->
+                        <!-- Step 3: Stake MCT -->
                         <div class="wizard-step-content" id="step3Content" style="display: none;">
-                            <h3 style="text-align: center; margin-bottom: 12px;">💎 Select Your Tier</h3>
+                            <h3 style="text-align: center; margin-bottom: 12px;">🔒 Stake MCT to Become a Relay Node</h3>
                             <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-bottom: 20px;">
-                                V4 stake-based tiers - Higher stake = Higher tier = More rewards!
+                                Stake 100 MCT on-chain to register as a relay node and start earning rewards
                             </p>
-                            <div class="tier-selector" id="wizardTierSelector">
-                                <div class="tier-card selected" data-tier="bronze">
-                                    <div class="tier-name">🥉 Bronze</div>
-                                    <div class="tier-storage">1-4 GB Storage</div>
-                                    <div class="tier-rewards">1.0x multiplier</div>
-                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: <strong>100 MCT</strong></div>
+                            
+                            <div id="stakingSection">
+                                <!-- Staking Requirements -->
+                                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                                    <h4 style="margin: 0 0 16px; color: var(--text-primary);">📋 Staking Requirements</h4>
+                                    <div style="display: grid; gap: 12px; font-size: 14px;">
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                            <span style="color: var(--text-muted);">Required Stake</span>
+                                            <span style="color: var(--primary); font-weight: 600;">100 MCT</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                            <span style="color: var(--text-muted);">Your Balance</span>
+                                            <span id="stakingBalance" style="font-weight: 600;">- MCT</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                                            <span style="color: var(--text-muted);">Gas Fee</span>
+                                            <span style="color: var(--text-secondary);">~0.01 RAMA</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="tier-card" data-tier="silver">
-                                    <div class="tier-name">🥈 Silver</div>
-                                    <div class="tier-storage">4-10 GB Storage</div>
-                                    <div class="tier-rewards">1.5x multiplier</div>
-                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: <strong>500 MCT</strong></div>
+
+                                <!-- Staking Process Info -->
+                                <div style="background: rgba(27, 140, 255, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                                    <h4 style="margin: 0 0 12px; color: var(--primary);">ℹ️ Staking Process</h4>
+                                    <ol style="margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 13px; line-height: 1.8;">
+                                        <li>Register your identity on blockchain (if not already)</li>
+                                        <li>Approve MCT token spending</li>
+                                        <li>Stake 100 MCT as relay node collateral</li>
+                                    </ol>
+                                    <p style="margin: 12px 0 0; font-size: 12px; color: var(--text-muted);">
+                                        💡 You'll need to confirm 2-3 transactions in MetaMask
+                                    </p>
                                 </div>
-                                <div class="tier-card" data-tier="gold">
-                                    <div class="tier-name">🥇 Gold</div>
-                                    <div class="tier-storage">10-50 GB Storage</div>
-                                    <div class="tier-rewards">2.0x multiplier</div>
-                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: <strong>1,000 MCT</strong></div>
-                                </div>
-                                <div class="tier-card" data-tier="platinum">
-                                    <div class="tier-name">💎 Platinum</div>
-                                    <div class="tier-storage">50-100 GB Storage</div>
-                                    <div class="tier-rewards">3.0x multiplier</div>
-                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Stake: <strong>5,000 MCT</strong></div>
-                                </div>
+
+                                <!-- Stake Button -->
+                                <button class="one-click-btn" id="stakeBtn" onclick="setupWizard.stakeAsRelay()" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                                    🔒 Stake 100 MCT & Register
+                                </button>
                             </div>
-                            <button class="one-click-btn" onclick="setupWizard.nextStep()">
-                                Continue →
-                            </button>
+                            
+                            <p style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 16px;">
+                                Already staked? <a href="#" onclick="setupWizard.checkStakingStatus(); return false;" style="color: var(--primary);">Check Status</a>
+                            </p>
                         </div>
 
                         <!-- Step 4: Install & Run -->

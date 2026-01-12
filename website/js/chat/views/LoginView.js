@@ -5,7 +5,7 @@
 
 import { state, loadPersistedData, saveUserData } from '../state.js';
 import { connectWallet, checkContractRegistration, registerOnContract, shortenAddress, setWalletProvider } from '../wallet.js';
-import { RELAY_DEFAULTS } from '../config.js';
+import { RELAY_DEFAULTS, RAMESTTA_CONFIG } from '../config.js';
 import { showLoading, hideLoading, showToast } from '../ui.js';
 import { fetchOnlineRelayNodes, getBestRelayNode, testRelayConnection } from '../relayService.js';
 import { detectWallets, getRecommendedWallets, connectToWallet, hasAnyWallet, isMobile, getPlatform, initEIP6963 } from '../walletDetection.js';
@@ -167,41 +167,125 @@ async function detectAndShowWallets() {
         hint.textContent = `${detectedWalletsList[0].name} detected • Click to connect`;
         connectBtn.disabled = false;
     } else {
-        // No wallets detected - show download options
-        html = `
-            <div class="no-wallet-message">
-                <div class="no-wallet-icon">🔐</div>
-                <div class="no-wallet-text">No wallet detected</div>
-                <div class="no-wallet-hint">Install a Web3 wallet to continue</div>
-            </div>
-        `;
-        
-        // Show download options
-        const walletsToShow = [
-            { id: 'ramaPay', name: 'RamaPay', icon: '💎', color: '#6366f1', desc: 'Recommended for Ramestta' },
-            { id: 'metamask', name: 'MetaMask', icon: '🦊', color: '#f6851b', desc: 'Most popular wallet' }
-        ];
-        
-        walletsToShow.forEach(wallet => {
-            const downloadUrl = platform === 'android' 
-                ? `https://play.google.com/store/apps/details?id=${wallet.id === 'ramaPay' ? 'io.ramestta.ramapay' : 'io.metamask'}`
-                : platform === 'ios'
-                    ? `https://apps.apple.com/app/${wallet.id === 'ramaPay' ? 'ramapay/id123456789' : 'metamask/id1438144202'}`
-                    : `https://chrome.google.com/webstore/detail/${wallet.id === 'ramaPay' ? 'ramapay' : 'metamask/nkbihfbeogaeaoehlefnkodbefgpgknn'}`;
-            
-            html += `
-                <a href="${downloadUrl}" target="_blank" class="wallet-download-btn" style="--wallet-color: ${wallet.color}">
-                    <span class="wallet-download-icon">${wallet.icon}</span>
-                    <div class="wallet-download-info">
-                        <div class="wallet-download-name">Get ${wallet.name}</div>
-                        <div class="wallet-download-desc">${wallet.desc}</div>
-                    </div>
-                    <span class="wallet-download-arrow">→</span>
-                </a>
+        // No wallets detected - show different UI for mobile vs desktop
+        if (mobile) {
+            // Mobile: Show deep link options to open wallet apps
+            // NOTE: On mobile, the dApp must run INSIDE the wallet's browser
+            // There's no way to connect from Chrome and return - that's how mobile Web3 works
+            html = `
+                <div class="no-wallet-message">
+                    <div class="no-wallet-icon">📱</div>
+                    <div class="no-wallet-text">Open in Wallet Browser</div>
+                    <div class="no-wallet-hint">Mobile wallets require using their built-in browser</div>
+                </div>
             `;
-        });
+            
+            // Show wallet app options with deep links
+            // These open the CURRENT PAGE inside the wallet's browser
+            const currentUrl = window.location.href;
+            const walletApps = [
+                { 
+                    name: 'MetaMask', 
+                    icon: '🦊', 
+                    color: '#f6851b', 
+                    deepLink: 'https://metamask.app.link/dapp/' + window.location.host + window.location.pathname,
+                    desc: 'Opens MumbleChat in MetaMask'
+                },
+                { 
+                    name: 'Trust Wallet', 
+                    icon: '🛡️', 
+                    color: '#3375bb', 
+                    deepLink: 'https://link.trustwallet.com/open_url?coin_id=60&url=' + encodeURIComponent(currentUrl),
+                    desc: 'Opens MumbleChat in Trust Wallet'
+                },
+                { 
+                    name: 'Coinbase Wallet', 
+                    icon: '🔵', 
+                    color: '#0052ff', 
+                    deepLink: 'https://go.cb-w.com/dapp?cb_url=' + encodeURIComponent(currentUrl),
+                    desc: 'Opens MumbleChat in Coinbase'
+                }
+            ];
+            
+            walletApps.forEach(wallet => {
+                html += `
+                    <a href="${wallet.deepLink}" class="wallet-download-btn" style="--wallet-color: ${wallet.color}">
+                        <span class="wallet-download-icon">${wallet.icon}</span>
+                        <div class="wallet-download-info">
+                            <div class="wallet-download-name">Open in ${wallet.name}</div>
+                            <div class="wallet-download-desc">${wallet.desc}</div>
+                        </div>
+                        <span class="wallet-download-arrow">→</span>
+                    </a>
+                `;
+            });
+            
+            // Info message
+            html += `
+                <div class="wallet-info-box">
+                    <p>💡 <strong>How it works:</strong></p>
+                    <p>Click above to open MumbleChat inside your wallet app. You'll use the chat directly in the wallet's browser - this is how mobile Web3 apps work!</p>
+                </div>
+            `;
+            
+            // Also show download links
+            html += `<div class="wallet-divider">Don't have a wallet?</div>`;
+            
+            const downloadLinks = platform === 'ios' ? [
+                { name: 'MetaMask', icon: '🦊', url: 'https://apps.apple.com/app/metamask/id1438144202' },
+                { name: 'Trust Wallet', icon: '🛡️', url: 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409' }
+            ] : [
+                { name: 'MetaMask', icon: '🦊', url: 'https://play.google.com/store/apps/details?id=io.metamask' },
+                { name: 'Trust Wallet', icon: '🛡️', url: 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp' }
+            ];
+            
+            downloadLinks.forEach(wallet => {
+                html += `
+                    <a href="${wallet.url}" target="_blank" class="wallet-download-btn secondary">
+                        <span class="wallet-download-icon">${wallet.icon}</span>
+                        <div class="wallet-download-info">
+                            <div class="wallet-download-name">Get ${wallet.name}</div>
+                        </div>
+                        <span class="wallet-download-arrow">↓</span>
+                    </a>
+                `;
+            });
+            
+            hint.innerHTML = `<span style="color: #f59e0b;">📱 Open this page in your wallet's browser</span>`;
+        } else {
+            // Desktop: Show install options
+            html = `
+                <div class="no-wallet-message">
+                    <div class="no-wallet-icon">🔐</div>
+                    <div class="no-wallet-text">No wallet detected</div>
+                    <div class="no-wallet-hint">Install a Web3 wallet to continue</div>
+                </div>
+            `;
+            
+            // Show download options
+            const walletsToShow = [
+                { id: 'ramaPay', name: 'RamaPay', icon: '💎', color: '#6366f1', desc: 'Recommended for Ramestta' },
+                { id: 'metamask', name: 'MetaMask', icon: '🦊', color: '#f6851b', desc: 'Most popular wallet' }
+            ];
+            
+            walletsToShow.forEach(wallet => {
+                const downloadUrl = `https://chrome.google.com/webstore/detail/${wallet.id === 'ramaPay' ? 'ramapay' : 'metamask/nkbihfbeogaeaoehlefnkodbefgpgknn'}`;
+                
+                html += `
+                    <a href="${downloadUrl}" target="_blank" class="wallet-download-btn" style="--wallet-color: ${wallet.color}">
+                        <span class="wallet-download-icon">${wallet.icon}</span>
+                        <div class="wallet-download-info">
+                            <div class="wallet-download-name">Get ${wallet.name}</div>
+                            <div class="wallet-download-desc">${wallet.desc}</div>
+                        </div>
+                        <span class="wallet-download-arrow">→</span>
+                    </a>
+                `;
+            });
+            
+            hint.innerHTML = `<span style="color: #f59e0b;">⚠️ Install a wallet to use MumbleChat</span>`;
+        }
         
-        hint.innerHTML = `<span style="color: #f59e0b;">⚠️ Install a wallet to use MumbleChat</span>`;
         connectBtn.disabled = true;
         connectBtn.textContent = '📲 Install Wallet First';
     }
@@ -524,6 +608,10 @@ async function handleConnect() {
             setWalletProvider(result.provider);
         }
         
+        // Check and switch to Ramestta network BEFORE wallet connection
+        if (spinnerText) spinnerText.textContent = 'Checking network...';
+        await checkAndSwitchNetwork();
+        
         // Standard wallet connection (handles network switching, etc.)
         await connectWallet();
         
@@ -558,9 +646,68 @@ async function handleConnect() {
         }
     } catch (error) {
         console.error('Connection failed:', error);
-        showToast('Connection failed: ' + error.message, 'error');
+        
+        // Check if user rejected the network switch
+        if (error.code === 4001) {
+            showToast('You need to switch to Ramestta network to use MumbleChat', 'error');
+        } else {
+            showToast('Connection failed: ' + error.message, 'error');
+        }
+        
         walletConnect.style.display = 'block';
         spinner.style.display = 'none';
+    }
+}
+
+/**
+ * Check if connected to Ramestta network and prompt to add/switch if not
+ */
+async function checkAndSwitchNetwork() {
+    const provider = window.ethereum;
+    if (!provider) return;
+    
+    try {
+        const chainId = await provider.request({ method: 'eth_chainId' });
+        const ramesttaChainId = RAMESTTA_CONFIG.chainId;
+        
+        console.log('🌐 Current chain:', chainId, '| Required:', ramesttaChainId);
+        
+        if (chainId !== ramesttaChainId) {
+            console.log('🔄 Switching to Ramestta network...');
+            
+            try {
+                // Try to switch to Ramestta
+                await provider.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: ramesttaChainId }]
+                });
+                console.log('✅ Switched to Ramestta network');
+            } catch (switchError) {
+                // Network doesn't exist - need to add it
+                if (switchError.code === 4902 || switchError.message?.includes('Unrecognized chain')) {
+                    console.log('📝 Adding Ramestta network...');
+                    
+                    await provider.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: ramesttaChainId,
+                            chainName: RAMESTTA_CONFIG.chainName,
+                            nativeCurrency: RAMESTTA_CONFIG.nativeCurrency,
+                            rpcUrls: RAMESTTA_CONFIG.rpcUrls,
+                            blockExplorerUrls: RAMESTTA_CONFIG.blockExplorerUrls
+                        }]
+                    });
+                    console.log('✅ Ramestta network added');
+                } else {
+                    throw switchError;
+                }
+            }
+        } else {
+            console.log('✅ Already on Ramestta network');
+        }
+    } catch (error) {
+        console.error('Network check failed:', error);
+        throw error;
     }
 }
 

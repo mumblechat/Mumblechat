@@ -20,6 +20,9 @@ import com.ramapay.app.chat.data.repository.MessageRepository
 import com.ramapay.app.chat.file.FileTransferManager
 import com.ramapay.app.chat.nat.HolePuncher
 import com.ramapay.app.chat.nat.StunClient
+import com.ramapay.app.chat.network.HubConnection
+import com.ramapay.app.chat.network.HybridNetworkManager
+import com.ramapay.app.chat.network.MobileRelayServer
 import com.ramapay.app.chat.network.P2PManager
 import com.ramapay.app.chat.p2p.BlockchainPeerResolver
 import com.ramapay.app.chat.p2p.BootstrapManager
@@ -280,6 +283,45 @@ object ChatModule {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // HUB CONNECTION & MOBILE RELAY (for web app compatibility)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @Provides
+    @Singleton
+    fun provideHubConnection(
+        @ApplicationContext context: Context
+    ): HubConnection {
+        return HubConnection(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMobileRelayServer(
+        @ApplicationContext context: Context,
+        hubConnection: HubConnection
+    ): MobileRelayServer {
+        return MobileRelayServer(context, hubConnection)
+    }
+
+    @Provides
+    @Singleton
+    fun provideHybridNetworkManager(
+        @ApplicationContext context: Context,
+        hubConnection: HubConnection,
+        p2pManager: P2PManager,
+        mobileRelayServer: MobileRelayServer,
+        messageEncryption: MessageEncryption
+    ): HybridNetworkManager {
+        return HybridNetworkManager(
+            context,
+            hubConnection,
+            p2pManager,
+            mobileRelayServer,
+            messageEncryption
+        )
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
 
     @Provides
     @Singleton
@@ -297,7 +339,10 @@ object ChatModule {
         walletBridge: WalletBridge,
         registrationManager: RegistrationManager,
         blockchainService: MumbleChatBlockchainService,
-        contactDao: ContactDao
+        contactDao: ContactDao,
+        hubConnection: HubConnection,
+        mobileRelayServer: MobileRelayServer,
+        hybridNetworkManager: HybridNetworkManager
     ): ChatService {
         return ChatService(
             context,
@@ -313,7 +358,10 @@ object ChatModule {
             walletBridge,
             registrationManager,
             blockchainService,
-            contactDao
+            contactDao,
+            hubConnection,
+            mobileRelayServer,
+            hybridNetworkManager
         )
     }
 }

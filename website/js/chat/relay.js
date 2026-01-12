@@ -4,8 +4,8 @@
  */
 
 import { state, updateState } from './state.js';
-import { receiveMessage } from './messages.js';
-import { updateContactStatus } from './contacts.js';
+import { receiveMessage, updateMessageStatus } from './messages.js';
+import { updateContactStatus, storeContactPublicKey } from './contacts.js';
 import { getBestRelayEndpoint, RELAY_DEFAULTS } from './config.js';
 
 let reconnectAttempts = 0;
@@ -46,18 +46,28 @@ export async function connectToRelay() {
 /**
  * Handle relay connection opened
  */
-function handleRelayOpen() {
+async function handleRelayOpen() {
     console.log('✅ Connected to relay node');
     state.relayConnected = true;
     reconnectAttempts = 0;
     updateRelayStatus(true);
 
-    // Authenticate with relay
+    // Get our public key for E2EE key exchange
+    let publicKey = null;
+    try {
+        const { exportPublicKey } = await import('./crypto.js');
+        publicKey = await exportPublicKey();
+    } catch (e) {
+        console.warn('Could not get public key for auth:', e);
+    }
+
+    // Authenticate with relay (include public key for key exchange)
     sendToRelay({
         type: 'authenticate',
         walletAddress: state.address,
         address: state.address,
         displayName: state.displayName || state.username,
+        publicKey: publicKey,  // E2EE public key for key exchange
         timestamp: Date.now()
     });
 
@@ -86,12 +96,19 @@ function handleRelayMessage(event) {
                 break;
 
             case 'message':
-                const messageContent = data.payload || data.encryptedBlob || data.content;
+                // Handle both encrypted and plain messages
                 receiveMessage({
                     from: data.from || data.senderAddress,
                     to: data.to || state.address,
-                    content: messageContent,
-                    payload: messageContent,
+                    // E2EE fields
+                    encrypted: data.encrypted || false,
+                    encryptedData: data.encryptedData || data.payload || data.encryptedBlob,
+                    signature: data.signature,
+                    senderPublicKey: data.senderPublicKey,
+                    // Legacy fields
+                    text: data.text,
+                    content: data.content,
+                    payload: data.payload || data.encryptedBlob,
                     timestamp: data.timestamp || Date.now(),
                     messageId: data.messageId
                 });
@@ -109,7 +126,69 @@ function handleRelayMessage(event) {
 
             case 'relay_ack':
             case 'delivery_receipt':
-                console.log('Message delivered:', data.messageId);
+                // Message was delivered to recipient
+                console.log('✅ Message delivered:', data.messageId);
+                if (data.messageId && data.to) {
+                    updateMessageStatus(data.messageId, data.to, 'delivered');
+                }
+                // Dispatch event for UI update
+                window.dispatchEvent(new CustomEvent('messageStatusChanged', {
+                    detail: { messageId: data.messageId, status: 'delivered', to: data.to }
+                }));
+                break;
+            
+            case 'message_queued':
+                // Message queued for offline user - will be delivered when they come online
+                console.log('📬 Message queued for offline delivery:', data.messageId);
+                if (data.messageId && data.recipient) {
+                    updateMessageStatus(data.messageId, data.recipient, 'pending');
+                }
+                // Dispatch event for UI update
+                window.dispatchEvent(new CustomEvent('messageStatusChanged', {
+                    detail: { messageId: data.messageId, status: 'pending', to: data.recipient, reason: 'recipient_offline' }
+                }));
+                break;
+            
+            case 'read_receipt':
+                // Message was read by recipient
+                console.log('👁 Message read:', data.messageId);
+                if (data.messageId && data.from) {
+                    updateMessageStatus(data.messageId, data.from, 'read');
+                }
+                window.dispatchEvent(new CustomEvent('messageStatusChanged', {
+                    detail: { messageId: data.messageId, status: 'read', to: data.from }
+                }));
+                break;
+            
+            case 'key_exchange':
+            case 'public_key':
+                // Received a contact's public key for E2EE
+                if (data.address && data.publicKey) {
+                    console.log('🔑 Received public key from:', data.address);
+                    storeContactPublicKey(data.address, data.publicKey);
+                }
+                break;
+            
+            case 'key_request':
+                // Someone requested our public key - send it
+                if (data.from) {
+                    sendPublicKeyToContact(data.from);
+                }
+                break;
+            
+            case 'stored_messages':
+            case 'offline_messages':
+                // Received offline messages after coming online
+                if (data.messages && Array.isArray(data.messages)) {
+                    console.log(`📬 Received ${data.messages.length} offline messages`);
+                    data.messages.forEach(msg => {
+                        receiveMessage(msg);
+                    });
+                    // Dispatch event to update UI
+                    window.dispatchEvent(new CustomEvent('offlineMessagesDelivered', {
+                        detail: { count: data.messages.length }
+                    }));
+                }
                 break;
 
             case 'sync_response':
@@ -188,15 +267,34 @@ export function sendToRelay(message) {
 }
 
 /**
- * Send chat message via relay
+ * Send chat message via relay (supports E2EE)
  */
-export function sendMessageViaRelay(to, content) {
+export function sendMessageViaRelay(to, content, messageId) {
+    // Handle encrypted message payload
+    let payload, encrypted = false, encryptedData = null, signature = null, senderPublicKey = null;
+    
+    if (typeof content === 'object' && content.encryptedData !== undefined) {
+        // E2EE encrypted message
+        encrypted = content.encrypted;
+        encryptedData = content.encryptedData;
+        signature = content.signature;
+        senderPublicKey = content.senderPublicKey;
+        payload = encryptedData; // Send encrypted data
+    } else {
+        // Plain text (legacy/no key exchange)
+        payload = content;
+    }
+    
     const message = {
         type: 'relay',
         to: to.toLowerCase(),
         from: state.address.toLowerCase(),
-        payload: content,
-        messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        payload: payload,
+        encrypted: encrypted,
+        encryptedData: encryptedData,
+        signature: signature,
+        senderPublicKey: senderPublicKey,
+        messageId: messageId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: Date.now()
     };
 
@@ -204,14 +302,18 @@ export function sendMessageViaRelay(to, content) {
 }
 
 /**
- * Update relay connection status in UI - FIXED to use correct IDs
+ * Update relay connection status in UI - Updates sidebar status bar
  */
 export function updateRelayStatus(connected, statusText = null) {
     state.relayConnected = connected;
     
-    // Update by ID (matches app.js status bar)
-    const relayDot = document.getElementById('relayDot');
-    const relayStatusText = document.getElementById('relayStatus');
+    // Update sidebar status bar (new location)
+    const sidebarRelayDot = document.getElementById('sidebarRelayDot');
+    const sidebarRelayStatus = document.getElementById('sidebarRelayStatus');
+    
+    // Also check for old IDs for backwards compatibility
+    const relayDot = sidebarRelayDot || document.getElementById('relayDot');
+    const relayStatusText = sidebarRelayStatus || document.getElementById('relayStatus');
     
     if (relayDot) {
         relayDot.style.background = connected ? '#22c55e' : '#ef4444';
@@ -265,4 +367,40 @@ export function sendReadReceipt(to, messageId) {
         from: state.address.toLowerCase(),
         messageId
     });
+}
+
+/**
+ * Send our public key to a contact (for key exchange)
+ */
+export async function sendPublicKeyToContact(contactAddress) {
+    try {
+        const { exportPublicKey } = await import('./crypto.js');
+        const publicKey = await exportPublicKey();
+        
+        if (publicKey) {
+            sendToRelay({
+                type: 'public_key',
+                to: contactAddress.toLowerCase(),
+                from: state.address.toLowerCase(),
+                publicKey: publicKey,
+                timestamp: Date.now()
+            });
+            console.log('🔑 Sent public key to:', contactAddress);
+        }
+    } catch (error) {
+        console.error('Failed to send public key:', error);
+    }
+}
+
+/**
+ * Request a contact's public key
+ */
+export function requestContactPublicKey(contactAddress) {
+    sendToRelay({
+        type: 'key_request',
+        to: contactAddress.toLowerCase(),
+        from: state.address.toLowerCase(),
+        timestamp: Date.now()
+    });
+    console.log('🔑 Requested public key from:', contactAddress);
 }

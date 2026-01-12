@@ -148,5 +148,7 @@ export const STORAGE_KEYS = {
     GROUPS: 'mumblechat_groups',
     BLOCKED: 'mumblechat_blocked',
     SETTINGS: 'mumblechat_settings',
-    RELAY_URL: 'mumblechat_relay_url'
+    RELAY_URL: 'mumblechat_relay_url',
+    CRYPTO_KEYS: 'mumblechat_crypto_keys',
+    PUBLIC_KEYS: 'mumblechat_public_keys'
 };

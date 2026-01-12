@@ -11,6 +11,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { ethers } from 'ethers';
 
 dotenv.config();
 
@@ -20,9 +21,114 @@ const config = {
     port: parseInt(process.env.HUB_PORT || '8080'),
     domain: process.env.HUB_DOMAIN || 'hub.mumblechat.com',
     rpcUrl: process.env.RPC_URL || 'https://blockchain.ramestta.com',
+    // Registry contract for user identity
+    registryAddress: process.env.REGISTRY_ADDRESS || '0x4f8D4955F370881B05b68D2344345E749d8632e3',
+    // Relay Manager contract for node staking
     relayManagerAddress: process.env.RELAY_MANAGER_ADDRESS || '0xF78F840eF0e321512b09e98C76eA0229Affc4b73',
     hubFeePercent: parseInt(process.env.HUB_FEE_PERCENT || '10'),
+    minStakeRequired: parseInt(process.env.MIN_STAKE_REQUIRED || '100'),  // 100 MCT minimum
+    // Set to false to allow unstaked nodes (for testing/development)
+    requireStaking: process.env.REQUIRE_STAKING === 'true' || false,
 };
+
+// ============ Registry Contract ABI ============
+
+const REGISTRY_ABI = [
+    'function getRelayNode(address node) external view returns (string endpoint, uint256 stakedAmount, uint256 messagesRelayed, uint256 rewardsEarned, bool isActive, uint256 dailyUptimeSeconds, uint256 storageMB, uint8 tier, uint256 rewardMultiplier, bool isOnline)',
+    'function isRegistered(address wallet) external view returns (bool)',
+    'function totalRelayNodes() external view returns (uint256)',
+    'function getActiveRelayNodes() external view returns (address[] memory)',
+    'function minRelayStake() external view returns (uint256)'
+];
+
+// Relay Manager ABI (for node staking)
+const RELAY_MANAGER_ABI = [
+    'function relayNodes(address) external view returns (bool isActive, uint8 tier, uint256 stakedAmount, uint256 messagesRelayed, uint256 rewardsEarned, uint256 dailyUptimeSeconds, uint256 storageMB, bool isOnline, uint256 registeredAt)',
+    'function getActiveEndpoints() external view returns (tuple(string nodeId, string endpoint, address wallet)[] memory)',
+    'function getTotalNodeIds() external view returns (uint256)'
+];
+
+// ============ Blockchain Provider ============
+
+let provider: ethers.JsonRpcProvider | null = null;
+let registryContract: ethers.Contract | null = null;
+let relayManagerContract: ethers.Contract | null = null;
+
+function initBlockchain() {
+    try {
+        provider = new ethers.JsonRpcProvider(config.rpcUrl);
+        registryContract = new ethers.Contract(config.registryAddress, REGISTRY_ABI, provider);
+        relayManagerContract = new ethers.Contract(config.relayManagerAddress, RELAY_MANAGER_ABI, provider);
+        console.log(`[Hub] Connected to blockchain: ${config.rpcUrl}`);
+        console.log(`[Hub] Registry contract: ${config.registryAddress}`);
+        console.log(`[Hub] Relay Manager contract: ${config.relayManagerAddress}`);
+        console.log(`[Hub] Staking required: ${config.requireStaking}`);
+    } catch (error) {
+        console.error('[Hub] Failed to connect to blockchain:', error);
+    }
+}
+
+// ============ Staking Verification ============
+
+interface StakingInfo {
+    isStaked: boolean;
+    stakedAmount: number;
+    messagesRelayed: number;
+    rewardsEarned: number;
+    tier: number;
+    isActive: boolean;
+}
+
+// Cache staking info to reduce RPC calls (cache for 5 minutes)
+const stakingCache: Map<string, { info: StakingInfo, timestamp: number }> = new Map();
+const STAKING_CACHE_TTL = 5 * 60 * 1000;  // 5 minutes
+
+async function verifyStaking(walletAddress: string): Promise<StakingInfo> {
+    const addr = walletAddress.toLowerCase();
+    
+    // Check cache first
+    const cached = stakingCache.get(addr);
+    if (cached && Date.now() - cached.timestamp < STAKING_CACHE_TTL) {
+        return cached.info;
+    }
+    
+    const defaultInfo: StakingInfo = {
+        isStaked: false,
+        stakedAmount: 0,
+        messagesRelayed: 0,
+        rewardsEarned: 0,
+        tier: 0,
+        isActive: false
+    };
+    
+    if (!registryContract) {
+        console.log(`[Hub] No blockchain connection, allowing node (dev mode)`);
+        return { ...defaultInfo, isStaked: true };  // Allow in dev mode
+    }
+    
+    try {
+        const relayInfo = await registryContract.getRelayNode(walletAddress);
+        
+        const info: StakingInfo = {
+            isStaked: relayInfo[4] && parseFloat(ethers.formatEther(relayInfo[1])) >= config.minStakeRequired,
+            stakedAmount: parseFloat(ethers.formatEther(relayInfo[1])),
+            messagesRelayed: Number(relayInfo[2]),
+            rewardsEarned: parseFloat(ethers.formatEther(relayInfo[3])),
+            tier: Number(relayInfo[7]),
+            isActive: relayInfo[4]
+        };
+        
+        // Cache the result
+        stakingCache.set(addr, { info, timestamp: Date.now() });
+        
+        console.log(`[Hub] Staking check for ${addr.slice(0,8)}...: staked=${info.stakedAmount} MCT, active=${info.isActive}`);
+        
+        return info;
+    } catch (error) {
+        console.error(`[Hub] Failed to verify staking for ${addr}:`, error);
+        return defaultInfo;
+    }
+}
 
 // ============ Types ============
 
@@ -38,6 +144,7 @@ interface ConnectedNode {
         messagesRelayed: number;
         bytesTransferred: number;
     };
+    staking: StakingInfo;  // Staking info from blockchain
 }
 
 interface ConnectedUser {
@@ -54,8 +161,25 @@ const connectedNodes: Map<string, ConnectedNode> = new Map();  // tunnelId -> no
 const nodeByWallet: Map<string, string> = new Map();  // node wallet -> tunnelId
 const connectedUsers: Map<string, ConnectedUser> = new Map();  // sessionId -> user
 
-// *** NEW: Global user registry for cross-node routing ***
+// *** Global user registry for cross-node routing ***
 const usersByAddress: Map<string, { sessionId: string, tunnelId: string }> = new Map();  // user wallet -> session info
+
+// ============ Offline Message Queue ============
+
+interface OfflineMessage {
+    id: string;
+    from: string;
+    to: string;
+    payload: any;
+    timestamp: number;
+    expiresAt: number;  // 7 days from creation
+    storedOnNodes: string[];  // Store on multiple nodes for redundancy
+    delivered: boolean;
+}
+
+const offlineMessages: Map<string, OfflineMessage[]> = new Map();  // recipient address -> messages
+const MESSAGE_EXPIRY_DAYS = 7;
+const REDUNDANT_NODE_COUNT = 3;  // Store on 2-3 nodes
 
 // ============ Express App ============
 
@@ -79,10 +203,17 @@ app.get('/api/stats', (req, res) => {
     const nodeStats = Array.from(connectedNodes.values()).map(node => ({
         tunnelId: node.tunnelId,
         endpoint: `${config.domain}/node/${node.tunnelId}`,
+        walletAddress: node.walletAddress,
         connectedUsers: node.connectedUsers.size,
         messagesRelayed: node.stats.messagesRelayed,
         connectedAt: node.connectedAt,
-        lastHeartbeat: node.lastHeartbeat
+        lastHeartbeat: node.lastHeartbeat,
+        // Staking info from blockchain
+        stakedAmount: (node as any).staking?.stakedAmount || 0,
+        rewardsEarned: (node as any).staking?.rewardsEarned || 0,
+        tier: (node as any).staking?.tier || 0,
+        isStaked: (node as any).staking?.isStaked || false,
+        blockchainMessages: (node as any).staking?.messagesRelayed || 0
     }));
 
     res.json({
@@ -92,6 +223,66 @@ app.get('/api/stats', (req, res) => {
         hubFeePercent: config.hubFeePercent,
         nodes: nodeStats
     });
+});
+
+// *** NEW: Get all registered relay nodes from blockchain ***
+app.get('/api/blockchain/nodes', async (req, res) => {
+    try {
+        if (!registryContract) {
+            return res.status(503).json({ error: 'Blockchain not connected' });
+        }
+        
+        // Try to get total relay nodes count
+        let totalNodes = 0;
+        try {
+            totalNodes = Number(await registryContract.totalRelayNodes());
+        } catch (e) {
+            console.log('[Hub] totalRelayNodes() not available');
+        }
+        
+        // For now, check specific known addresses (can be expanded)
+        // In production, the contract should have getActiveRelayNodes() or similar
+        const knownAddresses = [
+            '0x0aDbfCe3A8dEb25Cd1b258b6c074B292e36aa98f',
+            '0x4B9b3BFcB35b57933cDFbD035AA078Cc5A761deF',
+            '0x9C0306E72520e1C138A5749CAbcbeB7307017F0E'
+        ];
+        
+        const blockchainNodes = [];
+        
+        for (const addr of knownAddresses) {
+            try {
+                const relayInfo = await registryContract.getRelayNode(addr);
+                if (relayInfo[4]) { // isActive
+                    blockchainNodes.push({
+                        walletAddress: addr,
+                        endpoint: relayInfo[0],
+                        stakedAmount: parseFloat(ethers.formatEther(relayInfo[1])),
+                        messagesRelayed: Number(relayInfo[2]),
+                        rewardsEarned: parseFloat(ethers.formatEther(relayInfo[3])),
+                        isActive: relayInfo[4],
+                        dailyUptimeSeconds: Number(relayInfo[5]),
+                        storageMB: Number(relayInfo[6]),
+                        tier: Number(relayInfo[7]),
+                        rewardMultiplier: Number(relayInfo[8]) / 100,
+                        isOnline: relayInfo[9],
+                        // Check if currently connected to hub
+                        isConnectedToHub: nodeByWallet.has(addr)
+                    });
+                }
+            } catch (e) {
+                // Skip addresses that aren't registered
+            }
+        }
+        
+        res.json({
+            totalRegistered: totalNodes,
+            nodes: blockchainNodes
+        });
+    } catch (error: any) {
+        console.error('[Hub] Error fetching blockchain nodes:', error.message);
+        res.status(500).json({ error: 'Failed to fetch blockchain nodes' });
+    }
 });
 
 // Get available endpoints for users
@@ -109,7 +300,7 @@ app.get('/api/endpoints', (req, res) => {
     res.json({ endpoints });
 });
 
-// *** NEW: Check if a user is online (for cross-node status) ***
+// *** Check if a user is online (for cross-node status) ***
 app.get('/api/user/:address', (req, res) => {
     const address = req.params.address.toLowerCase();
     const userInfo = usersByAddress.get(address);
@@ -126,9 +317,187 @@ app.get('/api/user/:address', (req, res) => {
     }
 });
 
+// *** Get pending offline messages count for a user ***
+app.get('/api/user/:address/pending', (req, res) => {
+    const address = req.params.address.toLowerCase();
+    const messages = offlineMessages.get(address) || [];
+    const pending = messages.filter(m => !m.delivered && m.expiresAt > Date.now());
+    res.json({ 
+        address,
+        pendingCount: pending.length,
+        messages: pending.map(m => ({
+            id: m.id,
+            from: m.from,
+            timestamp: m.timestamp,
+            expiresAt: m.expiresAt
+        }))
+    });
+});
+
+// *** Get offline queue stats ***
+app.get('/api/offline-stats', (req, res) => {
+    let totalMessages = 0;
+    let pendingMessages = 0;
+    const now = Date.now();
+    
+    for (const messages of offlineMessages.values()) {
+        totalMessages += messages.length;
+        pendingMessages += messages.filter(m => !m.delivered && m.expiresAt > now).length;
+    }
+    
+    res.json({
+        totalRecipients: offlineMessages.size,
+        totalMessages,
+        pendingMessages
+    });
+});
+
 // ============ HTTP Server ============
 
 const server = createServer(app);
+
+// ============ Offline Message Functions ============
+
+function storeOfflineMessage(from: string, to: string, payload: any): string {
+    const toAddr = to.toLowerCase();
+    const fromAddr = from.toLowerCase();
+    const msgId = `offline_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    
+    // Get available nodes for redundant storage
+    const availableNodes = Array.from(connectedNodes.values())
+        .filter(n => Date.now() - n.lastHeartbeat.getTime() < 60000)
+        .map(n => n.tunnelId);
+    
+    // Select up to REDUNDANT_NODE_COUNT nodes
+    const storageNodes = availableNodes.slice(0, REDUNDANT_NODE_COUNT);
+    
+    const offlineMsg: OfflineMessage = {
+        id: msgId,
+        from: fromAddr,
+        to: toAddr,
+        payload,
+        timestamp: Date.now(),
+        expiresAt: Date.now() + (MESSAGE_EXPIRY_DAYS * 24 * 60 * 60 * 1000),  // 7 days
+        storedOnNodes: storageNodes,
+        delivered: false
+    };
+    
+    // Add to hub's queue
+    if (!offlineMessages.has(toAddr)) {
+        offlineMessages.set(toAddr, []);
+    }
+    offlineMessages.get(toAddr)!.push(offlineMsg);
+    
+    // Distribute to relay nodes for redundant storage
+    for (const tunnelId of storageNodes) {
+        const node = connectedNodes.get(tunnelId);
+        if (node && node.socket.readyState === WebSocket.OPEN) {
+            node.socket.send(JSON.stringify({
+                type: 'STORE_OFFLINE_MESSAGE',
+                message: offlineMsg
+            }));
+        }
+    }
+    
+    console.log(`[Hub] Stored offline message ${msgId.slice(0,12)}... for ${toAddr.slice(0,8)}... on ${storageNodes.length} nodes`);
+    return msgId;
+}
+
+function deliverOfflineMessages(address: string, tunnelId: string, sessionId: string): number {
+    const addr = address.toLowerCase();
+    const messages = offlineMessages.get(addr) || [];
+    const node = connectedNodes.get(tunnelId);
+    
+    if (!node) return 0;
+    
+    let deliveredCount = 0;
+    const now = Date.now();
+    
+    for (const msg of messages) {
+        if (msg.delivered || msg.expiresAt < now) continue;
+        
+        // Extract actual text content from nested payload
+        let textContent = msg.payload;
+        if (typeof textContent === 'object') {
+            textContent = textContent.text || textContent.payload || textContent.content || textContent.encryptedBlob || textContent;
+        }
+        
+        // Deliver to user via their node
+        node.socket.send(JSON.stringify({
+            type: 'DELIVER_OFFLINE_MESSAGE',
+            sessionId,
+            message: {
+                type: 'message',
+                from: msg.from,
+                senderAddress: msg.from,
+                to: msg.to,
+                text: textContent,
+                payload: textContent,
+                encryptedBlob: textContent,
+                messageId: msg.id,
+                timestamp: msg.timestamp,
+                isOfflineMessage: true
+            }
+        }));
+        
+        msg.delivered = true;
+        deliveredCount++;
+        
+        // Notify storage nodes to mark as delivered
+        for (const nodeId of msg.storedOnNodes) {
+            const storageNode = connectedNodes.get(nodeId);
+            if (storageNode && storageNode.socket.readyState === WebSocket.OPEN) {
+                storageNode.socket.send(JSON.stringify({
+                    type: 'MARK_MESSAGE_DELIVERED',
+                    messageId: msg.id,
+                    recipient: addr
+                }));
+            }
+        }
+    }
+    
+    if (deliveredCount > 0) {
+        console.log(`[Hub] Delivered ${deliveredCount} offline messages to ${addr.slice(0,8)}...`);
+    }
+    
+    return deliveredCount;
+}
+
+function cleanupExpiredMessages(): void {
+    const now = Date.now();
+    let cleanedTotal = 0;
+    
+    for (const [addr, messages] of offlineMessages) {
+        const before = messages.length;
+        const filtered = messages.filter(m => m.expiresAt > now && !m.delivered);
+        
+        if (filtered.length !== before) {
+            cleanedTotal += (before - filtered.length);
+            if (filtered.length === 0) {
+                offlineMessages.delete(addr);
+            } else {
+                offlineMessages.set(addr, filtered);
+            }
+        }
+    }
+    
+    if (cleanedTotal > 0) {
+        console.log(`[Hub] Cleaned up ${cleanedTotal} expired/delivered offline messages`);
+    }
+    
+    // Notify all nodes to cleanup
+    for (const node of connectedNodes.values()) {
+        if (node.socket.readyState === WebSocket.OPEN) {
+            node.socket.send(JSON.stringify({
+                type: 'CLEANUP_EXPIRED_MESSAGES',
+                expiryTime: now
+            }));
+        }
+    }
+}
+
+// Run cleanup every hour
+setInterval(cleanupExpiredMessages, 60 * 60 * 1000);
 
 // ============ WebSocket Server ============
 
@@ -165,6 +534,23 @@ function handleNodeConnection(ws: WebSocket) {
                 case 'NODE_AUTH':
                     const { walletAddress, signature, nodeId } = message;
                     
+                    // *** VERIFY STAKING BEFORE ACCEPTING NODE ***
+                    const stakingInfo = await verifyStaking(walletAddress);
+                    
+                    if (!stakingInfo.isStaked) {
+                        console.log(`[Hub] ❌ Node REJECTED: ${walletAddress.slice(0,8)}... - Not staked (${stakingInfo.stakedAmount} MCT, min: ${config.minStakeRequired} MCT)`);
+                        ws.send(JSON.stringify({
+                            type: 'NODE_AUTH_FAILED',
+                            error: 'INSUFFICIENT_STAKE',
+                            message: `You need to stake at least ${config.minStakeRequired} MCT to run a relay node`,
+                            currentStake: stakingInfo.stakedAmount,
+                            requiredStake: config.minStakeRequired,
+                            isActive: stakingInfo.isActive
+                        }));
+                        ws.close(4003, 'Insufficient stake');
+                        return;
+                    }
+                    
                     node = {
                         nodeId: nodeId || tunnelId,
                         walletAddress,
@@ -176,7 +562,8 @@ function handleNodeConnection(ws: WebSocket) {
                         stats: {
                             messagesRelayed: 0,
                             bytesTransferred: 0
-                        }
+                        },
+                        staking: stakingInfo
                     };
                     
                     connectedNodes.set(tunnelId, node);
@@ -188,10 +575,12 @@ function handleNodeConnection(ws: WebSocket) {
                         endpoint: `wss://${config.domain}/node/${tunnelId}`,
                         httpEndpoint: `https://${config.domain}/node/${tunnelId}`,
                         hubFeePercent: config.hubFeePercent,
+                        stakedAmount: stakingInfo.stakedAmount,
+                        tier: stakingInfo.tier,
                         message: 'Your node is now accessible!'
                     }));
                     
-                    console.log(`[Hub] Node connected: ${tunnelId} (wallet: ${walletAddress})`);
+                    console.log(`[Hub] ✅ Node connected: ${tunnelId} (wallet: ${walletAddress.slice(0,8)}..., staked: ${stakingInfo.stakedAmount} MCT, tier: ${stakingInfo.tier})`);
                     break;
 
                 case 'HEARTBEAT':
@@ -206,6 +595,7 @@ function handleNodeConnection(ws: WebSocket) {
                     if (node) {
                         const { userId, payload } = message;
                         let delivered = false;
+                        const senderAddr = (payload.from || payload.senderAddress || '').toLowerCase();
                         
                         // First try local user (on same node)
                         const userSocket = node.connectedUsers.get(userId);
@@ -215,7 +605,7 @@ function handleNodeConnection(ws: WebSocket) {
                             delivered = true;
                         }
                         
-                        // *** NEW: Cross-node delivery ***
+                        // Cross-node delivery
                         if (!delivered && payload.to) {
                             const targetAddr = payload.to.toLowerCase();
                             const targetUser = usersByAddress.get(targetAddr);
@@ -233,8 +623,46 @@ function handleNodeConnection(ws: WebSocket) {
                                     node.stats.messagesRelayed++;
                                     console.log(`[Hub] Cross-node relay: ${node.tunnelId} -> ${targetUser.tunnelId} for ${targetAddr.slice(0,8)}...`);
                                     delivered = true;
+                                    
+                                    // *** Send delivery confirmation back to sender's node ***
+                                    ws.send(JSON.stringify({
+                                        type: 'DELIVERY_RECEIPT',
+                                        messageId: payload.messageId,
+                                        to: targetAddr,
+                                        status: 'delivered',
+                                        timestamp: Date.now()
+                                    }));
                                 }
+                            } else if (!targetUser) {
+                                // *** USER IS OFFLINE - Store for later delivery ***
+                                const msgId = storeOfflineMessage(
+                                    payload.from || payload.senderAddress,
+                                    targetAddr,
+                                    payload
+                                );
+                                console.log(`[Hub] User ${targetAddr.slice(0,8)}... offline, queued message ${msgId.slice(0,12)}...`);
+                                
+                                // Send queued confirmation back to sender
+                                ws.send(JSON.stringify({
+                                    type: 'MESSAGE_QUEUED',
+                                    messageId: payload.messageId,
+                                    queuedId: msgId,
+                                    status: 'queued_offline',
+                                    recipient: targetAddr,
+                                    expiresIn: `${MESSAGE_EXPIRY_DAYS} days`
+                                }));
                             }
+                        }
+                        
+                        // *** If delivered locally on same node, send confirmation ***
+                        if (delivered && !payload.to) {
+                            ws.send(JSON.stringify({
+                                type: 'DELIVERY_RECEIPT',
+                                messageId: payload.messageId,
+                                to: payload.to,
+                                status: 'delivered',
+                                timestamp: Date.now()
+                            }));
                         }
                     }
                     break;
@@ -250,7 +678,7 @@ function handleNodeConnection(ws: WebSocket) {
                     }
                     break;
 
-                // *** NEW: User registered their address with the node ***
+                // *** User registered their address with the node ***
                 case 'USER_AUTHENTICATED':
                     if (node && message.sessionId && message.address) {
                         const addr = message.address.toLowerCase();
@@ -259,6 +687,12 @@ function handleNodeConnection(ws: WebSocket) {
                             tunnelId: node.tunnelId
                         });
                         console.log(`[Hub] User ${addr.slice(0,8)}... registered on node ${node.tunnelId}`);
+                        
+                        // *** Deliver any pending offline messages ***
+                        const delivered = deliverOfflineMessages(addr, node.tunnelId, message.sessionId);
+                        if (delivered > 0) {
+                            console.log(`[Hub] Delivered ${delivered} queued messages to ${addr.slice(0,8)}...`);
+                        }
                     }
                     break;
 
@@ -365,7 +799,7 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
                 console.log(`[Hub] User ${addr.slice(0,8)}... authenticated on node ${tunnelId}`);
             }
             
-            // *** NEW: Direct hub routing for relay messages ***
+            // *** Direct hub routing for relay messages ***
             if (payload.type === 'relay' && payload.to) {
                 const targetAddr = payload.to.toLowerCase();
                 const targetInfo = usersByAddress.get(targetAddr);
@@ -409,6 +843,25 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
                         }
                         return;  // Don't forward to node again
                     }
+                } else {
+                    // *** USER IS OFFLINE - Queue message for later delivery ***
+                    const msgId = storeOfflineMessage(
+                        payload.from,
+                        targetAddr,
+                        payload
+                    );
+                    console.log(`[Hub] User ${targetAddr.slice(0,8)}... offline, queued message ${msgId.slice(0,12)}...`);
+                    
+                    // Send queued confirmation
+                    ws.send(JSON.stringify({
+                        type: 'message_queued',
+                        messageId: payload.messageId,
+                        queuedId: msgId,
+                        status: 'queued_offline',
+                        recipient: targetAddr,
+                        expiresIn: `${MESSAGE_EXPIRY_DAYS} days`
+                    }));
+                    return;
                 }
             }
             
@@ -484,19 +937,24 @@ function handleAutoUserConnection(ws: WebSocket) {
 
 // ============ Start Server ============
 
+// Initialize blockchain connection first
+initBlockchain();
+
 server.listen(config.port, () => {
     console.log('═'.repeat(70));
-    console.log('   MumbleChat Relay Hub - WITH CROSS-NODE MESSAGING');
+    console.log('   MumbleChat Relay Hub - WITH STAKING VERIFICATION');
     console.log('═'.repeat(70));
     console.log(`   Server running on port ${config.port}`);
     console.log(`   Domain: ${config.domain}`);
     console.log(`   Hub fee: ${config.hubFeePercent}%`);
+    console.log(`   Min stake required: ${config.minStakeRequired} MCT`);
     console.log('');
     console.log('   Features:');
     console.log('   ✓ Multi-node support');
     console.log('   ✓ Cross-node message relay');
     console.log('   ✓ Global user registry');
     console.log('   ✓ Load balancing');
+    console.log('   ✓ MCT STAKING VERIFICATION');
     console.log('═'.repeat(70));
 });
 

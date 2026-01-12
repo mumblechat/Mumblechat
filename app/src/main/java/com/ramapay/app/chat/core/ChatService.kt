@@ -11,6 +11,9 @@ import com.ramapay.app.chat.data.entity.MessageType
 import com.ramapay.app.chat.data.repository.ConversationRepository
 import com.ramapay.app.chat.data.repository.GroupRepository
 import com.ramapay.app.chat.data.repository.MessageRepository
+import com.ramapay.app.chat.network.HubConnection
+import com.ramapay.app.chat.network.HybridNetworkManager
+import com.ramapay.app.chat.network.MobileRelayServer
 import com.ramapay.app.chat.network.P2PManager
 import com.ramapay.app.chat.p2p.P2PTransport
 import com.ramapay.app.chat.p2p.QRCodePeerExchange
@@ -34,20 +37,23 @@ import javax.inject.Singleton
  * - Chat initialization
  * - Message sending/receiving
  * - P2P network management
+ * - Hub relay connections (for web app compatibility)
+ * - Mobile relay server (phone as relay node)
  * - Message encryption/decryption
  * 
  * IMPORTANT: This service does NOT modify any wallet data.
  * All wallet access is READ-ONLY through WalletBridge.
  * 
- * NEW: Now integrates with MumbleChat Protocol v1.0 (P2PTransport)
+ * NEW: Integrates with HubConnection for web app compatibility
+ * NEW: Integrates with MobileRelayServer for phone-as-relay
  */
 @Singleton
 class ChatService @Inject constructor(
     private val context: Context,
     private val p2pManager: P2PManager,
-    private val p2pTransport: P2PTransport,  // NEW: MumbleChat Protocol transport
-    private val qrCodePeerExchange: QRCodePeerExchange,  // NEW: QR code peer discovery
-    private val messageCodec: MessageCodec,  // NEW: Binary protocol codec
+    private val p2pTransport: P2PTransport,  // MumbleChat Protocol transport
+    private val qrCodePeerExchange: QRCodePeerExchange,  // QR code peer discovery
+    private val messageCodec: MessageCodec,  // Binary protocol codec
     private val messageRepository: MessageRepository,
     private val conversationRepository: ConversationRepository,
     private val groupRepository: GroupRepository,
@@ -56,7 +62,11 @@ class ChatService @Inject constructor(
     private val walletBridge: WalletBridge,
     private val registrationManager: RegistrationManager,
     private val blockchainService: MumbleChatBlockchainService,
-    private val contactDao: ContactDao
+    private val contactDao: ContactDao,
+    // NEW: Hub connection for web app compatibility
+    private val hubConnection: HubConnection,
+    private val mobileRelayServer: MobileRelayServer,
+    private val hybridNetworkManager: HybridNetworkManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
@@ -65,6 +75,15 @@ class ChatService @Inject constructor(
     
     private val _registrationRequired = MutableStateFlow(false)
     val registrationRequired: StateFlow<Boolean> = _registrationRequired
+    
+    // Hub connection state exposed for UI
+    val hubConnectionState: StateFlow<HubConnection.HubConnectionState> = hubConnection.connectionState
+    
+    // Mobile relay server state exposed for UI
+    val mobileRelayState: StateFlow<MobileRelayServer.RelayServerState> = mobileRelayServer.serverState
+    
+    // Hybrid network mode
+    val networkConnectionMode: StateFlow<HybridNetworkManager.ConnectionMode> = hybridNetworkManager.connectionMode
     
     private var chatKeys: ChatKeyManager.ChatKeyPair? = null
 
@@ -116,14 +135,30 @@ class ChatService @Inject constructor(
                 Timber.w(e, "ChatService: P2P connection failed, will use relay")
             }
 
-            // 4. Start listening for incoming messages
+            // 4. Connect to Hub relay (for web app compatibility)
+            try {
+                val publicKeyBase64 = android.util.Base64.encodeToString(
+                    chatKeys!!.sessionPublic, android.util.Base64.NO_WRAP
+                )
+                
+                // Get display name from profile if available
+                val displayName = walletBridge.getDisplayName() ?: walletAddress.take(8)
+                
+                hubConnection.connect(walletAddress, displayName, publicKeyBase64)
+                Timber.d("ChatService: Hub connection initiated")
+            } catch (e: Exception) {
+                // Hub failure shouldn't block chat
+                Timber.w(e, "ChatService: Hub connection failed, will use P2P only")
+            }
+
+            // 5. Start listening for incoming messages
             try {
                 startMessageListener()
             } catch (e: Exception) {
                 Timber.w(e, "ChatService: Message listener failed to start")
             }
 
-            // 5. Sync pending messages from relays
+            // 6. Sync pending messages from relays
             try {
                 syncPendingMessages()
             } catch (e: Exception) {
@@ -400,6 +435,34 @@ class ChatService @Inject constructor(
                 handleProtocolMessage(protoMessage)
             }
         }
+        
+        // Listen to Hub messages (for web app compatibility)
+        scope.launch {
+            hubConnection.incomingMessages.collect { hubMessage ->
+                handleHubMessage(hubMessage)
+            }
+        }
+        
+        // Listen to Hub delivery status updates
+        scope.launch {
+            hubConnection.deliveryStatus.collect { status ->
+                handleHubDeliveryStatus(status)
+            }
+        }
+        
+        // Listen to Hybrid Network messages (unified layer)
+        scope.launch {
+            hybridNetworkManager.incomingMessages.collect { msg ->
+                handleHybridMessage(msg)
+            }
+        }
+        
+        // Listen to Hybrid Network delivery updates
+        scope.launch {
+            hybridNetworkManager.deliveryStatus.collect { update ->
+                handleHybridDeliveryUpdate(update)
+            }
+        }
     }
 
     /**
@@ -546,6 +609,192 @@ class ChatService @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "Failed to sync pending messages")
         }
+        
+        // Also sync from hub
+        try {
+            hubConnection.requestSync()
+            Timber.d("ChatService: Hub sync requested")
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to sync from hub")
+        }
+    }
+    
+    /**
+     * Handle incoming messages from Hub relay
+     */
+    private suspend fun handleHubMessage(hubMessage: HubConnection.HubMessage) {
+        try {
+            val keys = chatKeys ?: return
+            val myAddress = walletBridge.getCurrentWalletAddress() ?: return
+            
+            val encryptedPayload = hubMessage.encryptedData ?: hubMessage.payload ?: return
+            
+            // Decrypt message if we have sender's public key
+            var decryptedContent: String? = null
+            if (hubMessage.encrypted && hubMessage.senderPublicKey != null) {
+                try {
+                    val payloadBytes = android.util.Base64.decode(encryptedPayload, android.util.Base64.NO_WRAP)
+                    val senderPubKeyBytes = android.util.Base64.decode(hubMessage.senderPublicKey, android.util.Base64.NO_WRAP)
+                    
+                    // Split payload into ciphertext and nonce (last 12 bytes)
+                    val nonceSize = 12
+                    val ciphertext = payloadBytes.copyOfRange(0, payloadBytes.size - nonceSize)
+                    val nonce = payloadBytes.copyOfRange(payloadBytes.size - nonceSize, payloadBytes.size)
+                    
+                    val decrypted = messageEncryption.decrypt(
+                        MessageEncryption.SimpleEncryptedMessage(ciphertext, nonce),
+                        senderPubKeyBytes
+                    )
+                    decryptedContent = String(decrypted)
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to decrypt hub message")
+                    // Store encrypted for later decryption
+                    decryptedContent = null
+                }
+            } else if (!hubMessage.encrypted) {
+                // Plaintext message
+                decryptedContent = encryptedPayload
+            }
+            
+            // Get or create conversation
+            val conversation = conversationRepository.getOrCreate(myAddress, hubMessage.from)
+            
+            // Create message entity
+            val message = MessageEntity(
+                id = hubMessage.messageId,
+                conversationId = conversation.id,
+                groupId = null,
+                senderAddress = hubMessage.from,
+                recipientAddress = hubMessage.to,
+                contentType = MessageType.TEXT.name,
+                content = decryptedContent ?: "[Encrypted]",
+                encryptedContent = if (hubMessage.encrypted) encryptedPayload.toByteArray(Charsets.UTF_8) else null,
+                timestamp = hubMessage.timestamp,
+                status = MessageStatus.DELIVERED,
+                replyToId = null,
+                isDeleted = false,
+                signature = hubMessage.signature?.let { 
+                    try { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) } 
+                    catch (e: Exception) { null } 
+                }
+            )
+            
+            // Save to database (ignores if already exists)
+            messageRepository.insertIfNotExists(message)
+            
+            // Update conversation
+            conversationRepository.updateLastMessage(
+                conversation.id,
+                message.id,
+                (decryptedContent ?: "[Encrypted]").take(100),
+                message.timestamp
+            )
+            conversationRepository.incrementUnread(conversation.id)
+            
+            // Send read receipt back via hub
+            hubConnection.sendReadReceipt(hubMessage.messageId, hubMessage.from)
+            
+            Timber.d("ChatService: Received hub message from ${hubMessage.from}")
+            
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to handle hub message")
+        }
+    }
+    
+    /**
+     * Handle delivery status updates from Hub
+     */
+    private suspend fun handleHubDeliveryStatus(status: HubConnection.DeliveryStatus) {
+        try {
+            val newStatus = when (status.status) {
+                HubConnection.MessageDeliveryStatus.SENDING -> MessageStatus.SENDING
+                HubConnection.MessageDeliveryStatus.SENT -> MessageStatus.SENT_DIRECT
+                HubConnection.MessageDeliveryStatus.PENDING -> MessageStatus.SENT_TO_RELAY
+                HubConnection.MessageDeliveryStatus.DELIVERED -> MessageStatus.DELIVERED
+                HubConnection.MessageDeliveryStatus.READ -> MessageStatus.READ
+                HubConnection.MessageDeliveryStatus.FAILED -> MessageStatus.FAILED
+            }
+            
+            messageRepository.updateStatus(status.messageId, newStatus)
+            Timber.d("ChatService: Message ${status.messageId} status updated to $newStatus")
+            
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to handle hub delivery status")
+        }
+    }
+    
+    /**
+     * Handle incoming messages from HybridNetworkManager
+     */
+    private suspend fun handleHybridMessage(msg: HybridNetworkManager.IncomingChatMessage) {
+        try {
+            val myAddress = walletBridge.getCurrentWalletAddress() ?: return
+            
+            // Get or create conversation
+            val conversation = conversationRepository.getOrCreate(myAddress, msg.from)
+            
+            // Create message entity
+            val message = MessageEntity(
+                id = msg.messageId,
+                conversationId = conversation.id,
+                groupId = null,
+                senderAddress = msg.from,
+                recipientAddress = msg.to,
+                contentType = MessageType.TEXT.name,
+                content = msg.decryptedText ?: "[Encrypted]",
+                encryptedContent = if (msg.encrypted) msg.encryptedPayload.toByteArray(Charsets.UTF_8) else null,
+                timestamp = msg.timestamp,
+                status = if (msg.isOffline) MessageStatus.DELIVERED else MessageStatus.DELIVERED,
+                replyToId = null,
+                isDeleted = false,
+                signature = msg.signature?.let { 
+                    try { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) } 
+                    catch (e: Exception) { null } 
+                }
+            )
+            
+            // Save to database (ignores if already exists)
+            messageRepository.insertIfNotExists(message)
+            
+            // Update conversation
+            conversationRepository.updateLastMessage(
+                conversation.id,
+                message.id,
+                (msg.decryptedText ?: "[Encrypted]").take(100),
+                message.timestamp
+            )
+            conversationRepository.incrementUnread(conversation.id)
+            
+            // Send read receipt
+            hybridNetworkManager.sendReadReceipt(msg.messageId, msg.from)
+            
+            Timber.d("ChatService: Received hybrid message from ${msg.from} via ${msg.source}")
+            
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to handle hybrid message")
+        }
+    }
+    
+    /**
+     * Handle delivery status updates from HybridNetworkManager
+     */
+    private suspend fun handleHybridDeliveryUpdate(update: HybridNetworkManager.MessageDeliveryUpdate) {
+        try {
+            val newStatus = when (update.status) {
+                HybridNetworkManager.DeliveryStatus.SENDING -> MessageStatus.SENDING
+                HybridNetworkManager.DeliveryStatus.SENT -> MessageStatus.SENT_DIRECT
+                HybridNetworkManager.DeliveryStatus.PENDING -> MessageStatus.SENT_TO_RELAY
+                HybridNetworkManager.DeliveryStatus.DELIVERED -> MessageStatus.DELIVERED
+                HybridNetworkManager.DeliveryStatus.READ -> MessageStatus.READ
+                HybridNetworkManager.DeliveryStatus.FAILED -> MessageStatus.FAILED
+            }
+            
+            messageRepository.updateStatus(update.messageId, newStatus)
+            Timber.d("ChatService: Message ${update.messageId} status updated via ${update.deliveryMethod}")
+            
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to handle hybrid delivery update")
+        }
     }
 
     /**
@@ -553,6 +802,9 @@ class ChatService @Inject constructor(
      */
     fun cleanup() {
         p2pManager.disconnect()
+        hubConnection.disconnect()
+        mobileRelayServer.stop()
+        hybridNetworkManager.disconnect()
         chatKeys = null
         _isInitialized.value = false
         _registrationRequired.value = false
@@ -683,5 +935,215 @@ class ChatService @Inject constructor(
      */
     fun isMumbleChatDeepLink(url: String): Boolean {
         return url.startsWith("mumblechat://connect")
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // HUB & MOBILE RELAY METHODS
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /**
+     * Send a message via Hub relay (for web app compatibility)
+     * This is the preferred method when communicating with web clients
+     */
+    suspend fun sendMessageViaHub(
+        recipientAddress: String,
+        content: String,
+        contentType: MessageType = MessageType.TEXT
+    ): Result<MessageEntity> {
+        val keys = chatKeys ?: return Result.failure(Exception("Not initialized"))
+        val senderAddress = walletBridge.getCurrentWalletAddress()
+            ?: return Result.failure(Exception("No wallet"))
+            
+        return try {
+            // 0. Check if recipient has blocked sender
+            val canSend = blockchainService.canSendMessage(senderAddress, recipientAddress)
+            if (!canSend) {
+                return Result.failure(Exception("Cannot send message - you may be blocked by this user"))
+            }
+            
+            // 1. Get or create conversation
+            val conversation = conversationRepository.getOrCreate(senderAddress, recipientAddress)
+            
+            // 2. Generate message ID
+            val messageId = "msg_${System.currentTimeMillis()}_${(Math.random() * 100000).toInt()}"
+            
+            // 3. Create message entity
+            val message = MessageEntity(
+                id = messageId,
+                conversationId = conversation.id,
+                groupId = null,
+                senderAddress = senderAddress,
+                recipientAddress = recipientAddress,
+                contentType = contentType.name,
+                content = content,
+                encryptedContent = null,
+                timestamp = System.currentTimeMillis(),
+                status = MessageStatus.SENDING,
+                replyToId = null,
+                isDeleted = false,
+                signature = null
+            )
+            
+            // 4. Save locally first
+            messageRepository.insert(message)
+            
+            // 5. Get recipient's public key for encryption
+            val recipientPubKey = try {
+                registrationManager.getPublicKey(recipientAddress)
+            } catch (e: Exception) {
+                null // Will send with our key
+            }
+            
+            // 6. Encrypt message
+            val encryptedPayload: String
+            val isEncrypted: Boolean
+            
+            if (recipientPubKey != null) {
+                val encrypted = messageEncryption.encrypt(content.toByteArray(), recipientPubKey)
+                encryptedPayload = android.util.Base64.encodeToString(
+                    encrypted.ciphertext + encrypted.nonce,
+                    android.util.Base64.NO_WRAP
+                )
+                isEncrypted = true
+            } else {
+                // No public key - send plaintext (recipient not registered)
+                encryptedPayload = content
+                isEncrypted = false
+            }
+            
+            // 7. Get our public key for sender identification
+            val publicKeyBase64 = android.util.Base64.encodeToString(
+                keys.sessionPublic,
+                android.util.Base64.NO_WRAP
+            )
+            
+            // 8. Send via Hub
+            val sent = hubConnection.sendMessage(
+                to = recipientAddress,
+                encryptedPayload = encryptedPayload,
+                messageId = messageId,
+                encrypted = isEncrypted,
+                senderPublicKey = publicKeyBase64
+            )
+            
+            // 9. Update status
+            val newStatus = if (sent) MessageStatus.SENT_DIRECT else MessageStatus.FAILED
+            messageRepository.updateStatus(messageId, newStatus)
+            
+            // 10. Update conversation
+            conversationRepository.updateLastMessage(
+                conversation.id,
+                messageId,
+                content.take(100),
+                message.timestamp
+            )
+            
+            if (sent) {
+                Result.success(message.copy(status = newStatus))
+            } else {
+                Result.failure(Exception("Failed to send via Hub"))
+            }
+            
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to send message via Hub")
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Set custom relay endpoint (user-provided relay server)
+     */
+    fun setCustomRelayEndpoint(endpoint: String?) {
+        hubConnection.setCustomEndpoint(endpoint)
+        
+        // Reconnect if we have keys
+        if (endpoint != null && chatKeys != null) {
+            scope.launch {
+                try {
+                    val walletAddress = walletBridge.getCurrentWalletAddress() ?: return@launch
+                    val publicKeyBase64 = android.util.Base64.encodeToString(
+                        chatKeys!!.sessionPublic, android.util.Base64.NO_WRAP
+                    )
+                    val displayName = walletBridge.getDisplayName() ?: walletAddress.take(8)
+                    
+                    hubConnection.connect(walletAddress, displayName, publicKeyBase64)
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to connect to custom endpoint")
+                }
+            }
+        }
+    }
+    
+    /**
+     * Start mobile relay server (turn this phone into a relay node)
+     * Other users can connect to this phone to relay their messages
+     * 
+     * @param port Optional specific port (default: 8765)
+     * @return Endpoint URL that can be shared with others
+     */
+    fun startMobileRelayServer(port: Int = 8765): String? {
+        return try {
+            mobileRelayServer.start(port)
+            mobileRelayServer.getEndpointUrl()
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to start mobile relay server")
+            null
+        }
+    }
+    
+    /**
+     * Stop mobile relay server
+     */
+    fun stopMobileRelayServer() {
+        mobileRelayServer.stop()
+    }
+    
+    /**
+     * Get the mobile relay endpoint URL for sharing
+     */
+    fun getMobileRelayEndpoint(): String? {
+        return mobileRelayServer.getEndpointUrl()
+    }
+    
+    /**
+     * Get mobile relay server statistics
+     */
+    fun getMobileRelayStats(): MobileRelayServer.RelayStats {
+        return mobileRelayServer.stats.value
+    }
+    
+    /**
+     * Check if hub is connected
+     */
+    fun isHubConnected(): Boolean {
+        return hubConnection.connectionState.value == HubConnection.HubConnectionState.AUTHENTICATED
+    }
+    
+    /**
+     * Check if mobile relay is running
+     */
+    fun isMobileRelayRunning(): Boolean {
+        return mobileRelayServer.serverState.value == MobileRelayServer.RelayServerState.RUNNING
+    }
+    
+    /**
+     * Get available relay endpoints from hub
+     */
+    suspend fun getAvailableRelayEndpoints(): List<HubConnection.RelayEndpoint> {
+        return hubConnection.getAvailableEndpoints()
+    }
+    
+    /**
+     * Check if a user is online (via hub)
+     */
+    suspend fun isUserOnlineViaHub(address: String): Boolean {
+        return hubConnection.isUserOnline(address)
+    }
+    
+    /**
+     * Request sync of offline messages from hub
+     */
+    fun requestHubSync() {
+        hubConnection.requestSync()
     }
 }

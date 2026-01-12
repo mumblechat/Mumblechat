@@ -125,4 +125,17 @@ class WalletBridge @Inject constructor(
         val wallet = getCurrentWallet() ?: return true
         return wallet.type == com.ramapay.app.entity.WalletType.WATCH
     }
+    
+    /**
+     * Get the display name for the current wallet.
+     * Returns wallet name if set, otherwise abbreviated address.
+     */
+    fun getDisplayName(): String? {
+        val wallet = getCurrentWallet() ?: return null
+        // Return wallet name if available, otherwise shortened address
+        return wallet.name?.takeIf { it.isNotBlank() }
+            ?: wallet.address?.let { 
+                "${it.take(6)}...${it.takeLast(4)}"
+            }
+    }
 }

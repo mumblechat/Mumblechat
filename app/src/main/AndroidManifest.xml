@@ -246,6 +246,11 @@
                 android:theme="@style/AppTheme.NoActionBar"
                 android:label="Relay Node" />
 
+        <activity
+                android:name=".chat.ui.MobileRelaySettingsActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="Mobile Relay" />
+
         <!-- MumbleChat Relay Service - Foreground service for P2P relay operations -->
         <service
                 android:name=".chat.relay.RelayService"

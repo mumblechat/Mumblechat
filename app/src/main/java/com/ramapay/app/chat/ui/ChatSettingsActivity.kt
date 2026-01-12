@@ -165,6 +165,11 @@ class ChatSettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, RelayNodeActivity::class.java))
         }
         
+        // Mobile Relay Settings (Hub + Mobile Node)
+        binding.itemMobileRelay.setOnClickListener {
+            startActivity(Intent(this, MobileRelaySettingsActivity::class.java))
+        }
+        
         // Clear Stuck Transactions
         binding.itemClearNonce.setOnClickListener {
             checkAndClearStuckTransactions()

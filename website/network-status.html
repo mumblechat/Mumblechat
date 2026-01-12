@@ -309,20 +309,24 @@
         
         .node-stats {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
         }
         
         .node-stat {
             text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px 8px;
+            border-radius: 8px;
         }
         
         .node-stat-value {
-            font-size: 32px;
+            font-size: 22px;
             font-weight: 600;
             color: #fff;
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         
         .node-stat-label {
@@ -330,6 +334,70 @@
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 1px;
+        }
+        
+        .node-wallet {
+            font-size: 11px;
+            color: #94a3b8;
+            font-family: monospace;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .node-wallet a {
+            color: #10b981;
+            text-decoration: none;
+        }
+        
+        .node-wallet a:hover {
+            text-decoration: underline;
+        }
+        
+        .tier-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .tier-bronze { background: rgba(205, 127, 50, 0.2); color: #cd7f32; }
+        .tier-silver { background: rgba(192, 192, 192, 0.2); color: #c0c0c0; }
+        .tier-gold { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+        .tier-platinum { background: rgba(148, 0, 211, 0.2); color: #9400d3; }
+        
+        .stake-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 12px 0;
+            padding: 10px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .stake-item {
+            text-align: center;
+        }
+        
+        .stake-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #10b981;
+            display: block;
+        }
+        
+        .stake-label {
+            font-size: 9px;
+            color: #64748b;
+            text-transform: uppercase;
         }
         
         .last-update {
@@ -511,32 +579,63 @@
                 return;
             }
             
+            const tierNames = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+            const tierIcons = ['🥉', '🥈', '🥇', '💎'];
+            const tierClasses = ['bronze', 'silver', 'gold', 'platinum'];
+            
             container.innerHTML = nodes.map((node, index) => {
                 const lastSeen = getTimeSince(node.lastHeartbeat);
+                const tier = node.tier || 0;
+                const walletDisplay = node.walletAddress ? 
+                    `${node.walletAddress.slice(0, 6)}...${node.walletAddress.slice(-4)}` : 
+                    'Unknown';
+                const explorerUrl = node.walletAddress ? 
+                    `https://ramascan.com/address/${node.walletAddress}` : '#';
                 
                 return `
                     <div class="node-card">
                         <div class="node-header">
-                            <div class="node-id">Node #${index + 1} ${node.tunnelId.slice(0, 8)}</div>
-                            <div class="status-badge">
-                                <span class="status-dot"></span>
-                                Online
+                            <div class="node-id">Node #${index + 1}</div>
+                            <div class="tier-badge tier-${tierClasses[tier]}">
+                                ${tierIcons[tier]} ${tierNames[tier]}
                             </div>
                         </div>
+                        
+                        <div class="node-wallet">
+                            💳 <a href="${explorerUrl}" target="_blank">${walletDisplay}</a>
+                        </div>
+                        
                         <div class="node-endpoint">${node.endpoint}</div>
+                        
+                        <div class="stake-info">
+                            <div class="stake-item">
+                                <span class="stake-value">${(node.stakedAmount || 0).toFixed(0)}</span>
+                                <span class="stake-label">MCT Staked</span>
+                            </div>
+                            <div class="stake-item">
+                                <span class="stake-value">${(node.rewardsEarned || 0).toFixed(2)}</span>
+                                <span class="stake-label">MCT Earned</span>
+                            </div>
+                            <div class="stake-item">
+                                <span class="stake-value">${node.blockchainMessages || 0}</span>
+                                <span class="stake-label">Total Relayed</span>
+                            </div>
+                        </div>
+                        
                         <div class="node-stats">
                             <div class="node-stat">
                                 <span class="node-stat-value">${node.connectedUsers || 0}</span>
-                                <span class="node-stat-label">Users</span>
+                                <span class="node-stat-label">Users Online</span>
                             </div>
                             <div class="node-stat">
                                 <span class="node-stat-value">${node.messagesRelayed || 0}</span>
-                                <span class="node-stat-label">Messages</span>
+                                <span class="node-stat-label">Session Msgs</span>
                             </div>
-                            <div class="node-stat">
-                                <span class="node-stat-value" style="font-size: 24px; color: #10b981;">💚</span>
-                                <span class="node-stat-label">${lastSeen}</span>
-                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 12px; font-size: 11px; color: #64748b;">
+                            <span class="status-dot" style="display: inline-block; width: 6px; height: 6px; background: #10b981; border-radius: 50%; margin-right: 6px;"></span>
+                            Last heartbeat: ${lastSeen}
                         </div>
                     </div>
                 `;

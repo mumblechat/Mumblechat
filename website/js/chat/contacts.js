@@ -1,11 +1,112 @@
 /**
  * MumbleChat Contacts Management
- * Handles contact list operations
+ * Handles contact list operations with public key storage for E2EE
  */
 
 import { state, saveContacts, isBlocked, blockContact, unblockContact } from './state.js';
 import { checkContractRegistration, shortenAddress } from './wallet.js';
 import { sendToRelay } from './relay.js';
+import { HUB_CONFIG, STORAGE_KEYS } from './config.js';
+
+// Public key storage
+const publicKeyStore = new Map();
+
+/**
+ * Load public keys from storage
+ */
+export function loadPublicKeys() {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEYS.PUBLIC_KEYS);
+        if (stored) {
+            const keys = JSON.parse(stored);
+            for (const [addr, key] of Object.entries(keys)) {
+                publicKeyStore.set(addr.toLowerCase(), key);
+            }
+            console.log(`🔐 Loaded ${publicKeyStore.size} public keys`);
+        }
+    } catch (error) {
+        console.error('Failed to load public keys:', error);
+    }
+}
+
+/**
+ * Save public keys to storage
+ */
+function savePublicKeys() {
+    try {
+        const keys = {};
+        for (const [addr, key] of publicKeyStore) {
+            keys[addr] = key;
+        }
+        localStorage.setItem(STORAGE_KEYS.PUBLIC_KEYS, JSON.stringify(keys));
+    } catch (error) {
+        console.error('Failed to save public keys:', error);
+    }
+}
+
+/**
+ * Store a contact's public key
+ */
+export function storeContactPublicKey(address, publicKey) {
+    if (!address || !publicKey) return;
+    publicKeyStore.set(address.toLowerCase(), publicKey);
+    savePublicKeys();
+    console.log(`🔑 Stored public key for ${address.slice(0, 8)}...`);
+}
+
+/**
+ * Get a contact's public key
+ */
+export function getContactPublicKey(address) {
+    if (!address) return null;
+    return publicKeyStore.get(address.toLowerCase()) || null;
+}
+
+/**
+ * Check if we have a public key for a contact
+ */
+export function hasContactPublicKey(address) {
+    if (!address) return false;
+    return publicKeyStore.has(address.toLowerCase());
+}
+
+// Initialize on module load
+loadPublicKeys();
+
+/**
+ * Check if a user is online via Hub API (cross-node support)
+ */
+export async function checkUserOnlineStatus(address) {
+    try {
+        const response = await fetch(`${HUB_CONFIG.apiUrl}/api/user/${address.toLowerCase()}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            return data.online === true;
+        }
+    } catch (error) {
+        console.warn('Could not check user online status:', error.message);
+    }
+    return false;
+}
+
+/**
+ * Refresh online status for all contacts via Hub API
+ */
+export async function refreshAllContactsOnlineStatus() {
+    for (const contact of state.contacts) {
+        const online = await checkUserOnlineStatus(contact.address);
+        if (contact.online !== online) {
+            contact.online = online;
+            window.dispatchEvent(new CustomEvent('contactStatusChanged', { 
+                detail: { address: contact.address, online } 
+            }));
+        }
+    }
+    saveContacts();
+}
 
 /**
  * Add a new contact
@@ -32,6 +133,9 @@ export async function addContact(address, name = null) {
     // Check if registered on contract
     const registration = await checkContractRegistration(address);
     
+    // Check if user is online via Hub API (cross-node support)
+    const isOnline = await checkUserOnlineStatus(address);
+    
     const contact = {
         id: Date.now(),
         name: name || registration?.displayName || address.slice(0, 8),
@@ -40,7 +144,7 @@ export async function addContact(address, name = null) {
         isRegistered: !!registration,
         lastMessage: 'Start chatting...',
         unread: 0,
-        online: false,
+        online: isOnline,
         lastMessageTime: null,
         isPinned: false,
         isMuted: false,
@@ -181,6 +285,7 @@ export function getContact(address) {
 
 /**
  * Get sorted contacts list
+ * Sorts: pinned first, then unread, then by newest message (like WhatsApp/Telegram)
  */
 export function getSortedContacts(includeArchived = false) {
     let contacts = [...state.contacts];
@@ -193,15 +298,21 @@ export function getSortedContacts(includeArchived = false) {
     // Filter blocked
     contacts = contacts.filter(c => !isBlocked(c.address));
     
-    // Sort: pinned first, then by last message time
+    // Sort: pinned first, then unread messages, then by newest message timestamp
     return contacts.sort((a, b) => {
+        // Pinned contacts always first
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         
-        const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
-        const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+        // Among pinned (or non-pinned), unread messages come first
+        if (a.unread > 0 && b.unread === 0) return -1;
+        if (a.unread === 0 && b.unread > 0) return 1;
         
-        return timeB - timeA;
+        // Finally sort by timestamp - newest message first (like WhatsApp)
+        const timeA = a.lastMessageTimestamp || a.addedAt || 0;
+        const timeB = b.lastMessageTimestamp || b.addedAt || 0;
+        
+        return timeB - timeA; // Descending - newest first
     });
 }
 

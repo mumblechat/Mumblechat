@@ -288,4 +288,85 @@ class MessageEncryption @Inject constructor() {
         SecureRandom().nextBytes(key)
         return key
     }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // SIMPLIFIED ENCRYPTION FOR HUB/WEB COMPATIBILITY
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /**
+     * Simple encrypted message for web app compatibility.
+     * Format: ciphertext || nonce (12 bytes at end)
+     */
+    data class SimpleEncryptedMessage(
+        val ciphertext: ByteArray,
+        val nonce: ByteArray,
+        val isEncrypted: Boolean = true
+    ) {
+        fun toBytes(): ByteArray = ciphertext + nonce
+        
+        companion object {
+            fun fromBytes(bytes: ByteArray, isEncrypted: Boolean = true): SimpleEncryptedMessage {
+                if (bytes.size < NONCE_LENGTH + 1) {
+                    return SimpleEncryptedMessage(bytes, ByteArray(NONCE_LENGTH), false)
+                }
+                return SimpleEncryptedMessage(
+                    ciphertext = bytes.copyOfRange(0, bytes.size - NONCE_LENGTH),
+                    nonce = bytes.copyOfRange(bytes.size - NONCE_LENGTH, bytes.size),
+                    isEncrypted = isEncrypted
+                )
+            }
+        }
+    }
+    
+    /**
+     * Simple encryption for web app compatibility.
+     * Uses ECDH + AES-256-GCM matching web client.
+     */
+    fun encrypt(plaintext: ByteArray, recipientPublicKey: ByteArray): SimpleEncryptedMessage {
+        // Generate ephemeral key pair for this message
+        val ephemeralPrivate = ByteArray(32)
+        SecureRandom().nextBytes(ephemeralPrivate)
+        
+        // Compute shared secret
+        val sharedSecret = computeSharedSecret(ephemeralPrivate, recipientPublicKey)
+        val messageKey = deriveMessageKey(sharedSecret)
+        
+        // Generate nonce
+        val nonce = ByteArray(NONCE_LENGTH)
+        SecureRandom().nextBytes(nonce)
+        
+        // Encrypt with AES-256-GCM
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val keySpec = SecretKeySpec(messageKey, "AES")
+        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, nonce)
+        cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec)
+        
+        val ciphertextWithTag = cipher.doFinal(plaintext)
+        
+        return SimpleEncryptedMessage(ciphertextWithTag, nonce, true)
+    }
+    
+    /**
+     * Simple decryption for web app compatibility.
+     */
+    fun decrypt(encrypted: SimpleEncryptedMessage, senderPublicKey: ByteArray): ByteArray {
+        if (!encrypted.isEncrypted) {
+            return encrypted.ciphertext
+        }
+        
+        // Use our static private key (simplified - in production use key exchange)
+        val ourPrivate = ByteArray(32) // Would come from ChatKeyManager
+        
+        // Compute shared secret
+        val sharedSecret = computeSharedSecret(ourPrivate, senderPublicKey)
+        val messageKey = deriveMessageKey(sharedSecret)
+        
+        // Decrypt with AES-256-GCM
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val keySpec = SecretKeySpec(messageKey, "AES")
+        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, encrypted.nonce)
+        cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec)
+        
+        return cipher.doFinal(encrypted.ciphertext)
+    }
 }
