@@ -43,18 +43,18 @@ const DOWNLOAD_URLS = {
         icon: '🍎',
         file: 'mumblechat-relay-node-macos.dmg',
         url: 'https://github.com/AncientPatata/mumblechat-relay/releases/latest',
-        instructions: 'Install via npm or Homebrew. Runs as background service via launchd.',
-        command: 'npm install -g mumblechat-relay && mumblechat-relay start',
-        altCommand: 'npx mumblechat-relay start',
+        instructions: 'One-click install script or npm. Runs as background service.',
+        command: 'curl -fsSL https://mumblechat.com/install.sh | bash',
+        altCommand: 'npm install -g mumblechat-relay && mumblechat-relay start',
         prerequisite: 'Requires Node.js 18+ (brew install node)'
     },
     Linux: {
         icon: '🐧',
         file: 'mumblechat-relay-node-linux.tar.gz',
         url: 'https://github.com/AncientPatata/mumblechat-relay/releases/latest',
-        instructions: 'Install via npm. Systemd service auto-configured on install.',
-        command: 'sudo npm install -g mumblechat-relay && mumblechat-relay start',
-        altCommand: 'npx mumblechat-relay start',
+        instructions: 'One-click install script or npm. Systemd service auto-configured.',
+        command: 'curl -fsSL https://mumblechat.com/install.sh | sudo bash',
+        altCommand: 'sudo npm install -g mumblechat-relay && mumblechat-relay start',
         prerequisite: 'Requires Node.js 18+ (apt install nodejs / dnf install nodejs)'
     }
 };
