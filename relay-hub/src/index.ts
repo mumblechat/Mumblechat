@@ -551,6 +551,17 @@ function handleNodeConnection(ws: WebSocket) {
                         return;
                     }
                     
+                    // *** DISCONNECT OLD CONNECTION FROM SAME WALLET ***
+                    const existingTunnelId = nodeByWallet.get(walletAddress);
+                    if (existingTunnelId) {
+                        const existingNode = connectedNodes.get(existingTunnelId);
+                        if (existingNode && existingNode.socket.readyState === WebSocket.OPEN) {
+                            console.log(`[Hub] Replacing existing node ${existingTunnelId} for wallet ${walletAddress.slice(0,8)}...`);
+                            existingNode.socket.close(4001, 'Replaced by new connection');
+                        }
+                        connectedNodes.delete(existingTunnelId);
+                    }
+                    
                     node = {
                         nodeId: nodeId || tunnelId,
                         walletAddress,

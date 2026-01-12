@@ -1,0 +1,45 @@
+# Environment files (contain private keys!)
+.env
+.env.*
+*.env
+
+# Dependencies
+node_modules/
+
+# Build artifacts
+cache/
+artifacts/
+out/
+broadcast/
+
+# OpenZeppelin upgrades
+.openzeppelin/unknown-*.json
+
+# Foundry
+lib/
+
+# Hardhat
+typechain/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+lcov.info
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Private keys - NEVER commit
+*.pem
+*.key

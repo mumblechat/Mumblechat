@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MumbleChat Relay</title>
+    <style>
+        :root {
+            --primary: #1b8cff;
+            --primary-dark: #0066cc;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --border: #2a2a3a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+
+        .app {
+            padding: 20px;
+            -webkit-app-region: no-drag;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            -webkit-app-region: drag;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Status Card */
+        .status-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .status-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--error);
+            animation: none;
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+        }
+
+        .status-text {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .status-text.connected {
+            color: var(--success);
+        }
+
+        .status-text.disconnected {
+            color: var(--error);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Wallet Section */
+        .wallet-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wallet-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'SF Mono', monospace;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .wallet-input:focus {
+            border-color: var(--primary);
+        }
+
+        .wallet-display {
+            padding: 14px 16px;
+            background: var(--bg-dark);
+            border-radius: 10px;
+            font-family: 'SF Mono', monospace;
+            font-size: 13px;
+            color: var(--success);
+            word-break: break-all;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(27, 140, 255, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #f87171);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Settings */
+        .settings-section {
+            margin-top: 20px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 14px;
+        }
+
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: var(--border);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle.active {
+            background: var(--success);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle.active::after {
+            transform: translateX(22px);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Views */
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* Setup View */
+        .setup-icon {
+            font-size: 64px;
+            text-align: center;
+            margin: 40px 0 20px;
+        }
+
+        .setup-title {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .setup-desc {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .steps {
+            margin: 24px 0;
+        }
+
+        .step {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+        }
+
+        .step-num {
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            padding-top: 4px;
+        }
+
+        /* Links */
+        .links {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .link-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            text-decoration: none;
+            text-align: center;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .link-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Tier Badge */
+        .tier-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(205, 127, 50, 0.2);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #cd7f32;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Setup View -->
+        <div class="view" id="setupView">
+            <div class="header">
+                <div class="logo">📡</div>
+                <div class="title">MumbleChat Relay</div>
+                <div class="subtitle">Desktop Node v4.0.0</div>
+            </div>
+
+            <div class="setup-icon">🚀</div>
+            <div class="setup-title">Welcome!</div>
+            <div class="setup-desc">Set up your relay node to start earning MCT tokens</div>
+
+            <div class="wallet-section">
+                <div class="section-title">💳 Your Wallet Address</div>
+                <input type="text" class="wallet-input" id="walletInput" placeholder="0x..." />
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <div class="step-text">Enter your wallet address above</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <div class="step-text">Make sure you have staked MCT at <a href="#" onclick="openStakingPage()">nodesetup.mumblechat.com</a></div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <div class="step-text">Click "Start Relay" to begin earning</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="setupBtn" onclick="completeSetup()">
+                ✅ Save & Continue
+            </button>
+        </div>
+
+        <!-- Main Dashboard View -->
+        <div class="view" id="dashboardView">
+            <div class="header">
+                <div class="logo">📡</div>
+                <div class="title">MumbleChat Relay</div>
+                <div class="subtitle">Desktop Node v4.0.0</div>
+            </div>
+
+            <div class="status-card">
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span class="status-text" id="statusText">Disconnected</span>
+                </div>
+                
+                <button class="btn btn-success" id="startBtn" onclick="toggleRelay()">
+                    ▶️ Start Relaying
+                </button>
+
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="messagesCount">0</div>
+                        <div class="stat-label">Messages</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="uptimeDisplay">0:00</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="earningsDisplay">0.00</div>
+                        <div class="stat-label">MCT Earned</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">🥉</div>
+                        <div class="stat-label">Tier</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wallet-section">
+                <div class="section-title">💳 Wallet</div>
+                <div class="wallet-display" id="walletDisplay">-</div>
+                <div class="tier-badge" id="tierBadge">🥉 Bronze - 1.0x Rewards</div>
+            </div>
+
+            <div class="wallet-section settings-section">
+                <div class="section-title">⚙️ Settings</div>
+                <div class="setting-row">
+                    <span class="setting-label">Start on Login</span>
+                    <div class="toggle" id="autoStartToggle" onclick="toggleAutoStart()"></div>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Auto Reconnect</span>
+                    <div class="toggle active" id="autoReconnectToggle"></div>
+                </div>
+            </div>
+
+            <div class="links">
+                <div class="link-btn" onclick="openExternal('https://mumblechat.com/network-status.html')">
+                    📊 Network
+                </div>
+                <div class="link-btn" onclick="openExternal('https://mumblechat.com')">
+                    💬 Chat
+                </div>
+                <div class="link-btn" onclick="showSetup()">
+                    🔧 Setup
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Powered by <a href="#" onclick="openExternal('https://mumblechat.com')">MumbleChat Protocol</a>
+    </div>
+
+    <script>
+        let isRelaying = false;
+        let config = {};
+
+        // Initialize
+        async function init() {
+            config = await window.electronAPI.getConfig();
+            
+            if (config.wallet) {
+                showDashboard();
+                updateUI();
+            } else {
+                showSetup();
+            }
+            
+            // Set up event listeners
+            window.electronAPI.onRelayStatus((data) => {
+                isRelaying = data.connected;
+                updateUI();
+            });
+            
+            window.electronAPI.onMessageRelayed((data) => {
+                document.getElementById('messagesCount').textContent = data.messagesRelayed;
+            });
+            
+            window.electronAPI.onUptimeUpdate((data) => {
+                const hours = Math.floor(data.uptime / 3600);
+                const mins = Math.floor((data.uptime % 3600) / 60);
+                document.getElementById('uptimeDisplay').textContent = `${hours}:${mins.toString().padStart(2, '0')}`;
+            });
+            
+            window.electronAPI.onEarningsUpdate((data) => {
+                document.getElementById('earningsDisplay').textContent = data.earnings.toFixed(2);
+            });
+            
+            window.electronAPI.onRelayError((error) => {
+                console.error('Relay error:', error);
+            });
+        }
+
+        function showSetup() {
+            document.getElementById('setupView').classList.add('active');
+            document.getElementById('dashboardView').classList.remove('active');
+        }
+
+        function showDashboard() {
+            document.getElementById('setupView').classList.remove('active');
+            document.getElementById('dashboardView').classList.add('active');
+        }
+
+        async function completeSetup() {
+            const wallet = document.getElementById('walletInput').value.trim();
+            
+            if (!wallet.startsWith('0x') || wallet.length !== 42) {
+                alert('Please enter a valid wallet address (0x...)');
+                return;
+            }
+            
+            await window.electronAPI.saveWallet(wallet);
+            config.wallet = wallet;
+            showDashboard();
+            updateUI();
+        }
+
+        function updateUI() {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const startBtn = document.getElementById('startBtn');
+            
+            if (isRelaying) {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Relaying Active';
+                statusText.classList.add('connected');
+                statusText.classList.remove('disconnected');
+                startBtn.textContent = '⏹️ Stop Relaying';
+                startBtn.classList.remove('btn-success');
+                startBtn.classList.add('btn-danger');
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Disconnected';
+                statusText.classList.remove('connected');
+                statusText.classList.add('disconnected');
+                startBtn.textContent = '▶️ Start Relaying';
+                startBtn.classList.add('btn-success');
+                startBtn.classList.remove('btn-danger');
+            }
+            
+            if (config.wallet) {
+                document.getElementById('walletDisplay').textContent = 
+                    config.wallet.slice(0, 10) + '...' + config.wallet.slice(-8);
+            }
+            
+            if (config.autoStart) {
+                document.getElementById('autoStartToggle').classList.add('active');
+            }
+        }
+
+        async function toggleRelay() {
+            if (isRelaying) {
+                await window.electronAPI.stopRelay();
+            } else {
+                await window.electronAPI.startRelay();
+            }
+        }
+
+        async function toggleAutoStart() {
+            const toggle = document.getElementById('autoStartToggle');
+            const isActive = toggle.classList.contains('active');
+            
+            await window.electronAPI.setAutoStart(!isActive);
+            toggle.classList.toggle('active');
+        }
+
+        function openExternal(url) {
+            window.electronAPI.openExternal(url);
+        }
+
+        function openStakingPage() {
+            window.electronAPI.openExternal('https://nodesetup.mumblechat.com');
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>

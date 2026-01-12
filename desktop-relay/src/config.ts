@@ -192,26 +192,128 @@ export function getTierMultiplier(tier: RelayTier): number {
 }
 
 /**
- * Default configuration
+ * Load configuration from environment variables
+ * ALL sensitive data MUST come from .env file - no hardcoded values allowed
+ */
+function getEnvOrThrow(key: string): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+}
+
+function getEnvOrDefault(key: string, defaultValue: string): string {
+  return process.env[key] || defaultValue;
+}
+
+function getEnvNumberOrDefault(key: string, defaultValue: number): number {
+  const value = process.env[key];
+  return value ? parseInt(value, 10) : defaultValue;
+}
+
+/**
+ * Build configuration from environment variables
+ * Required env vars:
+ *   - RPC_URL: Blockchain RPC endpoint
+ *   - CHAIN_ID: Network chain ID
+ *   - REGISTRY_ADDRESS: MumbleChat Registry contract address
+ *   - RELAY_MANAGER_ADDRESS: MumbleChat Relay Manager contract address
+ *   - MCT_TOKEN_ADDRESS: MCT Token contract address
+ *   - HUB_URL: WebSocket URL for hub connection (managed mode)
+ * 
+ * Optional env vars:
+ *   - NODE_MODE: 'MANAGED' or 'SELF_HOSTED' (default: MANAGED)
+ *   - RELAY_PORT: Local relay port (default: 19370)
+ *   - RELAY_HOST: Local bind address (default: 0.0.0.0)
+ *   - SELF_HOSTED_ENDPOINT: Public endpoint for self-hosted mode
+ *   - MAX_CONNECTIONS: Max peer connections (default: 200)
+ *   - MAX_STORAGE_GB: Max storage in GB (default: 8)
+ *   - MESSAGE_TTL_DAYS: Message retention days (default: 7)
+ *   - HEARTBEAT_INTERVAL_MS: Heartbeat interval (default: 300000)
+ *   - API_PORT: Local API port (default: 19380)
+ *   - API_KEY: API authentication key
+ *   - LOG_LEVEL: Logging level (default: info)
+ */
+export function loadConfig(): RelayConfig {
+  return {
+    // Mode from env or default to MANAGED
+    mode: (getEnvOrDefault('NODE_MODE', 'MANAGED') as NodeMode),
+    
+    // Hub settings - URL from environment
+    hub: {
+      url: getEnvOrThrow('HUB_URL'),
+      reconnectIntervalMs: getEnvNumberOrDefault('HUB_RECONNECT_MS', 5000),
+      feePercent: getEnvNumberOrDefault('HUB_FEE_PERCENT', 10),
+    },
+    
+    // Self-hosted settings from environment
+    selfHosted: {
+      endpoint: getEnvOrDefault('SELF_HOSTED_ENDPOINT', ''),
+      port: getEnvNumberOrDefault('SELF_HOSTED_PORT', 19370),
+      host: getEnvOrDefault('SELF_HOSTED_HOST', '0.0.0.0'),
+    },
+    
+    relay: {
+      port: getEnvNumberOrDefault('RELAY_PORT', 19370),
+      host: getEnvOrDefault('RELAY_HOST', '0.0.0.0'),
+      maxConnections: getEnvNumberOrDefault('MAX_CONNECTIONS', 200),
+      maxStorageGB: getEnvNumberOrDefault('MAX_STORAGE_GB', 8),
+      messageTTLDays: getEnvNumberOrDefault('MESSAGE_TTL_DAYS', 7),
+      heartbeatIntervalMs: getEnvNumberOrDefault('HEARTBEAT_INTERVAL_MS', 300000),
+    },
+    
+    // Blockchain config - ALL addresses from environment (required)
+    blockchain: {
+      rpcUrl: getEnvOrThrow('RPC_URL'),
+      chainId: getEnvNumberOrDefault('CHAIN_ID', 1370),
+      registryAddress: getEnvOrThrow('REGISTRY_ADDRESS'),
+      relayManagerAddress: getEnvOrThrow('RELAY_MANAGER_ADDRESS'),
+      mctTokenAddress: getEnvOrThrow('MCT_TOKEN_ADDRESS'),
+    },
+    
+    wallet: {
+      privateKeyEnvVar: 'RELAY_PRIVATE_KEY',
+      keyStorePath: getEnvOrDefault('KEYSTORE_PATH', './keystore'),
+    },
+    
+    storage: {
+      dbPath: getEnvOrDefault('DB_PATH', './data/messages.db'),
+      backupPath: getEnvOrDefault('BACKUP_PATH', './data/backup'),
+    },
+    
+    logging: {
+      level: getEnvOrDefault('LOG_LEVEL', 'info'),
+      file: getEnvOrDefault('LOG_FILE', './logs/relay.log'),
+      maxSize: getEnvOrDefault('LOG_MAX_SIZE', '100m'),
+      maxFiles: getEnvNumberOrDefault('LOG_MAX_FILES', 5),
+    },
+    
+    api: {
+      enabled: getEnvOrDefault('API_ENABLED', 'true') === 'true',
+      port: getEnvNumberOrDefault('API_PORT', 19380),
+      apiKey: getEnvOrDefault('API_KEY', ''),
+    },
+  };
+}
+
+/**
+ * Default configuration - for reference only
+ * In production, use loadConfig() which reads from environment
+ * @deprecated Use loadConfig() instead
  */
 export const defaultConfig: RelayConfig = {
-  // Default to MANAGED mode (easiest for most users)
   mode: 'MANAGED',
-  
-  // Hub settings for managed mode
   hub: {
-    url: 'wss://hub.mumblechat.com/node/connect',
+    url: process.env.HUB_URL || '',
     reconnectIntervalMs: 5000,
     feePercent: 10,
   },
-  
-  // Self-hosted settings (empty by default, user must configure)
   selfHosted: {
-    endpoint: '',  // e.g., "192.168.1.100:19370" or "myrelay.example.com:443"
+    endpoint: '',
     port: 19370,
     host: '0.0.0.0',
   },
-  
   relay: {
     port: 19370,
     host: '0.0.0.0',
@@ -221,11 +323,11 @@ export const defaultConfig: RelayConfig = {
     heartbeatIntervalMs: 300000,
   },
   blockchain: {
-    rpcUrl: 'https://blockchain.ramestta.com',
-    chainId: 1370,
-    registryAddress: '0x4f8D4955F370881B05b68D2344345E749d8632e3',
-    relayManagerAddress: '0xF78F840eF0e321512b09e98C76eA0229Affc4b73',
-    mctTokenAddress: '0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE',
+    rpcUrl: process.env.RPC_URL || '',
+    chainId: parseInt(process.env.CHAIN_ID || '1370', 10),
+    registryAddress: process.env.REGISTRY_ADDRESS || '',
+    relayManagerAddress: process.env.RELAY_MANAGER_ADDRESS || '',
+    mctTokenAddress: process.env.MCT_TOKEN_ADDRESS || '',
   },
   wallet: {
     privateKeyEnvVar: 'RELAY_PRIVATE_KEY',

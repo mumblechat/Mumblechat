@@ -30,5 +30,8 @@
     "token"
   ],
   "author": "RamaPay Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.16.0"
+  }
 }
