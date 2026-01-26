@@ -77,11 +77,19 @@ const CONFIG = {
         { name: 'Silver', stake: 200, uptime: 8, multiplier: 1.5, badge: '🥈' },
         { name: 'Gold', stake: 300, uptime: 12, multiplier: 2.0, badge: '🥇' },
         { name: 'Platinum', stake: 400, uptime: 16, multiplier: 3.0, badge: '💎' }
-    ]
+    ],
+    // V3 Reward Cap System
+    REWARD_CAP: {
+        BASE_REWARD_PER_1000_MSG: 0.001,  // 0.001 MCT per 1000 messages
+        MESSAGES_PER_REWARD: 1000
+    }
 };
 
-// Contract ABIs (minimal)
+// Contract ABIs (minimal) - V3 with reward cap
 const RELAY_MANAGER_ABI = [
+    'function version() view returns (string)',
+    'function BASE_REWARD_PER_1000_MSG() view returns (uint256)',
+    'function MESSAGES_PER_REWARD() view returns (uint256)',
     'function getNodeInfo(address) view returns (uint256 stakedAmount, uint256 tier, uint256 lastActive, uint256 totalRelays, bool isActive)',
     'function getClaimableRewards(address) view returns (uint256 dailyPool, uint256 feePool, uint256 minting)',
     'function claimRewards() external',

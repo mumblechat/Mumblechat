@@ -76,13 +76,50 @@ The app connects to:
 | 🥇 Gold | 300 MCT | 12 hours/day | 2.0x |
 | 💎 Platinum | 400 MCT | 16 hours/day | 3.0x |
 
-## Rewards
+## V3 Reward System
 
 Relay node operators earn MCT tokens from three sources:
 
 1. **Daily Pool** - Proportional share of daily rewards based on uptime
-2. **Fee Pool** - Share of transaction fees from message relaying
+2. **Fee Pool** - Share of transaction fees from message relaying  
 3. **Minting Rewards** - New tokens minted for network participation
+
+**V3 Reward Cap**: Rewards are capped at `MIN(poolShare, (messages/1000) × 0.001 MCT)` to prevent over-payment.
+
+## Running on macOS
+
+### Quick Start (Development Mode)
+```bash
+# 1. Clone/download the repository
+git clone https://github.com/mumblechat/Mumblechat.git
+cd "Mumblechat Ramestta Protocol/desktop-app"
+
+# 2. Install dependencies
+npm install
+
+# 3. Run the app
+npm start
+```
+
+### Building a DMG for Distribution
+```bash
+# Build DMG for macOS (supports both Intel and Apple Silicon)
+npm run build:mac
+
+# Output will be in dist/ folder:
+# - MumbleChat Relay-4.0.0-arm64.dmg (Apple Silicon M1/M2/M3)
+# - MumbleChat Relay-4.0.0-x64.dmg (Intel Macs)
+```
+
+### Installing the DMG
+1. Open the `.dmg` file
+2. Drag "MumbleChat Relay" to Applications
+3. On first launch: Right-click → Open (to bypass Gatekeeper)
+4. Connect your wallet and start relaying!
+
+### Requirements for Building
+- **Node.js 18+**: `brew install node` or download from https://nodejs.org
+- **Xcode Command Line Tools**: `xcode-select --install`
 
 ## Development
 
