@@ -39,19 +39,32 @@ jobs:
       run: ./gradlew assembleRelease --no-daemon
       continue-on-error: true
       
-    - name: Upload Debug APK
+    - name: List APK outputs
+      run: |
+        echo "=== All APK files generated ==="
+        find app/build/outputs/apk -name "*.apk" -exec ls -lh {} \;
+        
+    - name: Upload Debug APK (noAnalytics)
       uses: actions/upload-artifact@v4
       with:
-        name: mumblechat-debug-apk
-        path: app/build/outputs/apk/debug/*.apk
-        retention-days: 30
+        name: RamaPay-debug-apk
+        path: app/build/outputs/apk/noAnalytics/debug/*.apk
+        retention-days: 90
+        
+    - name: Upload Debug APK (analytics)
+      uses: actions/upload-artifact@v4
+      with:
+        name: RamaPay-analytics-apk
+        path: app/build/outputs/apk/analytics/debug/*.apk
+        retention-days: 90
+      continue-on-error: true
         
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
-        name: mumblechat-release-apk
-        path: app/build/outputs/apk/release/*.apk
-        retention-days: 30
+        name: RamaPay-release-apk
+        path: app/build/outputs/apk/*/release/*.apk
+        retention-days: 90
       continue-on-error: true
       
     - name: Build Summary
@@ -62,4 +75,3 @@ jobs:
         find app/build/outputs/apk -name "*.apk" -exec ls -lh {} \; >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Download the APK from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
-# Build trigger Mon Jan 26 11:43:02 AM CET 2026
