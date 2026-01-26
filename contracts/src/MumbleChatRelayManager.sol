@@ -139,6 +139,12 @@ contract MumbleChatRelayManager is
     
     uint256 public constant HEARTBEAT_TIMEOUT = 5 minutes;
     
+    // ============ Base Reward Constants ============
+    // Base reward: 0.001 MCT per 1000 messages (from MCTToken.sol)
+    // This is used to cap pool rewards to prevent nodes from earning more than their message entitlement
+    uint256 public constant BASE_REWARD_PER_1000_MSG = 1 * 10 ** 15; // 0.001 MCT
+    uint256 public constant MESSAGES_PER_REWARD = 1000;
+    
     // ============ Daily Pool Variables ============
     
     mapping(uint256 => uint256) public dailyMissedPool;
@@ -475,6 +481,12 @@ contract MumbleChatRelayManager is
     /**
      * @dev Claim daily pool reward
      */
+    /**
+     * @dev Claim daily pool reward with base reward cap
+     * IMPORTANT: Nodes cannot earn more than their message entitlement
+     * Reward = MIN(poolShare, baseRewardCap)
+     * baseRewardCap = (relayCount / 1000) * 0.001 MCT
+     */
     function claimDailyPoolReward(uint256 dayId) external nonReentrant {
         require(dayId < block.timestamp / 1 days, "Cannot claim for current day");
         
@@ -487,9 +499,18 @@ contract MumbleChatRelayManager is
         
         stats.claimed = true;
         
+        // Calculate pool share
         uint256 totalActualEarned = (pool.totalWeightedRelays * relayRewardPerMessage) / 100;
         uint256 effectivePool = totalActualEarned > pool.poolAmount ? pool.poolAmount : totalActualEarned;
-        uint256 reward = (stats.weightedRelayCount * effectivePool) / pool.totalWeightedRelays;
+        uint256 poolShare = (stats.weightedRelayCount * effectivePool) / pool.totalWeightedRelays;
+        
+        // Calculate base reward cap: (relayCount / 1000) * 0.001 MCT
+        // This prevents nodes from earning more than their message entitlement
+        uint256 baseRewardCap = (stats.relayCount * BASE_REWARD_PER_1000_MSG) / MESSAGES_PER_REWARD;
+        
+        // Reward = MIN(poolShare, baseRewardCap)
+        // Node cannot earn more than what their relays entitle them to
+        uint256 reward = poolShare < baseRewardCap ? poolShare : baseRewardCap;
         
         uint256 available = IERC20(mctToken).balanceOf(address(this));
         if (reward > available) {
@@ -1014,7 +1035,7 @@ contract MumbleChatRelayManager is
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     
     function version() public pure returns (string memory) {
-        return "1.0.0";
+        return "3.0.0";
     }
 }
 

@@ -34,8 +34,8 @@
     },
     "MumbleChatRelayManager": {
       "proxy": "0xF78F840eF0e321512b09e98C76eA0229Affc4b73",
-      "implementation": "0xc9D5A9624368C903DE78B1530b7A1b1E70952d67",
-      "version": "2.0.0",
+      "implementation": "0x2233A9e60BE7aF129B76FD87427fe7228bA1E6d2",
+      "version": "3.0.0",
       "deployedAt": "2026-01-07T14:04:03.411Z",
       "verified": true,
       "features": [
@@ -48,10 +48,12 @@
         "Protection protocol (slashing, reputation)",
         "Daily pool distribution",
         "getActiveEndpoints() - Decentralized discovery",
-        "updateEndpoint() - Dynamic IP support"
+        "updateEndpoint() - Dynamic IP support",
+        "V3: Reward cap - MIN(poolShare, baseRewardCap)",
+        "V3: BASE_REWARD_PER_1000_MSG = 0.001 MCT"
       ],
-      "upgradedAt": "2026-01-07T21:54:22.935Z",
-      "lastUpgraded": "2026-01-07T21:58:00.000Z"
+      "upgradedAt": "2026-01-26T12:17:12.417Z",
+      "lastUpgraded": "2026-01-26T12:17:12.417Z"
     }
   },
   "verification": {
@@ -60,6 +62,7 @@
     "registryImplementation": "https://ramascan.com/address/0xe73f98b22528E34eDE1Ee4AD6facF704ED5dF8C3#code",
     "registryImplementationV4": "https://ramascan.com/address/0x912B6B9917B04f5466b1dc35086FB64aba63C7cD#code",
     "relayManagerProxy": "https://ramascan.com/address/0xF78F840eF0e321512b09e98C76eA0229Affc4b73#code",
-    "relayManagerImplementation": "https://ramascan.com/address/0xb9E673952e25E6E86745264B90FBC82b50ffb067#code"
+    "relayManagerImplementation": "https://ramascan.com/address/0xb9E673952e25E6E86745264B90FBC82b50ffb067#code",
+    "relayManagerImplementationV3": "https://ramascan.com/address/0x2233A9e60BE7aF129B76FD87427fe7228bA1E6d2#code"
   }
 }
