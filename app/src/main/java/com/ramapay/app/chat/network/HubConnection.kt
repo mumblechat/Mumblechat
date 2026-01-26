@@ -77,6 +77,17 @@ class HubConnection @Inject constructor(
     private val _crossNodeMessages = MutableSharedFlow<CrossNodeMessage>(extraBufferCapacity = 50)
     val crossNodeMessages: SharedFlow<CrossNodeMessage> = _crossNodeMessages
     
+    // Hub stats for rewards display (received via HEARTBEAT_ACK)
+    private val _hubStats = MutableStateFlow(HubStats())
+    val hubStats: StateFlow<HubStats> = _hubStats
+    
+    // Estimated rewards
+    private val _estimatedRewards = MutableStateFlow(EstimatedRewards())
+    val estimatedRewards: StateFlow<EstimatedRewards> = _estimatedRewards
+    
+    // Heartbeat job
+    private var heartbeatJob: Job? = null
+    
     // User info
     private var walletAddress: String? = null
     private var displayName: String? = null
@@ -134,6 +145,35 @@ class HubConnection @Inject constructor(
     )
     
     /**
+     * Hub statistics received from HEARTBEAT_ACK
+     * Updated every 30 seconds for dynamic reward calculation
+     */
+    data class HubStats(
+        val messagesRelayed: Long = 0,
+        val connectedUsers: Int = 0,
+        val bytesTransferred: Long = 0,
+        val totalNodes: Int = 1,
+        val totalNetworkMessages: Long = 0,
+        val totalWeightedRelays: Long = 0,
+        val stakedAmount: Double = 0.0,
+        val tier: Int = 0,
+        val rewardsEarned: Double = 0.0
+    )
+    
+    /**
+     * Estimated rewards calculated locally based on hub stats
+     */
+    data class EstimatedRewards(
+        val relayPoolReward: Double = 0.0,
+        val tierReward: Double = 0.0,
+        val bonusReward: Double = 0.0,
+        val totalEstimated: Double = 0.0,
+        val yourWeightedRelays: Long = 0,
+        val uptimePercent: Double = 0.0,
+        val activeNodes: Int = 1
+    )
+    
+    /**
      * Cross-node message from another mobile relay
      */
     data class CrossNodeMessage(
@@ -154,7 +194,7 @@ class HubConnection @Inject constructor(
     sealed class NodeEvent {
         data class UserConnected(val sessionId: String) : NodeEvent()
         data class UserDisconnected(val sessionId: String) : NodeEvent()
-        data class TunnelEstablished(val tunnelId: String, val endpoint: String) : NodeEvent()
+        data class TunnelEstablished(val tunnelId: String, val endpoint: String, val hubFeePercent: Int = 10) : NodeEvent()
         data class CrossNodeDelivery(val messageId: String, val delivered: Boolean) : NodeEvent()
     }
     
@@ -349,11 +389,15 @@ class HubConnection @Inject constructor(
         best?.endpoint
     }
     
-    private fun connectWebSocket(endpoint: String) {
+    // Track if connected as node
+    private var isNodeMode = false
+    
+    private fun connectWebSocket(endpoint: String, isNodeConnection: Boolean = false) {
         _connectionState.value = HubConnectionState.CONNECTING
         currentEndpoint = endpoint
+        isNodeMode = isNodeConnection
         
-        Timber.d("$TAG: Connecting to $endpoint")
+        Timber.d("$TAG: Connecting to $endpoint (node mode: $isNodeConnection)")
         
         val request = Request.Builder()
             .url(endpoint)
@@ -365,8 +409,12 @@ class HubConnection @Inject constructor(
                 _connectionState.value = HubConnectionState.CONNECTED
                 reconnectAttempts = 0
                 
-                // Authenticate
-                authenticate()
+                // Authenticate (different for node vs user mode)
+                if (isNodeMode) {
+                    authenticateAsNode()
+                } else {
+                    authenticate()
+                }
             }
             
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -407,7 +455,25 @@ class HubConnection @Inject constructor(
         }
         
         ws.send(auth.toString())
-        Timber.d("$TAG: Authentication sent")
+        Timber.d("$TAG: User authentication sent")
+    }
+    
+    /**
+     * Authenticate as a relay NODE (like desktop app)
+     */
+    private fun authenticateAsNode() {
+        val ws = webSocket ?: return
+        
+        val auth = JSONObject().apply {
+            put("type", "NODE_AUTH")
+            put("walletAddress", walletAddress)
+            put("displayName", displayName)
+            put("publicKey", publicKey)
+            put("timestamp", System.currentTimeMillis())
+        }
+        
+        ws.send(auth.toString())
+        Timber.d("$TAG: Node authentication sent")
     }
     
     private fun handleMessage(text: String) {
@@ -418,10 +484,20 @@ class HubConnection @Inject constructor(
             when (type) {
                 "authenticated", "auth_success", "CONNECTED" -> {
                     _connectionState.value = HubConnectionState.AUTHENTICATED
-                    Timber.d("$TAG: Authenticated successfully")
+                    Timber.d("$TAG: Authenticated successfully (mode: ${if (isNodeMode) "node" else "user"})")
+                    
+                    // Start heartbeat for node mode
+                    if (isNodeMode) {
+                        startHeartbeatLoop()
+                    }
                     
                     // Request any pending messages
                     requestSync()
+                }
+                
+                // *** HEARTBEAT_ACK - Hub sends back stats (node mode) ***
+                "HEARTBEAT_ACK" -> {
+                    handleHeartbeatAck(json)
                 }
                 
                 "message" -> {
@@ -499,8 +575,14 @@ class HubConnection @Inject constructor(
                 "NODE_AUTHENTICATED", "TUNNEL_ESTABLISHED" -> {
                     val tunnelId = json.optString("tunnelId")
                     val endpoint = json.optString("endpoint")
-                    Timber.d("$TAG: Mobile relay tunnel established: $tunnelId at $endpoint")
+                    val hubFeePercent = json.optInt("hubFeePercent", 10)
+                    Timber.d("$TAG: Mobile relay tunnel established: $tunnelId at $endpoint (hub fee: $hubFeePercent%)")
                     _connectionState.value = HubConnectionState.AUTHENTICATED
+                    
+                    // Emit tunnel established event so MobileRelayServer can use the endpoint
+                    scope.launch { 
+                        _nodeEvent.emit(NodeEvent.TunnelEstablished(tunnelId, endpoint, hubFeePercent)) 
+                    }
                 }
                 
                 // *** MESSAGE FROM HUB USER (when acting as relay node) ***
@@ -744,6 +826,141 @@ class HubConnection @Inject constructor(
         
         ws.send(auth.toString())
         Timber.d("$TAG: Registered as relay node: $nodeId")
+    }
+    
+    /**
+     * Connect to hub as a RELAY NODE (not user).
+     * This connects to /node/connect endpoint and enables:
+     * - Heartbeat with stats
+     * - Dynamic reward calculation
+     * - Cross-node message routing
+     */
+    suspend fun connectAsNode(
+        address: String,
+        name: String?,
+        pubKey: String?,
+        tunnelId: String
+    ): Result<Unit> {
+        walletAddress = address.lowercase()
+        displayName = name ?: address.take(8)
+        publicKey = pubKey
+        
+        return try {
+            // Connect to node endpoint (like desktop app)
+            val endpoint = "$HUB_WS_URL/node/$tunnelId"
+            connectWebSocket(endpoint, isNodeConnection = true)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Node connection failed")
+            _connectionState.value = HubConnectionState.ERROR
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Send heartbeat to hub (call every 30 seconds)
+     * Hub responds with HEARTBEAT_ACK containing stats
+     */
+    private fun sendHeartbeat() {
+        val ws = webSocket ?: return
+        
+        val heartbeat = JSONObject().apply {
+            put("type", "HEARTBEAT")
+            put("timestamp", System.currentTimeMillis())
+        }
+        
+        ws.send(heartbeat.toString())
+        Timber.d("$TAG: Heartbeat sent")
+    }
+    
+    /**
+     * Start heartbeat loop (every 30 seconds)
+     */
+    private fun startHeartbeatLoop() {
+        heartbeatJob?.cancel()
+        heartbeatJob = scope.launch {
+            while (isActive) {
+                delay(PING_INTERVAL_MS) // 30 seconds
+                sendHeartbeat()
+            }
+        }
+        Timber.d("$TAG: Heartbeat loop started")
+    }
+    
+    /**
+     * Handle HEARTBEAT_ACK from hub with stats
+     */
+    private fun handleHeartbeatAck(json: JSONObject) {
+        try {
+            val data = json.optJSONObject("data") ?: return
+            
+            val stats = HubStats(
+                messagesRelayed = data.optLong("messagesRelayed", 0),
+                connectedUsers = data.optInt("connectedUsers", 0),
+                bytesTransferred = data.optLong("bytesTransferred", 0),
+                totalNodes = data.optInt("totalNodes", 1),
+                totalNetworkMessages = data.optLong("totalNetworkMessages", 0),
+                totalWeightedRelays = data.optLong("totalWeightedRelays", 0),
+                stakedAmount = data.optDouble("stakedAmount", 0.0),
+                tier = data.optInt("tier", 0),
+                rewardsEarned = data.optDouble("rewardsEarned", 0.0)
+            )
+            
+            _hubStats.value = stats
+            Timber.d("$TAG: Hub stats updated - relayed: ${stats.messagesRelayed}, users: ${stats.connectedUsers}, nodes: ${stats.totalNodes}")
+            
+            // Calculate estimated rewards
+            calculateEstimatedRewards(stats)
+            
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to parse heartbeat ack")
+        }
+    }
+    
+    /**
+     * Calculate estimated rewards based on hub stats (same formula as desktop)
+     */
+    private fun calculateEstimatedRewards(stats: HubStats) {
+        // Contract constants
+        val DAILY_POOL_AMOUNT = 100.0
+        val MCT_PER_100_RELAYS = 0.001
+        val TIER_FEE_PERCENTS = arrayOf(10, 20, 30, 40)
+        val TIER_MULTIPLIERS = arrayOf(1.0, 1.5, 2.0, 3.0)
+        
+        val tierLevel = stats.tier.coerceIn(0, 3)
+        val multiplier = TIER_MULTIPLIERS[tierLevel]
+        val feePercent = TIER_FEE_PERCENTS[tierLevel]
+        
+        // Dynamic values from hub
+        val activeNodes = maxOf(1, stats.totalNodes)
+        val totalNetworkRelays = maxOf(1L, stats.totalWeightedRelays)
+        
+        // Your weighted relays
+        val yourWeightedRelays = (stats.messagesRelayed * multiplier).toLong()
+        
+        // PART 1: Relay Pool Reward
+        val totalEarnedFromRelays = (totalNetworkRelays * MCT_PER_100_RELAYS) / 100
+        val effectiveRelayPool = minOf(totalEarnedFromRelays, DAILY_POOL_AMOUNT)
+        val relayPoolReward = if (yourWeightedRelays > 0) {
+            (yourWeightedRelays.toDouble() / totalNetworkRelays) * effectiveRelayPool
+        } else 0.0
+        
+        // PART 2: Tier Fee Reward (assume 100% uptime for now)
+        val tierPool = (DAILY_POOL_AMOUNT * feePercent) / 100
+        val tierReward = tierPool / activeNodes
+        
+        val rewards = EstimatedRewards(
+            relayPoolReward = relayPoolReward,
+            tierReward = tierReward,
+            bonusReward = 0.0, // Would come from missed pool
+            totalEstimated = relayPoolReward + tierReward,
+            yourWeightedRelays = yourWeightedRelays,
+            uptimePercent = 100.0, // Assume running
+            activeNodes = activeNodes
+        )
+        
+        _estimatedRewards.value = rewards
+        Timber.d("$TAG: Estimated rewards: relay=${rewards.relayPoolReward}, tier=${rewards.tierReward}, total=${rewards.totalEstimated}")
     }
     
     // ============ Ping/Keepalive ============

@@ -128,8 +128,14 @@ class MobileRelayServer @Inject constructor(
         val connectedClients: Int = 0,
         val messagesRelayed: Long = 0,
         val offlineMessagesStored: Int = 0,
-        val uptimeSeconds: Long = 0
+        val uptimeSeconds: Long = 0,
+        val hubEndpoint: String? = null,  // Hub-provided tunnel endpoint (no IP exposed!)
+        val hubFeePercent: Int = 10       // Hub takes 10% of rewards
     )
+    
+    // Hub-provided tunnel endpoint (secure - doesn't expose IP)
+    private var hubTunnelEndpoint: String? = null
+    private var hubFeePercent: Int = 10
     
     // ============ Public API ============
     
@@ -207,17 +213,24 @@ class MobileRelayServer @Inject constructor(
     
     /**
      * Get server endpoint URL for sharing
+     * Returns the HUB TUNNEL endpoint (secure - doesn't expose your IP!)
+     * Hub takes 10% of rewards for providing this service.
      */
     fun getEndpointUrl(): String? {
         if (!isRunning) return null
         
-        // Get device's local IP
+        // Return hub-provided tunnel endpoint (SECURE - no IP exposed!)
+        // This is provided by hub after NODE_AUTH
+        return hubTunnelEndpoint
+    }
+    
+    /**
+     * Get local IP endpoint (for advanced users only - exposes IP)
+     */
+    fun getLocalEndpointUrl(): String? {
+        if (!isRunning) return null
         val ip = getLocalIpAddress()
-        return if (ip != null) {
-            "ws://$ip:$serverPort"
-        } else {
-            null
-        }
+        return if (ip != null) "ws://$ip:$serverPort" else null
     }
     
     /**
@@ -601,7 +614,15 @@ class MobileRelayServer @Inject constructor(
                 Timber.d("$TAG: User disconnected from hub tunnel: ${event.sessionId}")
             }
             is HubConnection.NodeEvent.TunnelEstablished -> {
-                Timber.d("$TAG: Hub tunnel established: ${event.tunnelId} at ${event.endpoint}")
+                // *** IMPORTANT: Store the hub-provided endpoint (secure - no IP exposed!) ***
+                hubTunnelEndpoint = event.endpoint
+                hubFeePercent = event.hubFeePercent
+                Timber.d("$TAG: Hub tunnel established: ${event.tunnelId}")
+                Timber.d("$TAG: Secure endpoint (no IP exposed): ${event.endpoint}")
+                Timber.d("$TAG: Hub fee: ${event.hubFeePercent}% of rewards")
+                
+                // Update stats to include the new endpoint
+                updateStats()
             }
             is HubConnection.NodeEvent.CrossNodeDelivery -> {
                 Timber.d("$TAG: Cross-node delivery confirmed: ${event.messageId}")
@@ -654,7 +675,9 @@ class MobileRelayServer @Inject constructor(
             connectedClients = connectedClients.size,
             messagesRelayed = messagesRelayed,
             offlineMessagesStored = totalOffline,
-            uptimeSeconds = uptimeSeconds
+            uptimeSeconds = uptimeSeconds,
+            hubEndpoint = hubTunnelEndpoint,
+            hubFeePercent = hubFeePercent
         )
     }
     

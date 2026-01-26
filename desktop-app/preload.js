@@ -1,19 +1,55 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Expose safe APIs to renderer
 contextBridge.exposeInMainWorld('electronAPI', {
-    getConfig: () => ipcRenderer.invoke('get-config'),
-    saveWallet: (wallet) => ipcRenderer.invoke('save-wallet', wallet),
-    startRelay: () => ipcRenderer.invoke('start-relay'),
-    stopRelay: () => ipcRenderer.invoke('stop-relay'),
-    setAutoStart: (enabled) => ipcRenderer.invoke('set-auto-start', enabled),
-    openExternal: (url) => ipcRenderer.invoke('open-external', url),
-    getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
+    // Configuration
+    getConfig: () => ipcRenderer.invoke('getConfig'),
+    setConfig: (config) => ipcRenderer.invoke('setConfig', config),
+    
+    // Relay control
+    startRelay: () => ipcRenderer.invoke('startRelay'),
+    stopRelay: () => ipcRenderer.invoke('stopRelay'),
+    
+    // Rewards
+    claimRewards: () => ipcRenderer.invoke('claimRewards'),
+    refreshTier: () => ipcRenderer.invoke('refreshTier'),
+    
+    // External links
+    openExternal: (url) => ipcRenderer.invoke('openExternal', url),
+    
+    // System info
+    getSystemInfo: () => ipcRenderer.invoke('getSystemInfo'),
     
     // Event listeners
-    onRelayStatus: (callback) => ipcRenderer.on('relay-status', (event, data) => callback(data)),
-    onRelayError: (callback) => ipcRenderer.on('relay-error', (event, data) => callback(data)),
-    onRelayRegistered: (callback) => ipcRenderer.on('relay-registered', (event, data) => callback(data)),
-    onMessageRelayed: (callback) => ipcRenderer.on('message-relayed', (event, data) => callback(data)),
-    onEarningsUpdate: (callback) => ipcRenderer.on('earnings-update', (event, data) => callback(data)),
-    onUptimeUpdate: (callback) => ipcRenderer.on('uptime-update', (event, data) => callback(data))
+    onStatsUpdate: (callback) => {
+        ipcRenderer.on('statsUpdate', (event, data) => callback(data));
+    },
+    
+    onConnectionChange: (callback) => {
+        ipcRenderer.on('connectionChange', (event, connected) => callback(connected));
+    },
+    
+    onTierUpdate: (callback) => {
+        ipcRenderer.on('tierUpdate', (event, tierInfo) => callback(tierInfo));
+    },
+    
+    onRewardsUpdate: (callback) => {
+        ipcRenderer.on('rewardsUpdate', (event, rewards) => callback(rewards));
+    },
+    
+    onTunnelUpdate: (callback) => {
+        ipcRenderer.on('tunnelUpdate', (event, tunnelInfo) => callback(tunnelInfo));
+    },
+    
+    onLog: (callback) => {
+        ipcRenderer.on('log', (event, [message, type]) => callback(message, type));
+    },
+    
+    // Remove listeners
+    removeAllListeners: (channel) => {
+        ipcRenderer.removeAllListeners(channel);
+    }
 });
+
+// Log that preload has loaded
+console.log('MumbleChat Relay preload script loaded');

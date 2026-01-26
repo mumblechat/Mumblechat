@@ -153,14 +153,49 @@ class MobileRelaySettingsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.relayStats.collect { stats ->
                 updateStatsUI(stats)
+                
+                // Update hub endpoint and fee
+                if (stats != null && stats.hubEndpoint != null) {
+                    binding.textEndpointUrl.text = stats.hubEndpoint
+                    binding.textHubFee.text = "Hub fee: ${stats.hubFeePercent}%"
+                    binding.btnCopyEndpoint.isEnabled = true
+                    binding.btnShareQr.isEnabled = true
+                } else if (stats?.isRunning == true) {
+                    binding.textEndpointUrl.text = "Connecting to hub..."
+                    binding.btnCopyEndpoint.isEnabled = false
+                    binding.btnShareQr.isEnabled = false
+                } else {
+                    binding.textEndpointUrl.text = "Start server to get endpoint..."
+                    binding.btnCopyEndpoint.isEnabled = false
+                    binding.btnShareQr.isEnabled = false
+                }
+            }
+        }
+        
+        // Observe hub stats for network info
+        lifecycleScope.launch {
+            viewModel.hubStats.collect { stats ->
+                updateNetworkInfoUI(stats)
+            }
+        }
+        
+        // Observe estimated rewards
+        lifecycleScope.launch {
+            viewModel.estimatedRewards.collect { rewards ->
+                updateRewardsUI(rewards)
             }
         }
 
+        // relayEndpoint is now handled via relayStats.hubEndpoint above
+        // This is kept for backward compatibility but stats.hubEndpoint takes priority
         lifecycleScope.launch {
             viewModel.relayEndpoint.collect { endpoint ->
-                binding.textEndpointUrl.text = endpoint ?: "Not running"
-                binding.btnCopyEndpoint.isEnabled = endpoint != null
-                binding.btnShareQr.isEnabled = endpoint != null
+                // Only update if we don't have hub endpoint yet
+                if (viewModel.relayStats.value?.hubEndpoint == null && endpoint != null) {
+                    binding.textEndpointUrl.text = endpoint
+                    binding.btnCopyEndpoint.isEnabled = true
+                    binding.btnShareQr.isEnabled = true
+                }
             }
         }
 
@@ -189,6 +224,16 @@ class MobileRelaySettingsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+    
+    private fun updateNetworkInfoUI(stats: HubConnection.HubStats) {
+        binding.textNetworkInfo.text = "📊 Pool: 100 MCT/day • ${stats.totalNodes} nodes • ${stats.totalWeightedRelays} relays"
+    }
+    
+    private fun updateRewardsUI(rewards: HubConnection.EstimatedRewards) {
+        binding.textRelayReward.text = String.format("%.4f", rewards.relayPoolReward)
+        binding.textTierReward.text = String.format("%.4f", rewards.tierReward)
+        binding.textTotalReward.text = String.format("%.4f", rewards.totalEstimated)
     }
 
     private fun updateHubConnectionUI(state: HubConnection.HubConnectionState) {
@@ -324,11 +369,16 @@ class MobileRelaySettingsActivity : AppCompatActivity() {
  */
 @HiltViewModel
 class MobileRelayViewModel @Inject constructor(
-    private val chatService: ChatService
+    private val chatService: ChatService,
+    private val hubConnection: HubConnection
 ) : ViewModel() {
 
     val hubConnectionState: StateFlow<HubConnection.HubConnectionState> = chatService.hubConnectionState
     val relayServerState: StateFlow<MobileRelayServer.RelayServerState> = chatService.mobileRelayState
+    
+    // Hub stats for rewards display
+    val hubStats: StateFlow<HubConnection.HubStats> = hubConnection.hubStats
+    val estimatedRewards: StateFlow<HubConnection.EstimatedRewards> = hubConnection.estimatedRewards
 
     private val _relayStats = MutableStateFlow<MobileRelayServer.RelayStats?>(null)
     val relayStats: StateFlow<MobileRelayServer.RelayStats?> = _relayStats

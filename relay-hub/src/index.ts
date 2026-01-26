@@ -32,14 +32,17 @@ const config = {
 };
 
 // ============ Registry Contract ABI ============
+// Note: The actual contract has a non-standard return format, so we use raw calls
 
 const REGISTRY_ABI = [
-    'function getRelayNode(address node) external view returns (string endpoint, uint256 stakedAmount, uint256 messagesRelayed, uint256 rewardsEarned, bool isActive, uint256 dailyUptimeSeconds, uint256 storageMB, uint8 tier, uint256 rewardMultiplier, bool isOnline)',
     'function isRegistered(address wallet) external view returns (bool)',
     'function totalRelayNodes() external view returns (uint256)',
     'function getActiveRelayNodes() external view returns (address[] memory)',
     'function minRelayStake() external view returns (uint256)'
 ];
+
+// Function selector for getRelayNode(address) - computed as keccak256("getRelayNode(address)")[:4]
+const GET_RELAY_NODE_SELECTOR = '0xa12d2773';
 
 // Relay Manager ABI (for node staking)
 const RELAY_MANAGER_ABI = [
@@ -101,27 +104,65 @@ async function verifyStaking(walletAddress: string): Promise<StakingInfo> {
         isActive: false
     };
     
-    if (!registryContract) {
+    if (!provider) {
         console.log(`[Hub] No blockchain connection, allowing node (dev mode)`);
         return { ...defaultInfo, isStaked: true };  // Allow in dev mode
     }
     
     try {
-        const relayInfo = await registryContract.getRelayNode(walletAddress);
+        // Use raw call because contract ABI has non-standard return format
+        const paddedAddr = walletAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+        const calldata = GET_RELAY_NODE_SELECTOR + paddedAddr;
+        
+        const result = await provider.call({
+            to: config.registryAddress,
+            data: calldata
+        });
+        
+        // Parse the hex result manually
+        // Result format (each word is 64 hex chars / 32 bytes):
+        // Word 0: offset pointer (320)
+        // Word 1: stakedAmount (in wei)
+        // Word 2: messagesRelayed
+        // Word 3: rewardsEarned (in wei)
+        // Word 4: isActive (1 or 0)
+        // Word 5: 0
+        // Word 6: offset for string
+        // Word 7: tier
+        // ...rest is string data
+        
+        if (result === '0x' || result.length < 66) {
+            console.log(`[Hub] No relay node found for ${addr.slice(0,8)}...`);
+            return defaultInfo;
+        }
+        
+        const data = result.slice(2); // Remove 0x
+        const words: string[] = [];
+        for (let i = 0; i < data.length; i += 64) {
+            words.push(data.slice(i, i + 64));
+        }
+        
+        const stakedAmountWei = BigInt('0x' + (words[1] || '0'));
+        const stakedAmount = Number(stakedAmountWei) / 1e18;
+        const messagesRelayed = parseInt(words[2] || '0', 16);
+        const rewardsEarnedWei = BigInt('0x' + (words[3] || '0'));
+        const rewardsEarned = Number(rewardsEarnedWei) / 1e18;
+        const isActive = words[4]?.endsWith('1') || false;
+        const tier = parseInt(words[7] || '0', 16);
         
         const info: StakingInfo = {
-            isStaked: relayInfo[4] && parseFloat(ethers.formatEther(relayInfo[1])) >= config.minStakeRequired,
-            stakedAmount: parseFloat(ethers.formatEther(relayInfo[1])),
-            messagesRelayed: Number(relayInfo[2]),
-            rewardsEarned: parseFloat(ethers.formatEther(relayInfo[3])),
-            tier: Number(relayInfo[7]),
-            isActive: relayInfo[4]
+            isStaked: isActive && stakedAmount >= config.minStakeRequired,
+            stakedAmount,
+            messagesRelayed,
+            rewardsEarned,
+            tier,
+            isActive
         };
         
         // Cache the result
         stakingCache.set(addr, { info, timestamp: Date.now() });
         
-        console.log(`[Hub] Staking check for ${addr.slice(0,8)}...: staked=${info.stakedAmount} MCT, active=${info.isActive}`);
+        console.log(`[Hub] Staking check for ${addr.slice(0,8)}...: staked=${info.stakedAmount} MCT, active=${info.isActive}, tier=${info.tier}`);
         
         return info;
     } catch (error) {
@@ -245,29 +286,26 @@ app.get('/api/blockchain/nodes', async (req, res) => {
         const knownAddresses = [
             '0x0aDbfCe3A8dEb25Cd1b258b6c074B292e36aa98f',
             '0x4B9b3BFcB35b57933cDFbD035AA078Cc5A761deF',
-            '0x9C0306E72520e1C138A5749CAbcbeB7307017F0E'
+            '0x9C0306E72520e1C138A5749CAbcbeB7307017F0E',
+            '0x33116e4e889338f1C907a50812beA4F49c6b6B32'  // Added user's address
         ];
         
         const blockchainNodes = [];
         
         for (const addr of knownAddresses) {
             try {
-                const relayInfo = await registryContract.getRelayNode(addr);
-                if (relayInfo[4]) { // isActive
+                const stakingInfo = await verifyStaking(addr);
+                if (stakingInfo.isActive) {
                     blockchainNodes.push({
                         walletAddress: addr,
-                        endpoint: relayInfo[0],
-                        stakedAmount: parseFloat(ethers.formatEther(relayInfo[1])),
-                        messagesRelayed: Number(relayInfo[2]),
-                        rewardsEarned: parseFloat(ethers.formatEther(relayInfo[3])),
-                        isActive: relayInfo[4],
-                        dailyUptimeSeconds: Number(relayInfo[5]),
-                        storageMB: Number(relayInfo[6]),
-                        tier: Number(relayInfo[7]),
-                        rewardMultiplier: Number(relayInfo[8]) / 100,
-                        isOnline: relayInfo[9],
+                        endpoint: `hub.mumblechat.com/node/${addr.slice(2, 14).toLowerCase()}`,
+                        stakedAmount: stakingInfo.stakedAmount,
+                        messagesRelayed: stakingInfo.messagesRelayed,
+                        rewardsEarned: stakingInfo.rewardsEarned,
+                        isActive: stakingInfo.isActive,
+                        tier: stakingInfo.tier,
                         // Check if currently connected to hub
-                        isConnectedToHub: nodeByWallet.has(addr)
+                        isConnectedToHub: nodeByWallet.has(addr.toLowerCase())
                     });
                 }
             } catch (e) {
@@ -532,7 +570,21 @@ function handleNodeConnection(ws: WebSocket) {
 
             switch (message.type) {
                 case 'NODE_AUTH':
-                    const { walletAddress, signature, nodeId } = message;
+                    // Support both formats: message.walletAddress and message.data.walletAddress
+                    const walletAddress = message.walletAddress || message.data?.walletAddress;
+                    const signature = message.signature || message.data?.signature;
+                    const nodeId = message.nodeId || message.data?.nodeId;
+                    
+                    if (!walletAddress) {
+                        console.log('[Hub] ❌ Node AUTH failed: No wallet address provided');
+                        ws.send(JSON.stringify({
+                            type: 'NODE_AUTH_FAILED',
+                            error: 'MISSING_WALLET',
+                            message: 'Wallet address is required'
+                        }));
+                        ws.close(4002, 'Missing wallet address');
+                        return;
+                    }
                     
                     // *** VERIFY STAKING BEFORE ACCEPTING NODE ***
                     const stakingInfo = await verifyStaking(walletAddress);
@@ -580,6 +632,7 @@ function handleNodeConnection(ws: WebSocket) {
                     connectedNodes.set(tunnelId, node);
                     nodeByWallet.set(walletAddress, tunnelId);
                     
+                    // Send tunnel established message
                     ws.send(JSON.stringify({
                         type: 'TUNNEL_ESTABLISHED',
                         tunnelId,
@@ -591,13 +644,50 @@ function handleNodeConnection(ws: WebSocket) {
                         message: 'Your node is now accessible!'
                     }));
                     
+                    // Also send NODE_REGISTERED for backwards compatibility with older clients
+                    ws.send(JSON.stringify({
+                        type: 'NODE_REGISTERED',
+                        nodeId: nodeId || tunnelId,
+                        data: {
+                            nodeId: nodeId || tunnelId,
+                            tunnelId
+                        }
+                    }));
+                    
                     console.log(`[Hub] ✅ Node connected: ${tunnelId} (wallet: ${walletAddress.slice(0,8)}..., staked: ${stakingInfo.stakedAmount} MCT, tier: ${stakingInfo.tier})`);
                     break;
 
                 case 'HEARTBEAT':
                     if (node) {
                         node.lastHeartbeat = new Date();
-                        ws.send(JSON.stringify({ type: 'HEARTBEAT_ACK' }));
+                        
+                        // Calculate total WEIGHTED relays (tier multiplier applied)
+                        const TIER_MULTIPLIERS = [1.0, 1.5, 2.0, 3.0];
+                        let totalWeightedRelays = 0;
+                        for (const [, n] of connectedNodes) {
+                            const mult = TIER_MULTIPLIERS[n.staking?.tier || 0] || 1;
+                            totalWeightedRelays += n.stats.messagesRelayed * mult;
+                        }
+                        
+                        // Send back node stats so desktop app can display real data
+                        ws.send(JSON.stringify({ 
+                            type: 'HEARTBEAT_ACK',
+                            data: {
+                                // Your node's stats
+                                messagesRelayed: node.stats.messagesRelayed,
+                                connectedUsers: node.connectedUsers.size,
+                                bytesTransferred: node.stats.bytesTransferred,
+                                // Network stats (DYNAMIC!)
+                                totalNodes: connectedNodes.size,
+                                totalNetworkUsers: Array.from(connectedNodes.values()).reduce((sum, n) => sum + n.connectedUsers.size, 0),
+                                totalNetworkMessages: Array.from(connectedNodes.values()).reduce((sum, n) => sum + n.stats.messagesRelayed, 0),
+                                totalWeightedRelays: totalWeightedRelays,  // For reward calculation
+                                // Your staking info
+                                stakedAmount: node.staking?.stakedAmount || 0,
+                                tier: node.staking?.tier || 0,
+                                rewardsEarned: node.staking?.rewardsEarned || 0
+                            }
+                        }));
                     }
                     break;
 

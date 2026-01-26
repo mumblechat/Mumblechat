@@ -3,638 +3,769 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MumbleChat Relay</title>
+    <title>MumbleChat Relay Node</title>
     <style>
         :root {
             --primary: #1b8cff;
-            --primary-dark: #0066cc;
             --success: #10b981;
             --warning: #f59e0b;
             --error: #ef4444;
+            --purple: #8b5cf6;
             --bg-dark: #0a0a0f;
             --bg-card: #12121a;
+            --bg-hover: #1a1a25;
             --border: #2a2a3a;
             --text-primary: #ffffff;
             --text-secondary: #a0a0b0;
             --text-muted: #606070;
         }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-dark); color: var(--text-primary); height: 100vh; overflow: hidden; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        .titlebar { height: 38px; background: linear-gradient(180deg, #1a1a25 0%, #12121a 100%); -webkit-app-region: drag; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid var(--border); }
+        .titlebar-title { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+        .titlebar-actions { display: flex; gap: 8px; -webkit-app-region: no-drag; }
+        .titlebar-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 4px; }
+        .titlebar-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            min-height: 100vh;
-            -webkit-app-region: drag;
-            user-select: none;
-        }
+        .app { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; height: calc(100vh - 38px); }
+        .left-column, .right-column { display: flex; flex-direction: column; gap: 12px; }
 
-        .app {
-            padding: 20px;
-            -webkit-app-region: no-drag;
-        }
+        .header { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; }
+        .logo { font-size: 32px; }
+        .header-text { flex: 1; }
+        .title { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, #1b8cff, #4bc0c8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .version { font-size: 10px; color: var(--text-muted); }
+        .settings-btn { background: var(--bg-hover); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-secondary); cursor: pointer; font-size: 14px; }
+        .settings-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-        /* Header */
-        .header {
-            text-align: center;
-            padding: 20px 0;
-            -webkit-app-region: drag;
-        }
+        .connection-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+        .connection-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .connection-status { display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--error); transition: all 0.3s; }
+        .status-dot.connected { background: var(--success); animation: pulse 2s infinite; }
+        .status-dot.connecting { background: var(--warning); animation: blink 1s infinite; }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .status-text { font-size: 13px; font-weight: 600; }
+        .status-text.connected { color: var(--success); }
+        .status-text.disconnected { color: var(--error); }
+        .status-text.connecting { color: var(--warning); }
+        .toggle-btn { padding: 8px 20px; border: none; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .toggle-btn.start { background: linear-gradient(135deg, var(--success), #059669); color: white; }
+        .toggle-btn.stop { background: linear-gradient(135deg, var(--error), #dc2626); color: white; }
+        .toggle-btn:hover { transform: scale(1.05); }
+        .toggle-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-        .logo {
-            font-size: 48px;
-            margin-bottom: 8px;
-        }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .stat-card { background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 12px 8px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .stat-card:hover { background: rgba(255, 255, 255, 0.06); transform: translateY(-2px); }
+        .stat-value { font-size: 20px; font-weight: 700; color: var(--primary); }
+        .stat-value.success { color: var(--success); }
+        .stat-value.warning { color: var(--warning); }
+        .stat-value.purple { color: var(--purple); }
+        .stat-label { font-size: 9px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; }
 
-        .title {
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        /* Secure Endpoint Card */
+        .endpoint-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+        .endpoint-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .endpoint-icon { font-size: 18px; }
+        .endpoint-title { font-size: 12px; font-weight: 600; color: var(--success); }
+        .endpoint-fee { margin-left: auto; font-size: 10px; color: var(--warning); background: rgba(245, 158, 11, 0.1); padding: 4px 8px; border-radius: 6px; }
+        .endpoint-url { background: var(--bg-dark); border-radius: 8px; padding: 10px; font-family: 'SF Mono', Monaco, monospace; font-size: 10px; color: var(--primary); word-break: break-all; display: flex; align-items: center; gap: 8px; }
+        .endpoint-placeholder { color: var(--text-muted); font-style: italic; }
+        .copy-endpoint-btn { background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; color: var(--text-muted); cursor: pointer; font-size: 10px; flex-shrink: 0; }
+        .copy-endpoint-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .endpoint-note { font-size: 9px; color: var(--text-muted); margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+        .endpoint-note .shield { color: var(--success); }
 
-        .subtitle {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
+        .section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; flex: 1; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .section-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+        .refresh-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; color: var(--text-muted); font-size: 10px; cursor: pointer; transition: all 0.2s; }
+        .refresh-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .refresh-btn.spinning { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* Status Card */
-        .status-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-            margin: 20px 0;
-            text-align: center;
-        }
+        .tier-display { display: flex; align-items: center; gap: 12px; padding: 12px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(27, 140, 255, 0.1)); border-radius: 10px; margin-bottom: 12px; }
+        .tier-badge { font-size: 32px; }
+        .tier-info { flex: 1; }
+        .tier-name { font-size: 16px; font-weight: 700; }
+        .tier-name.bronze { color: #cd7f32; }
+        .tier-name.silver { color: #c0c0c0; }
+        .tier-name.gold { color: #ffd700; }
+        .tier-name.platinum { color: #e5e4e2; }
+        .tier-stake { font-size: 11px; color: var(--text-muted); }
+        .tier-multiplier { background: var(--purple); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
+        .uptime-section { margin-bottom: 12px; }
+        .uptime-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .uptime-label { font-size: 11px; color: var(--text-secondary); }
+        .uptime-value { font-size: 11px; color: var(--success); font-weight: 600; }
+        .progress-bar { height: 8px; background: var(--bg-dark); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--success), var(--primary)); border-radius: 4px; transition: width 0.5s ease; }
 
-        .status-dot {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: var(--error);
-            animation: none;
-        }
+        .rewards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .reward-item { background: var(--bg-dark); border-radius: 8px; padding: 10px; text-align: center; }
+        .reward-value { font-size: 14px; font-weight: 700; color: var(--warning); }
+        .reward-label { font-size: 9px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; }
 
-        .status-dot.connected {
-            background: var(--success);
-            animation: pulse 2s infinite;
-        }
+        .total-section { text-align: center; padding: 12px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(251, 191, 36, 0.15)); border-radius: 10px; margin-bottom: 12px; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .total-label { font-size: 10px; color: var(--text-muted); }
+        .total-value { font-size: 24px; font-weight: 700; color: var(--warning); }
 
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-            50% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
-        }
+        .claim-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, var(--warning), #d97706); border: none; border-radius: 10px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s; }
+        .claim-btn:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
 
-        .status-text {
-            font-size: 18px;
-            font-weight: 600;
-        }
+        .wallet-section { margin-bottom: 10px; }
+        .wallet-input-group { display: flex; gap: 8px; margin-bottom: 10px; }
+        .wallet-input { flex: 1; padding: 10px 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-family: 'SF Mono', Monaco, monospace; font-size: 11px; outline: none; transition: border-color 0.2s; }
+        .wallet-input:focus { border-color: var(--primary); }
+        .save-btn { padding: 10px 16px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .save-btn:hover { background: #0066cc; }
+        .wallet-display { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-dark); border-radius: 8px; margin-bottom: 10px; }
+        .wallet-address { font-family: 'SF Mono', Monaco, monospace; font-size: 11px; color: var(--success); }
+        .edit-btn { background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; color: var(--text-muted); cursor: pointer; font-size: 10px; }
+        .edit-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-        .status-text.connected {
-            color: var(--success);
-        }
+        .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .action-btn { padding: 10px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); font-size: 11px; cursor: pointer; text-align: center; transition: all 0.2s; }
+        .action-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(27, 140, 255, 0.1); }
 
-        .status-text.disconnected {
-            color: var(--error);
-        }
+        .log-container { background: var(--bg-dark); border-radius: 8px; padding: 10px; height: 100%; min-height: 100px; overflow-y: auto; font-family: 'SF Mono', Monaco, monospace; font-size: 10px; }
+        .log-entry { padding: 3px 0; display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .log-entry:last-child { border-bottom: none; }
+        .log-time { color: var(--text-muted); flex-shrink: 0; }
+        .log-msg { color: var(--text-secondary); word-break: break-all; }
+        .log-msg.success { color: var(--success); }
+        .log-msg.error { color: var(--error); }
+        .log-msg.warning { color: var(--warning); }
+        .log-msg.info { color: var(--primary); }
 
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-top: 20px;
-        }
+        .info-section { font-size: 11px; color: var(--text-secondary); line-height: 1.7; }
+        .info-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+        .info-icon { flex-shrink: 0; }
+        .info-note { margin-top: 10px; padding: 10px; background: rgba(16,185,129,0.1); border-radius: 8px; font-size: 10px; color: var(--success); border-left: 3px solid var(--success); }
 
-        .stat-item {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
-        }
+        /* Settings Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 400px; max-width: 90%; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .modal-title { font-size: 18px; font-weight: 700; }
+        .modal-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; }
+        .modal-close:hover { color: var(--text-primary); }
+        .setting-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .setting-item:last-child { border-bottom: none; }
+        .setting-label { font-size: 13px; }
+        .setting-desc { font-size: 10px; color: var(--text-muted); }
+        .toggle-switch { position: relative; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-dark); border-radius: 24px; transition: 0.3s; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+        input:checked + .toggle-slider { background: var(--success); }
+        input:checked + .toggle-slider:before { transform: translateX(20px); }
+        .system-info { margin-top: 16px; padding: 12px; background: var(--bg-dark); border-radius: 8px; font-size: 10px; color: var(--text-muted); }
+        .system-row { display: flex; justify-content: space-between; padding: 4px 0; }
 
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .stat-label {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 4px;
-            text-transform: uppercase;
-        }
-
-        /* Wallet Section */
-        .wallet-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-
-        .section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .wallet-input {
-            width: 100%;
-            padding: 14px 16px;
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-family: 'SF Mono', monospace;
-            font-size: 13px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .wallet-input:focus {
-            border-color: var(--primary);
-        }
-
-        .wallet-display {
-            padding: 14px 16px;
-            background: var(--bg-dark);
-            border-radius: 10px;
-            font-family: 'SF Mono', monospace;
-            font-size: 13px;
-            color: var(--success);
-            word-break: break-all;
-        }
-
-        /* Buttons */
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #1b8cff, #4bc0c8);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(27, 140, 255, 0.3);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #10b981, #34d399);
-            color: white;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444, #f87171);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Settings */
-        .settings-section {
-            margin-top: 20px;
-        }
-
-        .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .setting-row:last-child {
-            border-bottom: none;
-        }
-
-        .setting-label {
-            font-size: 14px;
-        }
-
-        .toggle {
-            position: relative;
-            width: 48px;
-            height: 26px;
-            background: var(--border);
-            border-radius: 13px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .toggle.active {
-            background: var(--success);
-        }
-
-        .toggle::after {
-            content: '';
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 20px;
-            height: 20px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.3s;
-        }
-
-        .toggle.active::after {
-            transform: translateX(22px);
-        }
-
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: var(--text-muted);
-            font-size: 12px;
-        }
-
-        .footer a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-
-        /* Views */
-        .view {
-            display: none;
-        }
-
-        .view.active {
-            display: block;
-        }
-
-        /* Setup View */
-        .setup-icon {
-            font-size: 64px;
-            text-align: center;
-            margin: 40px 0 20px;
-        }
-
-        .setup-title {
-            font-size: 24px;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 8px;
-        }
-
-        .setup-desc {
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-bottom: 32px;
-        }
-
-        .steps {
-            margin: 24px 0;
-        }
-
-        .step {
-            display: flex;
-            gap: 12px;
-            padding: 12px 0;
-        }
-
-        .step-num {
-            width: 28px;
-            height: 28px;
-            background: var(--primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-
-        .step-text {
-            font-size: 14px;
-            color: var(--text-secondary);
-            padding-top: 4px;
-        }
-
-        /* Links */
-        .links {
-            display: flex;
-            gap: 12px;
-            margin-top: 16px;
-        }
-
-        .link-btn {
-            flex: 1;
-            padding: 12px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            text-decoration: none;
-            text-align: center;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .link-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        /* Tier Badge */
-        .tier-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background: rgba(205, 127, 50, 0.2);
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #cd7f32;
-            margin-top: 12px;
-        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div class="app">
-        <!-- Setup View -->
-        <div class="view" id="setupView">
-            <div class="header">
-                <div class="logo">📡</div>
-                <div class="title">MumbleChat Relay</div>
-                <div class="subtitle">Desktop Node v4.0.0</div>
-            </div>
-
-            <div class="setup-icon">🚀</div>
-            <div class="setup-title">Welcome!</div>
-            <div class="setup-desc">Set up your relay node to start earning MCT tokens</div>
-
-            <div class="wallet-section">
-                <div class="section-title">💳 Your Wallet Address</div>
-                <input type="text" class="wallet-input" id="walletInput" placeholder="0x..." />
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-num">1</div>
-                        <div class="step-text">Enter your wallet address above</div>
-                    </div>
-                    <div class="step">
-                        <div class="step-num">2</div>
-                        <div class="step-text">Make sure you have staked MCT at <a href="#" onclick="openStakingPage()">nodesetup.mumblechat.com</a></div>
-                    </div>
-                    <div class="step">
-                        <div class="step-num">3</div>
-                        <div class="step-text">Click "Start Relay" to begin earning</div>
-                    </div>
-                </div>
-            </div>
-
-            <button class="btn btn-primary" id="setupBtn" onclick="completeSetup()">
-                ✅ Save & Continue
-            </button>
+    <div class="titlebar">
+        <span class="titlebar-title">MumbleChat Relay Node</span>
+        <div class="titlebar-actions">
+            <button class="titlebar-btn" onclick="minimizeWindow()" title="Minimize">−</button>
         </div>
+    </div>
 
-        <!-- Main Dashboard View -->
-        <div class="view" id="dashboardView">
+    <div class="app">
+        <!-- Left Column -->
+        <div class="left-column">
             <div class="header">
                 <div class="logo">📡</div>
-                <div class="title">MumbleChat Relay</div>
-                <div class="subtitle">Desktop Node v4.0.0</div>
+                <div class="header-text">
+                    <div class="title">MumbleChat Relay</div>
+                    <div class="version">v4.0.0 • Ramestta Network</div>
+                </div>
+                <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
             </div>
 
-            <div class="status-card">
-                <div class="status-indicator">
-                    <div class="status-dot" id="statusDot"></div>
-                    <span class="status-text" id="statusText">Disconnected</span>
+            <div class="connection-card">
+                <div class="connection-header">
+                    <div class="connection-status">
+                        <div class="status-dot" id="statusDot"></div>
+                        <span class="status-text disconnected" id="statusText">Disconnected</span>
+                    </div>
+                    <button class="toggle-btn start" id="toggleBtn" onclick="toggleRelay()">Start Relay</button>
                 </div>
-                
-                <button class="btn btn-success" id="startBtn" onclick="toggleRelay()">
-                    ▶️ Start Relaying
-                </button>
-
                 <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value" id="messagesCount">0</div>
+                    <div class="stat-card" title="Messages relayed through your node">
+                        <div class="stat-value" id="messagesRelayed">0</div>
                         <div class="stat-label">Messages</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="uptimeDisplay">0:00</div>
+                    <div class="stat-card" title="Users currently connected">
+                        <div class="stat-value success" id="usersConnected">0</div>
+                        <div class="stat-label">Users</div>
+                    </div>
+                    <div class="stat-card" title="Data transferred">
+                        <div class="stat-value warning" id="dataTransferred">0 B</div>
+                        <div class="stat-label">Data</div>
+                    </div>
+                    <div class="stat-card" title="Session uptime">
+                        <div class="stat-value purple" id="uptime">0:00:00</div>
                         <div class="stat-label">Uptime</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="earningsDisplay">0.00</div>
-                        <div class="stat-label">MCT Earned</div>
+                </div>
+            </div>
+
+            <!-- Secure Endpoint Card -->
+            <div class="endpoint-card" id="endpointCard">
+                <div class="endpoint-header">
+                    <span class="endpoint-icon">🔒</span>
+                    <span class="endpoint-title">Secure Endpoint</span>
+                    <span class="endpoint-fee" id="hubFee">Hub fee: 10%</span>
+                </div>
+                <div class="endpoint-url">
+                    <span id="tunnelEndpoint" class="endpoint-placeholder">Connect to get secure endpoint...</span>
+                    <button class="copy-endpoint-btn" onclick="copyEndpoint()" title="Copy endpoint">📋 Copy</button>
+                </div>
+                <div class="endpoint-note">
+                    <span class="shield">🛡️</span> Your IP is hidden! Users connect via hub tunnel.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">👛 Wallet Configuration</div>
+                <div class="wallet-section">
+                    <div id="walletSetup">
+                        <div class="wallet-input-group">
+                            <input type="text" class="wallet-input" id="walletInput" placeholder="Enter your wallet address (0x...)" />
+                            <button class="save-btn" onclick="saveWallet()">Save</button>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value">🥉</div>
-                        <div class="stat-label">Tier</div>
+                    <div id="walletDisplay" class="hidden">
+                        <div class="wallet-display">
+                            <span class="wallet-address" id="walletAddress">0x...</span>
+                            <button class="edit-btn" onclick="editWallet()">Edit</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <div class="action-btn" onclick="openExternal('https://mumblechat.com/staking')">
+                        <div>📊</div>
+                        <div>Staking</div>
+                    </div>
+                    <div class="action-btn" onclick="openExternal('https://nodesetup.mumblechat.com')">
+                        <div>🔧</div>
+                        <div>Node Setup</div>
+                    </div>
+                    <div class="action-btn" onclick="openExternal('https://mumblechat.com')">
+                        <div>💬</div>
+                        <div>Chat App</div>
                     </div>
                 </div>
             </div>
 
-            <div class="wallet-section">
-                <div class="section-title">💳 Wallet</div>
-                <div class="wallet-display" id="walletDisplay">-</div>
-                <div class="tier-badge" id="tierBadge">🥉 Bronze - 1.0x Rewards</div>
-            </div>
-
-            <div class="wallet-section settings-section">
-                <div class="section-title">⚙️ Settings</div>
-                <div class="setting-row">
-                    <span class="setting-label">Start on Login</span>
-                    <div class="toggle" id="autoStartToggle" onclick="toggleAutoStart()"></div>
+            <div class="section" style="flex: 1;">
+                <div class="section-header">
+                    <span class="section-title">📋 Activity Log</span>
+                    <button class="refresh-btn" onclick="clearLog()">Clear</button>
                 </div>
-                <div class="setting-row">
-                    <span class="setting-label">Auto Reconnect</span>
-                    <div class="toggle active" id="autoReconnectToggle"></div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">
+                        <span class="log-time">--:--:--</span>
+                        <span class="log-msg">Welcome to MumbleChat Relay Node</span>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <div class="links">
-                <div class="link-btn" onclick="openExternal('https://mumblechat.com/network-status.html')">
-                    📊 Network
+        <!-- Right Column -->
+        <div class="right-column">
+            <div class="section" style="flex: 1;">
+                <div class="section-header">
+                    <span class="section-title">💎 Tier & Rewards</span>
+                    <button class="refresh-btn" id="refreshBtn" onclick="refreshTier()">↻ Refresh</button>
                 </div>
-                <div class="link-btn" onclick="openExternal('https://mumblechat.com')">
-                    💬 Chat
+
+                <div class="tier-display">
+                    <div class="tier-badge" id="tierBadge">🥉</div>
+                    <div class="tier-info">
+                        <div class="tier-name bronze" id="tierName">Bronze</div>
+                        <div class="tier-stake" id="tierStake">100 MCT Staked</div>
+                    </div>
+                    <div class="tier-multiplier" id="tierMultiplier">1.0x</div>
                 </div>
-                <div class="link-btn" onclick="showSetup()">
-                    🔧 Setup
+
+                <div class="uptime-section">
+                    <div class="uptime-header">
+                        <span class="uptime-label">Daily Uptime Progress (<span id="uptimePercent">0</span>%)</span>
+                        <span class="uptime-value" id="uptimeValue">0.0h / 4h required</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="uptimeProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="rewards-grid">
+                    <div class="reward-item" title="Relay earnings: (yourRelays/totalRelays) × min(earned, 100 MCT)">
+                        <div class="reward-value" id="dailyPoolReward">0.0000</div>
+                        <div class="reward-label">Relay Pool</div>
+                    </div>
+                    <div class="reward-item" title="Tier uptime reward: (tierPool ÷ nodes) × uptime%">
+                        <div class="reward-value" id="feePoolReward">0.0000</div>
+                        <div class="reward-label">Uptime Reward</div>
+                    </div>
+                    <div class="reward-item" title="Bonus from missed rewards (100% uptime required)">
+                        <div class="reward-value" id="mintingReward">0.0000</div>
+                        <div class="reward-label">Bonus</div>
+                    </div>
+                </div>
+
+                <div class="pool-info" style="font-size: 9px; color: var(--text-muted); margin-bottom: 8px; text-align: center;">
+                    📊 Pool: <span id="poolAmount">100</span> MCT/day • <span id="activeNodes">0</span> nodes • <span id="weightedRelays">0</span> network relays
+                </div>
+
+                <div class="total-section">
+                    <div class="total-label">Estimated Daily Rewards</div>
+                    <div class="total-value" id="totalClaimable">0.0000 MCT</div>
+                    <div style="font-size: 9px; color: var(--text-muted); margin-top: 4px;">Dynamic • Updates every 30s from hub</div>
+                </div>
+
+                <button class="claim-btn" onclick="claimRewards()">
+                    <span>💰</span> Claim via Website
+                </button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">ℹ️ Reward Formula</div>
+                <div class="info-section" style="font-size: 10px;">
+                    <div class="info-item"><span class="info-icon">📦</span><span><strong>Relay Pool:</strong> (yourRelays / networkRelays) × pool</span></div>
+                    <div class="info-item"><span class="info-icon">⏱️</span><span><strong>Uptime Reward:</strong> (tierPool ÷ activeNodes) × uptime%</span></div>
+                    <div class="info-item"><span class="info-icon">🎁</span><span><strong>Bonus:</strong> Missed rewards redistributed to 100% uptime nodes</span></div>
+                    <div class="info-item"><span class="info-icon">💎</span><span><strong>Multipliers:</strong> Bronze 1x, Silver 1.5x, Gold 2x, Platinum 3x</span></div>
+                </div>
+                <div class="info-note">
+                    ✅ 0.001 MCT per 100 relays • Tier Pool: 10/20/30/40% of 100 MCT • Shared proportionally
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="footer">
-        Powered by <a href="#" onclick="openExternal('https://mumblechat.com')">MumbleChat Protocol</a>
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">⚙️ Settings</span>
+                <button class="modal-close" onclick="closeSettings()">×</button>
+            </div>
+            
+            <div class="setting-item">
+                <div>
+                    <div class="setting-label">Auto-Reconnect</div>
+                    <div class="setting-desc">Automatically reconnect if connection drops</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoReconnect" checked onchange="saveSetting('autoReconnect', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="setting-item">
+                <div>
+                    <div class="setting-label">Start on Login</div>
+                    <div class="setting-desc">Launch relay when computer starts</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoStart" onchange="saveSetting('autoStart', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="system-info" id="systemInfo">
+                <div class="system-row"><span>Platform:</span><span id="sysPlatform">-</span></div>
+                <div class="system-row"><span>Architecture:</span><span id="sysArch">-</span></div>
+                <div class="system-row"><span>CPUs:</span><span id="sysCPUs">-</span></div>
+                <div class="system-row"><span>Memory:</span><span id="sysMemory">-</span></div>
+                <div class="system-row"><span>Node ID:</span><span id="sysNodeId">-</span></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        let isRelaying = false;
-        let config = {};
+        // State
+        let state = {
+            connected: false,
+            connecting: false,
+            relaying: false,
+            wallet: '',
+            stats: { messagesRelayed: 0, usersConnected: 0, bytesTransferred: 0, uptimeSeconds: 0 },
+            tier: { level: 0, name: 'Bronze', badge: '🥉', multiplier: 1.0, stakedAmount: 100, requiredUptime: 4 },
+            rewards: { dailyPool: 0, feePool: 0, minting: 0, total: 0 },
+            settings: { autoReconnect: true, autoStart: false },
+            tunnel: { endpoint: null, hubFeePercent: 10, isActive: false }
+        };
 
         // Initialize
-        async function init() {
-            config = await window.electronAPI.getConfig();
-            
-            if (config.wallet) {
-                showDashboard();
-                updateUI();
-            } else {
-                showSetup();
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const config = await window.electronAPI.getConfig();
+                
+                // Load wallet
+                if (config.wallet) {
+                    state.wallet = config.wallet;
+                    showWalletDisplay();
+                }
+                
+                // Load settings
+                state.settings.autoReconnect = config.autoReconnect !== false;
+                state.settings.autoStart = config.autoStart || false;
+                document.getElementById('autoReconnect').checked = state.settings.autoReconnect;
+                document.getElementById('autoStart').checked = state.settings.autoStart;
+                
+                // Load state
+                if (config.isRelaying) {
+                    state.relaying = true;
+                    state.connected = true;
+                }
+                if (config.stats) {
+                    state.stats = { ...state.stats, ...config.stats };
+                    updateStatsDisplay();
+                }
+                if (config.tierInfo) {
+                    state.tier = { ...state.tier, ...config.tierInfo };
+                    updateTierDisplay();
+                }
+                if (config.rewards) {
+                    state.rewards = config.rewards;
+                    updateRewardsDisplay();
+                }
+                
+                // Load tunnel info
+                if (config.hubTunnel) {
+                    state.tunnel = config.hubTunnel;
+                    updateTunnelDisplay();
+                }
+                
+                updateConnectionState(config.isRelaying);
+
+                // Load system info
+                loadSystemInfo();
+
+                // Event listeners
+                window.electronAPI.onStatsUpdate((stats) => {
+                    state.stats = { ...state.stats, ...stats };
+                    updateStatsDisplay();
+                });
+
+                window.electronAPI.onConnectionChange((connected) => {
+                    state.connecting = connected === 'connecting';
+                    state.connected = connected === true;
+                    state.relaying = connected === true;
+                    updateConnectionState(connected);
+                });
+
+                window.electronAPI.onTierUpdate((tierInfo) => {
+                    state.tier = { ...state.tier, ...tierInfo };
+                    updateTierDisplay();
+                });
+
+                window.electronAPI.onRewardsUpdate((rewards) => {
+                    state.rewards = rewards;
+                    updateRewardsDisplay();
+                });
+
+                window.electronAPI.onTunnelUpdate((tunnelInfo) => {
+                    state.tunnel = tunnelInfo;
+                    updateTunnelDisplay();
+                });
+
+                window.electronAPI.onLog((msg, type) => {
+                    addLog(msg, type);
+                });
+
+                addLog('Application ready - enter wallet & click Start', 'success');
+            } catch (error) {
+                addLog('Initialization error: ' + error.message, 'error');
             }
-            
-            // Set up event listeners
-            window.electronAPI.onRelayStatus((data) => {
-                isRelaying = data.connected;
-                updateUI();
-            });
-            
-            window.electronAPI.onMessageRelayed((data) => {
-                document.getElementById('messagesCount').textContent = data.messagesRelayed;
-            });
-            
-            window.electronAPI.onUptimeUpdate((data) => {
-                const hours = Math.floor(data.uptime / 3600);
-                const mins = Math.floor((data.uptime % 3600) / 60);
-                document.getElementById('uptimeDisplay').textContent = `${hours}:${mins.toString().padStart(2, '0')}`;
-            });
-            
-            window.electronAPI.onEarningsUpdate((data) => {
-                document.getElementById('earningsDisplay').textContent = data.earnings.toFixed(2);
-            });
-            
-            window.electronAPI.onRelayError((error) => {
-                console.error('Relay error:', error);
-            });
-        }
+        });
 
-        function showSetup() {
-            document.getElementById('setupView').classList.add('active');
-            document.getElementById('dashboardView').classList.remove('active');
-        }
-
-        function showDashboard() {
-            document.getElementById('setupView').classList.remove('active');
-            document.getElementById('dashboardView').classList.add('active');
-        }
-
-        async function completeSetup() {
-            const wallet = document.getElementById('walletInput').value.trim();
-            
-            if (!wallet.startsWith('0x') || wallet.length !== 42) {
-                alert('Please enter a valid wallet address (0x...)');
+        // Connection control
+        async function toggleRelay() {
+            if (!state.wallet) {
+                addLog('Please save your wallet address first', 'error');
                 return;
             }
             
-            await window.electronAPI.saveWallet(wallet);
-            config.wallet = wallet;
-            showDashboard();
-            updateUI();
+            const btn = document.getElementById('toggleBtn');
+            btn.disabled = true;
+            
+            try {
+                if (state.relaying) {
+                    await window.electronAPI.stopRelay();
+                } else {
+                    await window.electronAPI.startRelay();
+                }
+            } catch (error) {
+                addLog('Error: ' + error.message, 'error');
+            }
+            
+            btn.disabled = false;
         }
 
-        function updateUI() {
-            const statusDot = document.getElementById('statusDot');
-            const statusText = document.getElementById('statusText');
-            const startBtn = document.getElementById('startBtn');
+        function updateConnectionState(connected) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            const btn = document.getElementById('toggleBtn');
             
-            if (isRelaying) {
-                statusDot.classList.add('connected');
-                statusText.textContent = 'Relaying Active';
-                statusText.classList.add('connected');
-                statusText.classList.remove('disconnected');
-                startBtn.textContent = '⏹️ Stop Relaying';
-                startBtn.classList.remove('btn-success');
-                startBtn.classList.add('btn-danger');
+            dot.className = 'status-dot';
+            text.className = 'status-text';
+
+            if (connected === 'connecting' || state.connecting) {
+                dot.classList.add('connecting');
+                text.textContent = 'Connecting...';
+                text.classList.add('connecting');
+                btn.textContent = 'Connecting...';
+                btn.className = 'toggle-btn start';
+                btn.disabled = true;
+            } else if (connected === true) {
+                dot.classList.add('connected');
+                text.textContent = 'Connected';
+                text.classList.add('connected');
+                btn.textContent = 'Stop';
+                btn.className = 'toggle-btn stop';
+                btn.disabled = false;
             } else {
-                statusDot.classList.remove('connected');
-                statusText.textContent = 'Disconnected';
-                statusText.classList.remove('connected');
-                statusText.classList.add('disconnected');
-                startBtn.textContent = '▶️ Start Relaying';
-                startBtn.classList.add('btn-success');
-                startBtn.classList.remove('btn-danger');
-            }
-            
-            if (config.wallet) {
-                document.getElementById('walletDisplay').textContent = 
-                    config.wallet.slice(0, 10) + '...' + config.wallet.slice(-8);
-            }
-            
-            if (config.autoStart) {
-                document.getElementById('autoStartToggle').classList.add('active');
+                text.textContent = 'Disconnected';
+                text.classList.add('disconnected');
+                btn.textContent = 'Start Relay';
+                btn.className = 'toggle-btn start';
+                btn.disabled = false;
             }
         }
 
-        async function toggleRelay() {
-            if (isRelaying) {
-                await window.electronAPI.stopRelay();
+        // Stats display
+        function updateStatsDisplay() {
+            document.getElementById('messagesRelayed').textContent = state.stats.messagesRelayed.toLocaleString();
+            document.getElementById('usersConnected').textContent = state.stats.usersConnected.toLocaleString();
+            document.getElementById('dataTransferred').textContent = formatBytes(state.stats.bytesTransferred);
+            
+            const hours = Math.floor(state.stats.uptimeSeconds / 3600);
+            const minutes = Math.floor((state.stats.uptimeSeconds % 3600) / 60);
+            const seconds = state.stats.uptimeSeconds % 60;
+            document.getElementById('uptime').textContent = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update uptime progress
+            const dailyHours = state.stats.uptimeSeconds / 3600;
+            const requiredHours = state.tier.requiredUptime || 4;
+            const progress = Math.min(100, (dailyHours / requiredHours) * 100);
+            document.getElementById('uptimeProgress').style.width = progress + '%';
+            document.getElementById('uptimeValue').textContent = `${dailyHours.toFixed(1)}h / ${requiredHours}h required`;
+            document.getElementById('uptimePercent').textContent = Math.min(100, progress).toFixed(0);
+        }
+
+        // Tier display
+        function updateTierDisplay() {
+            const badges = ['🥉', '🥈', '🥇', '💎'];
+            const names = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+            const multipliers = [1.0, 1.5, 2.0, 3.0];
+            const stakes = [100, 200, 300, 400];
+            
+            const level = state.tier.level || 0;
+            
+            document.getElementById('tierBadge').textContent = badges[level];
+            
+            const nameEl = document.getElementById('tierName');
+            nameEl.textContent = names[level];
+            nameEl.className = 'tier-name ' + names[level].toLowerCase();
+            
+            document.getElementById('tierMultiplier').textContent = multipliers[level] + 'x';
+            document.getElementById('tierStake').textContent = (state.tier.stakedAmount || stakes[level]) + ' MCT Staked';
+        }
+
+        // Rewards display - Contract-accurate formula
+        function updateRewardsDisplay() {
+            // Update reward values
+            document.getElementById('dailyPoolReward').textContent = (state.rewards.dailyPool || 0).toFixed(4);
+            document.getElementById('feePoolReward').textContent = (state.rewards.feePool || 0).toFixed(4);
+            document.getElementById('mintingReward').textContent = (state.rewards.minting || 0).toFixed(4);
+            
+            // Update dynamic pool info from hub
+            if (state.rewards.activeNodes !== undefined) {
+                document.getElementById('activeNodes').textContent = state.rewards.activeNodes;
+            }
+            if (state.rewards.totalNetworkRelays !== undefined) {
+                document.getElementById('weightedRelays').textContent = state.rewards.totalNetworkRelays.toFixed(0);
+            }
+            
+            // Calculate total
+            const total = (state.rewards.dailyPool || 0) + (state.rewards.feePool || 0) + (state.rewards.minting || 0);
+            document.getElementById('totalClaimable').textContent = total.toFixed(4) + ' MCT';
+        }
+
+        // Tunnel display - Secure endpoint that hides your IP
+        function updateTunnelDisplay() {
+            const endpointEl = document.getElementById('tunnelEndpoint');
+            const feeEl = document.getElementById('hubFee');
+            
+            if (state.tunnel && state.tunnel.endpoint && state.tunnel.isActive) {
+                endpointEl.textContent = state.tunnel.endpoint;
+                endpointEl.classList.remove('endpoint-placeholder');
+                feeEl.textContent = `Hub fee: ${state.tunnel.hubFeePercent || 10}%`;
+            } else if (state.connected) {
+                endpointEl.textContent = 'Waiting for tunnel...';
+                endpointEl.classList.add('endpoint-placeholder');
             } else {
-                await window.electronAPI.startRelay();
+                endpointEl.textContent = 'Connect to get secure endpoint...';
+                endpointEl.classList.add('endpoint-placeholder');
             }
         }
 
-        async function toggleAutoStart() {
-            const toggle = document.getElementById('autoStartToggle');
-            const isActive = toggle.classList.contains('active');
+        // Copy endpoint to clipboard
+        async function copyEndpoint() {
+            if (!state.tunnel || !state.tunnel.endpoint) {
+                addLog('No endpoint available to copy', 'warning');
+                return;
+            }
             
-            await window.electronAPI.setAutoStart(!isActive);
-            toggle.classList.toggle('active');
+            try {
+                await navigator.clipboard.writeText(state.tunnel.endpoint);
+                addLog('Endpoint copied to clipboard!', 'success');
+            } catch (err) {
+                addLog('Failed to copy endpoint', 'error');
+            }
         }
 
+        // Actions
+        async function refreshTier() {
+            const btn = document.getElementById('refreshBtn');
+            btn.classList.add('spinning');
+            addLog('Refreshing tier and rewards...', 'info');
+            
+            await window.electronAPI.refreshTier();
+            
+            setTimeout(() => {
+                btn.classList.remove('spinning');
+            }, 1000);
+        }
+
+        async function claimRewards() {
+            addLog('Opening rewards claim page...', 'info');
+            await window.electronAPI.claimRewards();
+        }
+
+        // Wallet management
+        async function saveWallet() {
+            const input = document.getElementById('walletInput');
+            const wallet = input.value.trim();
+            
+            if (!wallet.match(/^0x[a-fA-F0-9]{40}$/)) {
+                addLog('Invalid wallet address format', 'error');
+                input.style.borderColor = 'var(--error)';
+                setTimeout(() => input.style.borderColor = '', 2000);
+                return;
+            }
+            
+            state.wallet = wallet;
+            await window.electronAPI.setConfig({ wallet });
+            showWalletDisplay();
+            addLog('Wallet saved: ' + wallet.slice(0, 8) + '...' + wallet.slice(-6), 'success');
+            refreshTier();
+        }
+
+        function showWalletDisplay() {
+            document.getElementById('walletSetup').classList.add('hidden');
+            document.getElementById('walletDisplay').classList.remove('hidden');
+            document.getElementById('walletAddress').textContent = state.wallet.slice(0, 10) + '...' + state.wallet.slice(-8);
+        }
+
+        function editWallet() {
+            document.getElementById('walletSetup').classList.remove('hidden');
+            document.getElementById('walletDisplay').classList.add('hidden');
+            document.getElementById('walletInput').value = state.wallet;
+        }
+
+        // External links
         function openExternal(url) {
             window.electronAPI.openExternal(url);
         }
 
-        function openStakingPage() {
-            window.electronAPI.openExternal('https://nodesetup.mumblechat.com');
+        // Settings
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
         }
 
-        // Start
-        init();
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        async function saveSetting(key, value) {
+            state.settings[key] = value;
+            await window.electronAPI.setConfig({ [key]: value });
+            addLog(`Setting "${key}" ${value ? 'enabled' : 'disabled'}`, 'info');
+        }
+
+        async function loadSystemInfo() {
+            try {
+                const info = await window.electronAPI.getSystemInfo();
+                const config = await window.electronAPI.getConfig();
+                
+                document.getElementById('sysPlatform').textContent = info.platform;
+                document.getElementById('sysArch').textContent = info.arch;
+                document.getElementById('sysCPUs').textContent = info.cpus + ' cores';
+                document.getElementById('sysMemory').textContent = info.memory + ' GB';
+                document.getElementById('sysNodeId').textContent = config.nodeId || config.machineId?.slice(0, 12) || '-';
+            } catch (e) {
+                console.error('Failed to load system info:', e);
+            }
+        }
+
+        // Logging
+        function addLog(msg, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}">${msg}</span>`;
+            container.insertBefore(entry, container.firstChild);
+            
+            // Keep only last 50 entries
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function clearLog() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '';
+            addLog('Log cleared', 'info');
+        }
+
+        // Utility functions
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+            return (bytes / 1073741824).toFixed(2) + ' GB';
+        }
+
+        function minimizeWindow() {
+            // Electron will handle this through the titlebar
+        }
+
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSettings();
+        });
+
+        // Close modal on overlay click
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) closeSettings();
+        });
     </script>
 </body>
 </html>
