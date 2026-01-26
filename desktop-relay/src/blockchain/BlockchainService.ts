@@ -9,15 +9,20 @@ import { ethers } from 'ethers';
 import { getLogger } from '../utils/logger';
 import { RelayTier, getTierName } from '../config';
 
-// Contract ABIs - V4 Split Architecture
+// Contract ABIs - V4 Split Architecture (RelayManager V3 - Reward Cap)
 const REGISTRY_ABI = [
   'function identities(address) view returns (bytes32 publicKeyX, bytes32 publicKeyY, uint256 registeredAt, uint256 lastUpdated, bool isActive, string displayName)',
   'function register(bytes32 publicKeyX, string displayName)',
   'function isIdentityActive(address user) view returns (bool)',
 ];
 
-// V4 RelayManager ABI - Node Identity + Tier System
+// V4 RelayManager ABI - Node Identity + Tier System (V3 Reward Cap)
 const RELAY_MANAGER_ABI = [
+  // V3 Reward Cap Constants
+  'function BASE_REWARD_PER_1000_MSG() view returns (uint256)',
+  'function MESSAGES_PER_REWARD() view returns (uint256)',
+  'function version() view returns (string)',
+  
   // Node Identity Registration
   'function registerNodeIdentity(bytes32 nodeId, bytes32 machineIdHash, bytes32 serialHash, string endpoint, uint256 storageMB, uint8 tier) payable',
   'function deactivateNodeIdentity(bytes32 nodeId)',

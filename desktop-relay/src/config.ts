@@ -94,6 +94,15 @@ export const PoolShare = {
 } as const;
 
 /**
+ * V3 Reward Cap Constants - matches smart contract
+ * Prevents nodes from earning more than their message entitlement
+ */
+export const RewardCap = {
+  BASE_REWARD_PER_1000_MSG: 0.001,  // 0.001 MCT per 1000 messages
+  MESSAGES_PER_REWARD: 1000,         // Messages required per reward unit
+} as const;
+
+/**
  * Fee Pool Bonus Multipliers (100 = 1x) - matches smart contract
  */
 export const FeeBonus = {

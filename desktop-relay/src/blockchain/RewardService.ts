@@ -1,5 +1,5 @@
 /**
- * MumbleChat Desktop Relay Node - Reward Service
+ * MumbleChat Desktop Relay Node - Reward Service (V3)
  * 
  * Comprehensive reward management implementing all features from relay-nodes.html:
  * - Daily Pool Rewards (100 MCT distributed at midnight UTC)
@@ -7,14 +7,24 @@
  * - Minting Rewards (0.001 MCT per 1,000 messages)
  * - Tier-based multipliers (Bronze 1x, Silver 1.5x, Gold 2x, Platinum 3x)
  * - Uptime tracking and missed reward redistribution
+ * 
+ * V3 REWARD CAP FIX:
+ * - Rewards are capped at base entitlement: MIN(poolShare, baseRewardCap)
+ * - baseRewardCap = (relayCount / 1000) * 0.001 MCT
+ * - Prevents nodes from earning more than their message count entitles them to
+ * - Contract: 0x2233A9e60BE7aF129B76FD87427fe7228bA1E6d2
  */
 
 import { ethers } from 'ethers';
 import { getLogger } from '../utils/logger';
 import { RelayTier, getTierName } from '../config';
 
-// Extended RelayManager ABI for reward functions
+// Extended RelayManager ABI for reward functions (V3 - Reward Cap System)
 const RELAY_MANAGER_REWARD_ABI = [
+  // ===== V3 REWARD CAP CONSTANTS =====
+  'function BASE_REWARD_PER_1000_MSG() view returns (uint256)',  // 0.001 MCT
+  'function MESSAGES_PER_REWARD() view returns (uint256)',       // 1000
+  
   // ===== DAILY POOL REWARDS =====
   'function claimDailyPoolReward(uint256 dayId)',
   'function getTodayPoolInfo() view returns (uint256 dayId, uint256 totalRelays, uint256 totalWeightedRelays, uint256 poolAmount, bool distributed)',
