@@ -1,8 +1,8 @@
 # MumbleChat Protocol - Security Threat Model
 
-**Version:** 1.0.0  
-**Date:** January 2026  
-**Status:** Active Development  
+**Version:** 1.1.0  
+**Date:** February 2026  
+**Status:** V4.4 — Production Active  
 
 ---
 
@@ -82,7 +82,7 @@ Alice verifies Bob's key:
 
 **Impact:** Draining reward pool, inflation of MCT.
 
-**Mitigations:** ✅ TO IMPLEMENT
+**Mitigations:** ✅ PARTIALLY IMPLEMENTED
 1. **Relay ≠ Sender/Recipient:** Smart contract rejects if relay wallet equals sender or recipient
 2. **Daily Relay Cap:** Maximum rewards per wallet per day
 3. **Minimum Stake:** Relays must stake MCT to participate
@@ -181,11 +181,14 @@ require(recipientIsRegistered)
 
 ### 4.1 Android
 
-| Threat | Mitigation |
-|--------|------------|
-| Background kill | Foreground service for relay mode |
-| Battery drain | Optimize DHT refresh interval |
-| Storage access | Encrypt local database |
+| Threat | Mitigation | Status |
+|--------|------------|--------|
+| Background kill | Foreground service + START_STICKY + BootReceiver | ✅ V4.4 |
+| Battery drain | Battery optimization exemption + hybrid strategy | ✅ V4.2 |
+| Storage access | Encrypt local database (Room + AES) | ✅ Complete |
+| Doze mode | AlarmManager setExactAndAllowWhileIdle | ✅ V4.4 |
+| Network loss | ConnectivityManager.NetworkCallback auto-reconnect | ✅ V4.4 |
+| Reboot | BootReceiver with SharedPreferences state | ✅ V4.4 |
 
 ### 4.2 iOS
 
@@ -257,10 +260,14 @@ ON-CHAIN CHECKS:
 - [ ] Penetration testing
 - [ ] NAT traversal success rate testing (India)
 - [ ] Incentive abuse simulation
-- [ ] Key rotation implementation
-- [ ] Rate limiting implementation
-- [ ] iOS limitations documented
+- [x] Key rotation implementation
+- [x] Rate limiting implementation
+- [x] iOS limitations documented
 - [ ] Security advisory process
+- [x] AlarmManager for Doze-safe heartbeat (V4.4)
+- [x] BootReceiver for auto-restart (V4.4)
+- [x] NetworkCallback for auto-reconnect (V4.4)
+- [x] Battery optimization exemption (V4.2)
 
 ---
 
@@ -321,5 +328,5 @@ ON-CHAIN CHECKS:
 ---
 
 **Document Maintainer:** MumbleChat Protocol Team  
-**Last Reviewed:** January 5, 2026  
+**Last Reviewed:** February 10, 2026  
 **Next Review:** Before Beta Release
