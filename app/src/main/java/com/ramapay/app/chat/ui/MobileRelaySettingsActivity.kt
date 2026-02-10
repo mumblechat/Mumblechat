@@ -3,7 +3,12 @@ package com.ramapay.app.chat.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -103,7 +108,12 @@ class MobileRelaySettingsActivity : AppCompatActivity() {
     private fun setupButtons() {
         // Start/Stop server buttons
         binding.btnStartServer.setOnClickListener {
-            viewModel.startRelayServer()
+            // Check battery optimization before starting
+            if (!isIgnoringBatteryOptimizations()) {
+                showBatteryOptimizationDialog()
+            } else {
+                viewModel.startRelayServer()
+            }
         }
 
         binding.btnStopServer.setOnClickListener {
@@ -335,6 +345,81 @@ class MobileRelaySettingsActivity : AppCompatActivity() {
             seconds < 60 -> "${seconds}s"
             seconds < 3600 -> "${seconds / 60}m ${seconds % 60}s"
             else -> "${seconds / 3600}h ${(seconds % 3600) / 60}m"
+        }
+    }
+    
+    // ============ Battery Optimization ============
+    
+    /**
+     * Check if app is exempt from battery optimization.
+     * This is required for reliable background relay operation.
+     */
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            return pm.isIgnoringBatteryOptimizations(packageName)
+        }
+        return true  // Not needed on older Android versions
+    }
+    
+    /**
+     * Show dialog explaining why battery optimization exemption is needed.
+     */
+    private fun showBatteryOptimizationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Background Relay Permission")
+            .setMessage(
+                "To keep your relay node running when the phone is locked, " +
+                "MumbleChat needs to be exempt from battery optimization.\n\n" +
+                "This ensures:\n" +
+                "• Continuous message relaying\n" +
+                "• Accurate uptime tracking for rewards\n" +
+                "• Reliable hub connection\n\n" +
+                "You can change this in Settings anytime."
+            )
+            .setPositiveButton("Allow") { _, _ ->
+                requestBatteryOptimizationExemption()
+            }
+            .setNegativeButton("Start Anyway") { _, _ ->
+                // Start even without exemption (may be killed by system)
+                viewModel.startRelayServer()
+                Toast.makeText(
+                    this, 
+                    "⚠️ Relay may stop when phone is locked", 
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setNeutralButton("Cancel", null)
+            .show()
+    }
+    
+    /**
+     * Request battery optimization exemption from the system.
+     */
+    @Suppress("BatteryLife")
+    private fun requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+                
+                // Start relay after user returns (they may or may not grant)
+                // The relay will work, but may be killed by system if not exempt
+                viewModel.startRelayServer()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to request battery optimization exemption")
+                // Fallback: open battery settings
+                try {
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                } catch (e2: Exception) {
+                    Toast.makeText(this, "Please disable battery optimization in Settings", Toast.LENGTH_LONG).show()
+                }
+                viewModel.startRelayServer()
+            }
+        } else {
+            viewModel.startRelayServer()
         }
     }
 
