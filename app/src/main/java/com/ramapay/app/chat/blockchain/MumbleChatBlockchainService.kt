@@ -167,7 +167,7 @@ class MumbleChatBlockchainService @Inject constructor(
      */
     suspend fun getRelayNode(address: String): RelayNodeStatus? = withContext(Dispatchers.IO) {
         try {
-            // V2: Use getRelayNode function that returns all tier fields
+            // V4.1: getRelayNode now returns 11 fields including registeredAt
             val function = Function(
                 "getRelayNode",
                 listOf(Address(address)),
@@ -181,7 +181,8 @@ class MumbleChatBlockchainService @Inject constructor(
                     object : TypeReference<Uint256>() {},      // storageMB
                     object : TypeReference<Uint256>() {},      // tier (enum as uint8)
                     object : TypeReference<Uint256>() {},      // rewardMultiplier
-                    object : TypeReference<Bool>() {}          // isOnline
+                    object : TypeReference<Bool>() {},         // isOnline
+                    object : TypeReference<Uint256>() {}       // registeredAt (V4.1)
                 )
             )
             
@@ -205,8 +206,8 @@ class MumbleChatBlockchainService @Inject constructor(
                 function.outputParameters
             )
             
-            if (output.size < 10) {
-                Timber.w("$TAG: getRelayNode returned ${output.size} fields, expected 10")
+            if (output.size < 11) {
+                Timber.w("$TAG: getRelayNode returned ${output.size} fields, expected 11")
                 return@withContext null
             }
             
@@ -218,11 +219,12 @@ class MumbleChatBlockchainService @Inject constructor(
             val tier = (output[7] as Uint256).value.toInt()
             val rewardMultiplier = (output[8] as Uint256).value.toDouble() / 100.0  // Basis points to decimal
             val isOnline = (output[9] as Bool).value
+            val registeredAt = (output[10] as Uint256).value.toLong()  // V4.1: registeredAt timestamp
             
             RelayNodeStatus(
                 endpoint = (output[0] as Utf8String).value,
                 stakedAmount = stakedAmount.toDouble() / 1e18,
-                registeredAt = 0, // Not returned by getRelayNode
+                registeredAt = registeredAt,  // V4.1: Now properly parsed from contract
                 messagesRelayed = (output[2] as Uint256).value.toLong(),
                 rewardsEarned = rewardsEarned.toDouble() / 1e18,
                 isActive = isActive,

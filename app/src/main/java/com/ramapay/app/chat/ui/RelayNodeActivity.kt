@@ -300,7 +300,13 @@ class RelayNodeActivity : AppCompatActivity() {
         binding.textMessagesRelayed.text = status.messagesRelayed.toString()
         binding.textRewardsEarned.text = decimalFormat.format(status.rewardsEarned)
         binding.textStakedAmount.text = "${decimalFormat.format(status.stakedAmount)} MCT"
-        binding.textActiveSince.text = dateFormat.format(Date(status.registeredAt * 1000))
+        
+        // V4.1: Handle registeredAt properly - show "Recently" if 0 (legacy fallback)
+        if (status.registeredAt > 0) {
+            binding.textActiveSince.text = dateFormat.format(Date(status.registeredAt * 1000))
+        } else {
+            binding.textActiveSince.text = "Recently"
+        }
         
         // V2: Update tier display
         binding.textCurrentTier.text = status.tierName
@@ -350,7 +356,12 @@ class RelayNodeActivity : AppCompatActivity() {
         // Quick stats (estimates)
         binding.textBestDayEarnings.text = "${decimalFormat.format(status.rewardsEarned * 1.2)} MCT"
         
-        val daysActive = ((System.currentTimeMillis() / 1000) - status.registeredAt) / 86400
+        // V4.1: Handle daysActive calculation properly
+        val daysActive = if (status.registeredAt > 0) {
+            ((System.currentTimeMillis() / 1000) - status.registeredAt) / 86400
+        } else {
+            1L  // Default to 1 day if registeredAt is unknown
+        }
         binding.textTotalDaysActive.text = "${daysActive.toInt()} days"
         
         val avgDaily = if (daysActive > 0) status.rewardsEarned / daysActive else 0.0

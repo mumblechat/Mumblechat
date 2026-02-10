@@ -44,6 +44,19 @@ async function main() {
     console.log("1️⃣  Compiling MumbleChatRegistry V4...");
     const MumbleChatRegistryV4 = await ethers.getContractFactory("MumbleChatRegistry");
     
+    // Force import existing proxy so OpenZeppelin tracks it
+    console.log("1.5️⃣  Force-importing existing proxy...");
+    try {
+        await upgrades.forceImport(proxyAddress, MumbleChatRegistryV4, { kind: "uups" });
+        console.log("   ✅ Proxy imported successfully");
+    } catch (err) {
+        if (err.message.includes("already") || err.message.includes("registered")) {
+            console.log("   ℹ️  Already imported (OK)");
+        } else {
+            console.log("   ⚠️  Import warning:", err.message);
+        }
+    }
+
     console.log("2️⃣  Upgrading proxy to V4 implementation...");
     const upgraded = await upgrades.upgradeProxy(proxyAddress, MumbleChatRegistryV4, {
         kind: "uups",

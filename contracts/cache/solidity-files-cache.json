@@ -1,1 +1,856 @@
-{"_format":"","paths":{"artifacts":"artifacts","build_infos":"artifacts/build-info","sources":"src","tests":"test","scripts":"script","libraries":["lib","node_modules"]},"files":{"lib/forge-std/src/Base.sol":{"lastModificationDate":1767821355239,"contentHash":"057da15af4544b7a","interfaceReprHash":null,"sourceName":"lib/forge-std/src/Base.sol","imports":["lib/forge-std/src/StdStorage.sol","lib/forge-std/src/Vm.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"CommonBase":{"0.8.22":{"default":{"path":"Base.sol/CommonBase.json","build_id":"7c50a74afcf56e69"}}},"ScriptBase":{"0.8.22":{"default":{"path":"Base.sol/ScriptBase.json","build_id":"7c50a74afcf56e69"}}},"TestBase":{"0.8.22":{"default":{"path":"Base.sol/TestBase.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/Script.sol":{"lastModificationDate":1767821355239,"contentHash":"f2808a0770d1b6a2","interfaceReprHash":null,"sourceName":"lib/forge-std/src/Script.sol","imports":["lib/forge-std/src/Base.sol","lib/forge-std/src/StdChains.sol","lib/forge-std/src/StdCheats.sol","lib/forge-std/src/StdConstants.sol","lib/forge-std/src/StdJson.sol","lib/forge-std/src/StdMath.sol","lib/forge-std/src/StdStorage.sol","lib/forge-std/src/StdStyle.sol","lib/forge-std/src/StdUtils.sol","lib/forge-std/src/Vm.sol","lib/forge-std/src/console.sol","lib/forge-std/src/console2.sol","lib/forge-std/src/interfaces/IMulticall3.sol","lib/forge-std/src/safeconsole.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"Script":{"0.8.22":{"default":{"path":"Script.sol/Script.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdAssertions.sol":{"lastModificationDate":1767821355239,"contentHash":"7bf8f8dd736b7b28","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdAssertions.sol","imports":["lib/forge-std/src/Vm.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"StdAssertions":{"0.8.22":{"default":{"path":"StdAssertions.sol/StdAssertions.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdChains.sol":{"lastModificationDate":1767821355239,"contentHash":"37547492f43f9670","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdChains.sol","imports":["lib/forge-std/src/Vm.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"StdChains":{"0.8.22":{"default":{"path":"StdChains.sol/StdChains.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdCheats.sol":{"lastModificationDate":1767821355239,"contentHash":"5ac6d1c1eff06e2e","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdCheats.sol","imports":["lib/forge-std/src/StdStorage.sol","lib/forge-std/src/Vm.sol","lib/forge-std/src/console.sol","lib/forge-std/src/console2.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"StdCheats":{"0.8.22":{"default":{"path":"StdCheats.sol/StdCheats.json","build_id":"7c50a74afcf56e69"}}},"StdCheatsSafe":{"0.8.22":{"default":{"path":"StdCheats.sol/StdCheatsSafe.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdConstants.sol":{"lastModificationDate":1767821355239,"contentHash":"6e64e3e0f1e270b1","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdConstants.sol","imports":["lib/forge-std/src/Vm.sol","lib/forge-std/src/interfaces/IMulticall3.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"StdConstants":{"0.8.22":{"default":{"path":"StdConstants.sol/StdConstants.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdError.sol":{"lastModificationDate":1767821355239,"contentHash":"aa3090ae1422ce31","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdError.sol","imports":[],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"stdError":{"0.8.22":{"default":{"path":"StdError.sol/stdError.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdInvariant.sol":{"lastModificationDate":1767821355239,"contentHash":"d793abf5e6d9aed5","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdInvariant.sol","imports":[],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"StdInvariant":{"0.8.22":{"default":{"path":"StdInvariant.sol/StdInvariant.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdJson.sol":{"lastModificationDate":1767821355243,"contentHash":"deb75521f38fb99f","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdJson.sol","imports":["lib/forge-std/src/Vm.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"stdJson":{"0.8.22":{"default":{"path":"StdJson.sol/stdJson.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdMath.sol":{"lastModificationDate":1767821355243,"contentHash":"393b2ec0becc479a","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdMath.sol","imports":[],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"stdMath":{"0.8.22":{"default":{"path":"StdMath.sol/stdMath.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdStorage.sol":{"lastModificationDate":1767821355243,"contentHash":"918bfa1df9612032","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdStorage.sol","imports":["lib/forge-std/src/Vm.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"stdStorage":{"0.8.22":{"default":{"path":"StdStorage.sol/stdStorage.json","build_id":"7c50a74afcf56e69"}}},"stdStorageSafe":{"0.8.22":{"default":{"path":"StdStorage.sol/stdStorageSafe.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdStyle.sol":{"lastModificationDate":1767821355243,"contentHash":"dd683e581612d9d7","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdStyle.sol","imports":["lib/forge-std/src/Vm.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"StdStyle":{"0.8.22":{"default":{"path":"StdStyle.sol/StdStyle.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdToml.sol":{"lastModificationDate":1767821355243,"contentHash":"13feb0c412102b9f","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdToml.sol","imports":["lib/forge-std/src/Vm.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"stdToml":{"0.8.22":{"default":{"path":"StdToml.sol/stdToml.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/StdUtils.sol":{"lastModificationDate":1767821355243,"contentHash":"c82e7e04785854c2","interfaceReprHash":null,"sourceName":"lib/forge-std/src/StdUtils.sol","imports":["lib/forge-std/src/StdConstants.sol","lib/forge-std/src/Vm.sol","lib/forge-std/src/interfaces/IMulticall3.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"StdUtils":{"0.8.22":{"default":{"path":"StdUtils.sol/StdUtils.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/Test.sol":{"lastModificationDate":1767821355243,"contentHash":"bd0e131f71fa5665","interfaceReprHash":null,"sourceName":"lib/forge-std/src/Test.sol","imports":["lib/forge-std/src/Base.sol","lib/forge-std/src/StdAssertions.sol","lib/forge-std/src/StdChains.sol","lib/forge-std/src/StdCheats.sol","lib/forge-std/src/StdConstants.sol","lib/forge-std/src/StdError.sol","lib/forge-std/src/StdInvariant.sol","lib/forge-std/src/StdJson.sol","lib/forge-std/src/StdMath.sol","lib/forge-std/src/StdStorage.sol","lib/forge-std/src/StdStyle.sol","lib/forge-std/src/StdToml.sol","lib/forge-std/src/StdUtils.sol","lib/forge-std/src/Vm.sol","lib/forge-std/src/console.sol","lib/forge-std/src/console2.sol","lib/forge-std/src/interfaces/IMulticall3.sol","lib/forge-std/src/safeconsole.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"Test":{"0.8.22":{"default":{"path":"Test.sol/Test.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/Vm.sol":{"lastModificationDate":1767821355243,"contentHash":"39abbb4265fde091","interfaceReprHash":null,"sourceName":"lib/forge-std/src/Vm.sol","imports":[],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"Vm":{"0.8.22":{"default":{"path":"Vm.sol/Vm.json","build_id":"7c50a74afcf56e69"}}},"VmSafe":{"0.8.22":{"default":{"path":"Vm.sol/VmSafe.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/console.sol":{"lastModificationDate":1767821355247,"contentHash":"c2f250cceea75093","interfaceReprHash":null,"sourceName":"lib/forge-std/src/console.sol","imports":[],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"console":{"0.8.22":{"default":{"path":"console.sol/console.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/console2.sol":{"lastModificationDate":1767821355247,"contentHash":"fb84555cebe27360","interfaceReprHash":null,"sourceName":"lib/forge-std/src/console2.sol","imports":["lib/forge-std/src/console.sol"],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{},"seenByCompiler":true},"lib/forge-std/src/interfaces/IMulticall3.sol":{"lastModificationDate":1767821355247,"contentHash":"731463c8fd01e759","interfaceReprHash":null,"sourceName":"lib/forge-std/src/interfaces/IMulticall3.sol","imports":[],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"IMulticall3":{"0.8.22":{"default":{"path":"IMulticall3.sol/IMulticall3.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"lib/forge-std/src/safeconsole.sol":{"lastModificationDate":1767821355247,"contentHash":"075ad54247fa474a","interfaceReprHash":null,"sourceName":"lib/forge-std/src/safeconsole.sol","imports":[],"versionRequirement":">=0.8.13, <0.9.0","artifacts":{"safeconsole":{"0.8.22":{"default":{"path":"safeconsole.sol/safeconsole.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/interfaces/IERC1967.sol":{"lastModificationDate":1767368791000,"contentHash":"ae7885d5bfccd2c9","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/interfaces/IERC1967.sol","imports":[],"versionRequirement":">=0.4.11","artifacts":{"IERC1967":{"0.8.22":{"default":{"path":"IERC1967.sol/IERC1967.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/interfaces/draft-IERC1822.sol":{"lastModificationDate":1767368791000,"contentHash":"7978860927b16795","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/interfaces/draft-IERC1822.sol","imports":[],"versionRequirement":">=0.4.16","artifacts":{"IERC1822Proxiable":{"0.8.22":{"default":{"path":"draft-IERC1822.sol/IERC1822Proxiable.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol":{"lastModificationDate":1767368791000,"contentHash":"9c740010cc7bb5db","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol","imports":[],"versionRequirement":">=0.8.4","artifacts":{"IERC1155Errors":{"0.8.22":{"default":{"path":"draft-IERC6093.sol/IERC1155Errors.json","build_id":"7c50a74afcf56e69"}}},"IERC20Errors":{"0.8.22":{"default":{"path":"draft-IERC6093.sol/IERC20Errors.json","build_id":"7c50a74afcf56e69"}}},"IERC721Errors":{"0.8.22":{"default":{"path":"draft-IERC6093.sol/IERC721Errors.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol":{"lastModificationDate":1767368791000,"contentHash":"4c17afdc9af158b0","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol","imports":["node_modules/@openzeppelin/contracts/interfaces/IERC1967.sol","node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol","node_modules/@openzeppelin/contracts/utils/Address.sol","node_modules/@openzeppelin/contracts/utils/Errors.sol","node_modules/@openzeppelin/contracts/utils/StorageSlot.sol"],"versionRequirement":"^0.8.21","artifacts":{"ERC1967Utils":{"0.8.22":{"default":{"path":"ERC1967Utils.sol/ERC1967Utils.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol":{"lastModificationDate":1767368791000,"contentHash":"ac349d9fb9a6fdba","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol","imports":[],"versionRequirement":">=0.4.16","artifacts":{"IBeacon":{"0.8.22":{"default":{"path":"IBeacon.sol/IBeacon.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol":{"lastModificationDate":1767368791000,"contentHash":"1dcd768972ff31b3","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol","imports":[],"versionRequirement":">=0.4.16","artifacts":{"IERC20":{"0.8.22":{"default":{"path":"IERC20.sol/IERC20.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol":{"lastModificationDate":1767368791000,"contentHash":"c0fde354a75fbdc6","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol","imports":["node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol"],"versionRequirement":">=0.6.2","artifacts":{"IERC20Metadata":{"0.8.22":{"default":{"path":"IERC20Metadata.sol/IERC20Metadata.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/utils/Address.sol":{"lastModificationDate":1767368791000,"contentHash":"3a8447ab9fbdeb3c","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/utils/Address.sol","imports":["node_modules/@openzeppelin/contracts/utils/Errors.sol"],"versionRequirement":"^0.8.20","artifacts":{"Address":{"0.8.22":{"default":{"path":"Address.sol/Address.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/utils/Errors.sol":{"lastModificationDate":1767368791000,"contentHash":"3c9245fed7a7e4ab","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/utils/Errors.sol","imports":[],"versionRequirement":"^0.8.20","artifacts":{"Errors":{"0.8.22":{"default":{"path":"Errors.sol/Errors.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts/utils/StorageSlot.sol":{"lastModificationDate":1767368791000,"contentHash":"261e9fcb6515866e","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts/utils/StorageSlot.sol","imports":[],"versionRequirement":"^0.8.20","artifacts":{"StorageSlot":{"0.8.22":{"default":{"path":"StorageSlot.sol/StorageSlot.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol":{"lastModificationDate":1767368794000,"contentHash":"26b4289f55358df5","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol","imports":["node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol","node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol"],"versionRequirement":"^0.8.20","artifacts":{"OwnableUpgradeable":{"0.8.22":{"default":{"path":"OwnableUpgradeable.sol/OwnableUpgradeable.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol":{"lastModificationDate":1767368794000,"contentHash":"6f3b98bf791c0f0c","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol","imports":[],"versionRequirement":"^0.8.20","artifacts":{"Initializable":{"0.8.22":{"default":{"path":"Initializable.sol/Initializable.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol":{"lastModificationDate":1767368794000,"contentHash":"37e0c31acc385d0b","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol","imports":["node_modules/@openzeppelin/contracts/interfaces/IERC1967.sol","node_modules/@openzeppelin/contracts/interfaces/draft-IERC1822.sol","node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol","node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol","node_modules/@openzeppelin/contracts/utils/Address.sol","node_modules/@openzeppelin/contracts/utils/Errors.sol","node_modules/@openzeppelin/contracts/utils/StorageSlot.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol"],"versionRequirement":"^0.8.22","artifacts":{"UUPSUpgradeable":{"0.8.22":{"default":{"path":"UUPSUpgradeable.sol/UUPSUpgradeable.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol":{"lastModificationDate":1767368794000,"contentHash":"5767651c8b83bf46","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol","imports":["node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol","node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol","node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol","node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol"],"versionRequirement":"^0.8.20","artifacts":{"ERC20Upgradeable":{"0.8.22":{"default":{"path":"ERC20Upgradeable.sol/ERC20Upgradeable.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol":{"lastModificationDate":1767368794000,"contentHash":"99d911fbd4a431e5","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol","imports":["node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol","node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol","node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol","node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol"],"versionRequirement":"^0.8.20","artifacts":{"ERC20BurnableUpgradeable":{"0.8.22":{"default":{"path":"ERC20BurnableUpgradeable.sol/ERC20BurnableUpgradeable.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol":{"lastModificationDate":1767368794000,"contentHash":"2459bbe8cace6a48","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol","imports":["node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol"],"versionRequirement":"^0.8.20","artifacts":{"ContextUpgradeable":{"0.8.22":{"default":{"path":"ContextUpgradeable.sol/ContextUpgradeable.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"node_modules/@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol":{"lastModificationDate":1767368794000,"contentHash":"d6d9d821da6818b5","interfaceReprHash":null,"sourceName":"node_modules/@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol","imports":["node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol"],"versionRequirement":"^0.8.20","artifacts":{"ReentrancyGuardUpgradeable":{"0.8.22":{"default":{"path":"ReentrancyGuardUpgradeable.sol/ReentrancyGuardUpgradeable.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"script/Counter.s.sol":{"lastModificationDate":1767821354140,"contentHash":"2f28174698c31b47","interfaceReprHash":null,"sourceName":"script/Counter.s.sol","imports":["lib/forge-std/src/Base.sol","lib/forge-std/src/Script.sol","lib/forge-std/src/StdChains.sol","lib/forge-std/src/StdCheats.sol","lib/forge-std/src/StdConstants.sol","lib/forge-std/src/StdJson.sol","lib/forge-std/src/StdMath.sol","lib/forge-std/src/StdStorage.sol","lib/forge-std/src/StdStyle.sol","lib/forge-std/src/StdUtils.sol","lib/forge-std/src/Vm.sol","lib/forge-std/src/console.sol","lib/forge-std/src/console2.sol","lib/forge-std/src/interfaces/IMulticall3.sol","lib/forge-std/src/safeconsole.sol","src/Counter.sol"],"versionRequirement":"^0.8.13","artifacts":{"CounterScript":{"0.8.22":{"default":{"path":"Counter.s.sol/CounterScript.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"src/Counter.sol":{"lastModificationDate":1767821354140,"contentHash":"11a918b87c723f51","interfaceReprHash":null,"sourceName":"src/Counter.sol","imports":[],"versionRequirement":"^0.8.13","artifacts":{"Counter":{"0.8.22":{"default":{"path":"Counter.sol/Counter.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"src/MCTToken.sol":{"lastModificationDate":1767431582000,"contentHash":"42995e30fcbd70c5","interfaceReprHash":null,"sourceName":"src/MCTToken.sol","imports":["node_modules/@openzeppelin/contracts/interfaces/IERC1967.sol","node_modules/@openzeppelin/contracts/interfaces/draft-IERC1822.sol","node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol","node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol","node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol","node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol","node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol","node_modules/@openzeppelin/contracts/utils/Address.sol","node_modules/@openzeppelin/contracts/utils/Errors.sol","node_modules/@openzeppelin/contracts/utils/StorageSlot.sol","node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol"],"versionRequirement":"^0.8.22","artifacts":{"MCTToken":{"0.8.22":{"default":{"path":"MCTToken.sol/MCTToken.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"src/MumbleChatRegistry.sol":{"lastModificationDate":1767794016836,"contentHash":"25e3ac1e53ad5873","interfaceReprHash":null,"sourceName":"src/MumbleChatRegistry.sol","imports":["node_modules/@openzeppelin/contracts/interfaces/IERC1967.sol","node_modules/@openzeppelin/contracts/interfaces/draft-IERC1822.sol","node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol","node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol","node_modules/@openzeppelin/contracts/utils/Address.sol","node_modules/@openzeppelin/contracts/utils/Errors.sol","node_modules/@openzeppelin/contracts/utils/StorageSlot.sol","node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol"],"versionRequirement":"^0.8.22","artifacts":{"IERC20":{"0.8.22":{"default":{"path":"MumbleChatRegistry.sol/IERC20.json","build_id":"7c50a74afcf56e69"}}},"IMCTToken":{"0.8.22":{"default":{"path":"MumbleChatRegistry.sol/IMCTToken.json","build_id":"7c50a74afcf56e69"}}},"MumbleChatRegistry":{"0.8.22":{"default":{"path":"MumbleChatRegistry.sol/MumbleChatRegistry.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"src/MumbleChatRelayManager.sol":{"lastModificationDate":1767821818881,"contentHash":"2cb6955e4df8b7ca","interfaceReprHash":null,"sourceName":"src/MumbleChatRelayManager.sol","imports":["node_modules/@openzeppelin/contracts/interfaces/IERC1967.sol","node_modules/@openzeppelin/contracts/interfaces/draft-IERC1822.sol","node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol","node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol","node_modules/@openzeppelin/contracts/utils/Address.sol","node_modules/@openzeppelin/contracts/utils/Errors.sol","node_modules/@openzeppelin/contracts/utils/StorageSlot.sol","node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol","node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol","node_modules/@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol"],"versionRequirement":"^0.8.22","artifacts":{"IERC20":{"0.8.22":{"default":{"path":"MumbleChatRelayManager.sol/IERC20.json","build_id":"7c50a74afcf56e69"}}},"IMCTToken":{"0.8.22":{"default":{"path":"MumbleChatRelayManager.sol/IMCTToken.json","build_id":"7c50a74afcf56e69"}}},"IMumbleChatRegistry":{"0.8.22":{"default":{"path":"MumbleChatRelayManager.sol/IMumbleChatRegistry.json","build_id":"7c50a74afcf56e69"}}},"MumbleChatRelayManager":{"0.8.22":{"default":{"path":"MumbleChatRelayManager.sol/MumbleChatRelayManager.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true},"test/Counter.t.sol":{"lastModificationDate":1767821354140,"contentHash":"f4793edc3fe87617","interfaceReprHash":null,"sourceName":"test/Counter.t.sol","imports":["lib/forge-std/src/Base.sol","lib/forge-std/src/StdAssertions.sol","lib/forge-std/src/StdChains.sol","lib/forge-std/src/StdCheats.sol","lib/forge-std/src/StdConstants.sol","lib/forge-std/src/StdError.sol","lib/forge-std/src/StdInvariant.sol","lib/forge-std/src/StdJson.sol","lib/forge-std/src/StdMath.sol","lib/forge-std/src/StdStorage.sol","lib/forge-std/src/StdStyle.sol","lib/forge-std/src/StdToml.sol","lib/forge-std/src/StdUtils.sol","lib/forge-std/src/Test.sol","lib/forge-std/src/Vm.sol","lib/forge-std/src/console.sol","lib/forge-std/src/console2.sol","lib/forge-std/src/interfaces/IMulticall3.sol","lib/forge-std/src/safeconsole.sol","src/Counter.sol"],"versionRequirement":"^0.8.13","artifacts":{"CounterTest":{"0.8.22":{"default":{"path":"Counter.t.sol/CounterTest.json","build_id":"7c50a74afcf56e69"}}}},"seenByCompiler":true}},"builds":["7c50a74afcf56e69"],"profiles":{"default":{"solc":{"optimizer":{"enabled":true,"runs":200},"metadata":{"useLiteralContent":false,"bytecodeHash":"ipfs","appendCBOR":true},"outputSelection":{"*":{"*":["abi","evm.bytecode.object","evm.bytecode.sourceMap","evm.bytecode.linkReferences","evm.deployedBytecode.object","evm.deployedBytecode.sourceMap","evm.deployedBytecode.linkReferences","evm.deployedBytecode.immutableReferences","evm.methodIdentifiers","metadata"]}},"evmVersion":"paris","viaIR":true,"libraries":{}},"vyper":{"evmVersion":"paris","outputSelection":{"*":{"*":["abi","evm.bytecode","evm.deployedBytecode"]}}}}},"preprocessed":false,"mocks":[]}
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/src/Counter.sol": {
+      "lastModificationDate": 1767821354140,
+      "contentHash": "ae6c800a2b4c57768024d6e9423d39e8",
+      "sourceName": "src/Counter.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.13"
+      ],
+      "artifacts": [
+        "Counter"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/src/MCTToken.sol": {
+      "lastModificationDate": 1767715946007,
+      "contentHash": "0a43bf9ab02a408841ce034867dc87fe",
+      "sourceName": "src/MCTToken.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol",
+        "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.22"
+      ],
+      "artifacts": [
+        "MCTToken"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol": {
+      "lastModificationDate": 1767715961819,
+      "contentHash": "77d30f3cd93f46b80b6f8f1ebc574ee4",
+      "sourceName": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../utils/ContextUpgradeable.sol",
+        "../proxy/utils/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "OwnableUpgradeable"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol": {
+      "lastModificationDate": 1767715967907,
+      "contentHash": "2acae54ad209714bca07edf4bae32f72",
+      "sourceName": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Initializable"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol": {
+      "lastModificationDate": 1767715967903,
+      "contentHash": "f5cb0cb4dcb2ad0074b448995119804b",
+      "sourceName": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+        "../../utils/ContextUpgradeable.sol",
+        "@openzeppelin/contracts/interfaces/draft-IERC6093.sol",
+        "../../proxy/utils/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ERC20Upgradeable"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol": {
+      "lastModificationDate": 1767715967907,
+      "contentHash": "08db0b4bea3d52072346c326c5b857b7",
+      "sourceName": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/interfaces/draft-IERC1822.sol",
+        "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol",
+        "./Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.22"
+      ],
+      "artifacts": [
+        "UUPSUpgradeable"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol": {
+      "lastModificationDate": 1767715971151,
+      "contentHash": "1715e45b25825865aadbbd2205cbfe06",
+      "sourceName": "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../ERC20Upgradeable.sol",
+        "../../../utils/ContextUpgradeable.sol",
+        "../../../proxy/utils/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ERC20BurnableUpgradeable"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol": {
+      "lastModificationDate": 1767715961823,
+      "contentHash": "c28aaa25d083a9a55bd9ec9e0b785122",
+      "sourceName": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../proxy/utils/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ContextUpgradeable"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol": {
+      "lastModificationDate": 1767715961811,
+      "contentHash": "5041977bbe908de2e6ed0270447f79ad",
+      "sourceName": "@openzeppelin/contracts/interfaces/draft-IERC6093.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "IERC1155Errors",
+        "IERC20Errors",
+        "IERC721Errors"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+      "lastModificationDate": 1767715967803,
+      "contentHash": "9261adf6457863de3e9892f51317ec89",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.16"
+      ],
+      "artifacts": [
+        "IERC20"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+      "lastModificationDate": 1767715971139,
+      "contentHash": "513778b30d2750f5d2b9b19bbcf748a5",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC20.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.2"
+      ],
+      "artifacts": [
+        "IERC20Metadata"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/interfaces/draft-IERC1822.sol": {
+      "lastModificationDate": 1767715961807,
+      "contentHash": "9b2cafd2153b51bcfd7f4cb4cfc975aa",
+      "sourceName": "@openzeppelin/contracts/interfaces/draft-IERC1822.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.16"
+      ],
+      "artifacts": [
+        "IERC1822Proxiable"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol": {
+      "lastModificationDate": 1767715967811,
+      "contentHash": "2741625b983eb412cfdd8aa55a7671c1",
+      "sourceName": "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../beacon/IBeacon.sol",
+        "../../interfaces/IERC1967.sol",
+        "../../utils/Address.sol",
+        "../../utils/StorageSlot.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.21"
+      ],
+      "artifacts": [
+        "ERC1967Utils"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/utils/Address.sol": {
+      "lastModificationDate": 1767715961795,
+      "contentHash": "2a06d82f31f75087bf90231599da4f1c",
+      "sourceName": "@openzeppelin/contracts/utils/Address.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Errors.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Address"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/interfaces/IERC1967.sol": {
+      "lastModificationDate": 1767715961811,
+      "contentHash": "3c9577899f440b0c66e880c96e9250bb",
+      "sourceName": "@openzeppelin/contracts/interfaces/IERC1967.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.11"
+      ],
+      "artifacts": [
+        "IERC1967"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/utils/StorageSlot.sol": {
+      "lastModificationDate": 1767715961795,
+      "contentHash": "e656d64c4ce918f3d13030b91c935134",
+      "sourceName": "@openzeppelin/contracts/utils/StorageSlot.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "StorageSlot"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol": {
+      "lastModificationDate": 1767715967811,
+      "contentHash": "ee2e46607ed2be58bd554306d068acba",
+      "sourceName": "@openzeppelin/contracts/proxy/beacon/IBeacon.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.16"
+      ],
+      "artifacts": [
+        "IBeacon"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts/utils/Errors.sol": {
+      "lastModificationDate": 1767715961795,
+      "contentHash": "6b5eac2b85500c3012977849cfd633d8",
+      "sourceName": "@openzeppelin/contracts/utils/Errors.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Errors"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/src/MumbleChatRelayManager.sol": {
+      "lastModificationDate": 1769429732078,
+      "contentHash": "ce5373e01014d5906c46205c926e8218",
+      "sourceName": "src/MumbleChatRelayManager.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol",
+        "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.22"
+      ],
+      "artifacts": [
+        "IERC20",
+        "IMCTToken",
+        "IMumbleChatRegistry",
+        "MumbleChatRelayManager"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/node_modules/@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol": {
+      "lastModificationDate": 1767715961823,
+      "contentHash": "24562076b21756e3358ede5e844008ce",
+      "sourceName": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../proxy/utils/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ReentrancyGuardUpgradeable"
+      ]
+    },
+    "/root/MumbleChat/Mumblechat Ramestta Protocol/contracts/src/MumbleChatRegistry.sol": {
+      "lastModificationDate": 1770736305765,
+      "contentHash": "bb4dc232549e6eab4f516adfe92290c5",
+      "sourceName": "src/MumbleChatRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.22",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol",
+        "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.22"
+      ],
+      "artifacts": [
+        "IERC20",
+        "IMCTToken",
+        "MumbleChatRegistry"
+      ]
+    }
+  }
+}

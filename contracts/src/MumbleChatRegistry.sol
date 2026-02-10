@@ -89,7 +89,7 @@ contract MumbleChatRegistry is
     uint256 public constant GOLD_MULTIPLIER = 200;
     uint256 public constant PLATINUM_MULTIPLIER = 300;
     
-    uint256 public constant HEARTBEAT_TIMEOUT = 5 minutes;
+    uint256 public constant HEARTBEAT_TIMEOUT = 6 hours;
     
     // ============ User Blocking ============
     
@@ -499,7 +499,7 @@ contract MumbleChatRegistry is
     }
     
     /**
-     * @dev Get relay node info
+     * @dev Get relay node info (V4.1: includes registeredAt)
      */
     function getRelayNode(address node) external view returns (
         string memory endpoint,
@@ -511,7 +511,8 @@ contract MumbleChatRegistry is
         uint256 storageMB,
         NodeTier tier,
         uint256 rewardMultiplier,
-        bool isOnline
+        bool isOnline,
+        uint256 registeredAt
     ) {
         RelayNode memory r = relayNodes[node];
         return (
@@ -524,7 +525,8 @@ contract MumbleChatRegistry is
             r.storageMB,
             r.tier,
             getRewardMultiplier(node),
-            isNodeOnline(node)
+            isNodeOnline(node),
+            r.registeredAt
         );
     }
     

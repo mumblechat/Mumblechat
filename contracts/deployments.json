@@ -20,15 +20,21 @@
     },
     "MumbleChatRegistry": {
       "proxy": "0x4f8D4955F370881B05b68D2344345E749d8632e3",
-      "implementation": "0x912B6B9917B04f5466b1dc35086FB64aba63C7cD",
+      "implementation": "0x7bD40A40CaaB785C320b3484e4Cf511D85177038",
       "version": "4.0.0",
-      "lastUpgraded": "2026-01-07T14:15:22.799Z",
+      "lastUpgraded": "2026-02-10T15:13:46.217Z",
       "verified": true,
       "features": [
         "Identity registration",
+        "Relay node registration",
+        "V4: Node Identity System (multi-node per machine)",
+        "V4: Tier-based stake (100/200/300/400 MCT)",
+        "V4: Proportional uptime rewards",
+        "V4: Missed reward redistribution",
+        "V4: Fee pool percentages (10%/20%/30%/40%)",
         "User blocking",
-        "Legacy relay node registration",
-        "Linked to RelayManager for V4 features"
+        "Decentralized relay proofs",
+        "Fair daily pool distribution"
       ],
       "relayManager": "0xF78F840eF0e321512b09e98C76eA0229Affc4b73"
     },
@@ -60,7 +66,7 @@
     "mctTokenProxy": "https://ramascan.com/address/0xEfD7B65676FCD4b6d242CbC067C2470df19df1dE#code",
     "registryProxy": "https://ramascan.com/address/0x4f8D4955F370881B05b68D2344345E749d8632e3#code",
     "registryImplementation": "https://ramascan.com/address/0xe73f98b22528E34eDE1Ee4AD6facF704ED5dF8C3#code",
-    "registryImplementationV4": "https://ramascan.com/address/0x912B6B9917B04f5466b1dc35086FB64aba63C7cD#code",
+    "registryImplementationV4": "https://ramascan.com/address/0x7bD40A40CaaB785C320b3484e4Cf511D85177038#code",
     "relayManagerProxy": "https://ramascan.com/address/0xF78F840eF0e321512b09e98C76eA0229Affc4b73#code",
     "relayManagerImplementation": "https://ramascan.com/address/0xb9E673952e25E6E86745264B90FBC82b50ffb067#code",
     "relayManagerImplementationV3": "https://ramascan.com/address/0x2233A9e60BE7aF129B76FD87427fe7228bA1E6d2#code"

@@ -31,6 +31,164 @@ const config = {
     requireStaking: process.env.REQUIRE_STAKING === 'true' || false,
 };
 
+// ============ Gasless Heartbeat System ============
+// Hub sends blockchain heartbeats on behalf of connected nodes
+// Node owners don't pay gas - hub relays using their keys stored server-side
+
+const HEARTBEAT_ABI = ['function heartbeat() external'];
+const BLOCKCHAIN_HEARTBEAT_INTERVAL = 5.5 * 60 * 60 * 1000; // 5.5 hours (contract timeout = 6 hours)
+
+// Pre-configured node private keys (wallet address lowercase -> private key)
+// Hub sends heartbeat TX using each node's own wallet so contract sees correct msg.sender
+const nodePrivateKeys: Map<string, string> = new Map();
+
+// Parse NODE_KEYS env: comma-separated "address:privatekey" pairs
+// e.g. NODE_KEYS=0xabc:0x123,0xdef:0x456
+function loadNodeKeys() {
+    const keysEnv = process.env.NODE_KEYS || '';
+    if (keysEnv) {
+        const pairs = keysEnv.split(',');
+        for (const pair of pairs) {
+            const [addr, key] = pair.trim().split(':');
+            if (addr && key) {
+                nodePrivateKeys.set(addr.toLowerCase(), key);
+                console.log(`[Heartbeat] Loaded key for node ${addr.slice(0, 10)}...`);
+            }
+        }
+    }
+    console.log(`[Heartbeat] ${nodePrivateKeys.size} node keys loaded for gasless heartbeat`);
+}
+
+// Track active heartbeat intervals per wallet
+const heartbeatIntervals: Map<string, NodeJS.Timeout> = new Map();
+
+async function sendHeartbeatForNode(walletAddress: string, privateKey: string) {
+    try {
+        if (!provider) {
+            console.error('[Heartbeat] No blockchain provider');
+            return;
+        }
+        const wallet = new ethers.Wallet(privateKey, provider);
+        const contract = new ethers.Contract(config.registryAddress, HEARTBEAT_ABI, wallet);
+        const tx = await contract.heartbeat({ gasLimit: 200000 });
+        await tx.wait();
+        console.log(`[Heartbeat] 💓 Sent for ${walletAddress.slice(0, 10)}... tx: ${tx.hash.slice(0, 16)}...`);
+    } catch (error: any) {
+        console.error(`[Heartbeat] ❌ Failed for ${walletAddress.slice(0, 10)}...: ${error.message?.slice(0, 80)}`);
+    }
+}
+
+function startHeartbeatForNode(walletAddress: string) {
+    const addr = walletAddress.toLowerCase();
+    const privateKey = nodePrivateKeys.get(addr);
+    if (!privateKey) return;
+    
+    // Don't start if already running
+    if (heartbeatIntervals.has(addr)) return;
+    
+    console.log(`[Heartbeat] 🟢 Starting gasless heartbeat for ${addr.slice(0, 10)}...`);
+    
+    // Send initial heartbeat after 15 seconds
+    setTimeout(() => {
+        if (connectedNodes.has(nodeByWallet.get(addr) || '')) {
+            sendHeartbeatForNode(addr, privateKey);
+        }
+    }, 15000);
+    
+    // Then every 4 minutes
+    const interval = setInterval(() => {
+        // Only send if node is still connected via WebSocket
+        const tunnelId = nodeByWallet.get(addr);
+        if (tunnelId && connectedNodes.has(tunnelId)) {
+            sendHeartbeatForNode(addr, privateKey);
+        } else {
+            // Node disconnected, stop heartbeat
+            stopHeartbeatForNode(addr);
+        }
+    }, BLOCKCHAIN_HEARTBEAT_INTERVAL);
+    
+    heartbeatIntervals.set(addr, interval);
+}
+
+function stopHeartbeatForNode(walletAddress: string) {
+    const addr = walletAddress.toLowerCase();
+    const interval = heartbeatIntervals.get(addr);
+    if (interval) {
+        clearInterval(interval);
+        heartbeatIntervals.delete(addr);
+        console.log(`[Heartbeat] 🔴 Stopped gasless heartbeat for ${addr.slice(0, 10)}...`);
+    }
+}
+
+// ============ P2P Peer-to-Peer Ping System ============
+// Nodes ping each other every 5 minutes (gasless, off-chain)
+// Hub orchestrates by sharing peer list; nodes do direct WebSocket pings
+
+const P2P_PING_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+interface P2PPingResult {
+    from: string;      // wallet address of pinger
+    to: string;        // wallet address of target
+    latencyMs: number;  // round-trip time in ms
+    timestamp: number;
+    success: boolean;
+}
+
+// Track P2P ping results for each node pair
+const p2pPingResults: Map<string, P2PPingResult[]> = new Map(); // "from->to" => results
+
+// Track node type (desktop/mobile) and last P2P ping time
+interface NodeP2PInfo {
+    walletAddress: string;
+    nodeType: 'desktop' | 'mobile' | 'server';  // node type
+    lastP2PPing: number;   // timestamp of last P2P ping received
+    p2pPeers: Map<string, { latencyMs: number, lastPing: number, online: boolean }>;
+}
+
+const nodeP2PInfo: Map<string, NodeP2PInfo> = new Map(); // wallet -> info
+
+// Orchestrate P2P pings - tell each node to ping all other nodes
+function broadcastPeerList() {
+    const peerList = Array.from(connectedNodes.values()).map(n => ({
+        tunnelId: n.tunnelId,
+        walletAddress: n.walletAddress,
+        nodeType: nodeP2PInfo.get(n.walletAddress.toLowerCase())?.nodeType || 'server',
+    }));
+    
+    for (const node of connectedNodes.values()) {
+        if (node.socket.readyState === WebSocket.OPEN) {
+            const peers = peerList.filter(p => p.tunnelId !== node.tunnelId);
+            node.socket.send(JSON.stringify({
+                type: 'PEER_LIST',
+                peers,
+                pingInterval: P2P_PING_INTERVAL
+            }));
+        }
+    }
+}
+
+// Broadcast peer list every 5 minutes
+setInterval(broadcastPeerList, P2P_PING_INTERVAL);
+
+// Record P2P ping result from a node
+function recordP2PPing(from: string, to: string, latencyMs: number, success: boolean) {
+    const key = `${from.toLowerCase()}->${to.toLowerCase()}`;
+    if (!p2pPingResults.has(key)) {
+        p2pPingResults.set(key, []);
+    }
+    const results = p2pPingResults.get(key)!;
+    results.push({ from, to, latencyMs, timestamp: Date.now(), success });
+    // Keep only last 50 results
+    if (results.length > 50) results.splice(0, results.length - 50);
+    
+    // Update node P2P info
+    const info = nodeP2PInfo.get(from.toLowerCase());
+    if (info) {
+        info.lastP2PPing = Date.now();
+        info.p2pPeers.set(to.toLowerCase(), { latencyMs, lastPing: Date.now(), online: success });
+    }
+}
+
 // ============ Registry Contract ABI ============
 // Note: The actual contract has a non-standard return format, so we use raw calls
 
@@ -184,51 +342,22 @@ async function verifyStaking(walletAddress: string): Promise<StakingInfo> {
         isActive: false
     };
     
-    if (!provider) {
+    if (!registryContract) {
         console.log(`[Hub] No blockchain connection, allowing node (dev mode)`);
         return { ...defaultInfo, isStaked: true };  // Allow in dev mode
     }
     
     try {
-        // Use raw call because contract ABI has non-standard return format
-        const paddedAddr = walletAddress.toLowerCase().replace('0x', '').padStart(64, '0');
-        const calldata = GET_RELAY_NODE_SELECTOR + paddedAddr;
+        // Use typed contract call via getRelayNode ABI
+        const result = await registryContract.getRelayNode(walletAddress);
         
-        const result = await provider.call({
-            to: config.registryAddress,
-            data: calldata
-        });
-        
-        // Parse the hex result manually
-        // Result format (each word is 64 hex chars / 32 bytes):
-        // Word 0: offset pointer (320)
-        // Word 1: stakedAmount (in wei)
-        // Word 2: messagesRelayed
-        // Word 3: rewardsEarned (in wei)
-        // Word 4: isActive (1 or 0)
-        // Word 5: 0
-        // Word 6: offset for string
-        // Word 7: tier
-        // ...rest is string data
-        
-        if (result === '0x' || result.length < 66) {
-            console.log(`[Hub] No relay node found for ${addr.slice(0,8)}...`);
-            return defaultInfo;
-        }
-        
-        const data = result.slice(2); // Remove 0x
-        const words: string[] = [];
-        for (let i = 0; i < data.length; i += 64) {
-            words.push(data.slice(i, i + 64));
-        }
-        
-        const stakedAmountWei = BigInt('0x' + (words[1] || '0'));
+        const stakedAmountWei = BigInt(result.stakedAmount);
         const stakedAmount = Number(stakedAmountWei) / 1e18;
-        const messagesRelayed = parseInt(words[3] || '0', 16);
-        const rewardsEarnedWei = BigInt('0x' + (words[4] || '0'));
+        const messagesRelayed = Number(result.messagesRelayed);
+        const rewardsEarnedWei = BigInt(result.rewardsEarned);
         const rewardsEarned = Number(rewardsEarnedWei) / 1e18;
-        const isActive = parseInt(words[5] || '0', 16) === 1;
-        const tier = parseInt(words[13] || '0', 16);
+        const isActive = result.isActive;
+        const tier = Number(result.tier);
         
         const info: StakingInfo = {
             isStaked: isActive && stakedAmount >= config.minStakeRequired,
@@ -348,6 +477,9 @@ app.get('/api/stats', async (req, res) => {
     
     for (const bcNode of blockchainNodes) {
         if (!connectedWallets.has(bcNode.walletAddress.toLowerCase())) {
+            // Only include blockchain-only nodes if they have a recent heartbeat (isOnline)
+            if (!bcNode.isOnline) continue;
+            
             nodeStats.push({
                 tunnelId: `bc-${bcNode.walletAddress.slice(2, 10).toLowerCase()}`,
                 endpoint: bcNode.endpoint,
@@ -361,7 +493,7 @@ app.get('/api/stats', async (req, res) => {
                 tier: bcNode.tier,
                 isStaked: true,
                 blockchainMessages: bcNode.messagesRelayed,
-                isOnline: bcNode.isOnline  // Based on blockchain heartbeat (5 min timeout)
+                isOnline: true
             } as any);
         }
     }
@@ -407,6 +539,163 @@ app.get('/api/blockchain/nodes', async (req, res) => {
         console.error('[Hub] Error fetching blockchain nodes:', error.message);
         res.status(500).json({ error: 'Failed to fetch blockchain nodes' });
     }
+});
+
+// *** Gasless Heartbeat Status ***
+app.get('/api/heartbeat/status', (req, res) => {
+    const status = Array.from(heartbeatIntervals.keys()).map(addr => ({
+        wallet: addr.slice(0, 10) + '...',
+        active: true,
+        isConnected: nodeByWallet.has(addr)
+    }));
+    
+    const configuredKeys = Array.from(nodePrivateKeys.keys()).map(addr => ({
+        wallet: addr.slice(0, 10) + '...',
+        hasKey: true,
+        heartbeatActive: heartbeatIntervals.has(addr),
+        isConnected: nodeByWallet.has(addr)
+    }));
+    
+    res.json({
+        totalConfiguredKeys: nodePrivateKeys.size,
+        activeHeartbeats: heartbeatIntervals.size,
+        intervalMs: BLOCKCHAIN_HEARTBEAT_INTERVAL,
+        configuredNodes: configuredKeys,
+        activeNodes: status
+    });
+});
+
+// *** P2P Ping Status ***
+app.get('/api/p2p/status', (req, res) => {
+    const nodes: any[] = [];
+    
+    for (const [wallet, info] of nodeP2PInfo) {
+        const peers: any[] = [];
+        for (const [peerWallet, peerInfo] of info.p2pPeers) {
+            peers.push({
+                wallet: peerWallet.slice(0, 10) + '...',
+                walletAddress: peerWallet,
+                latencyMs: peerInfo.latencyMs,
+                lastPing: peerInfo.lastPing,
+                online: peerInfo.online && (Date.now() - peerInfo.lastPing) < P2P_PING_INTERVAL * 2
+            });
+        }
+        nodes.push({
+            wallet: wallet.slice(0, 10) + '...',
+            walletAddress: wallet,
+            nodeType: info.nodeType,
+            lastP2PPing: info.lastP2PPing,
+            isP2PActive: info.lastP2PPing > 0 && (Date.now() - info.lastP2PPing) < P2P_PING_INTERVAL * 2,
+            peers
+        });
+    }
+    
+    res.json({
+        totalNodes: nodeP2PInfo.size,
+        pingIntervalMs: P2P_PING_INTERVAL,
+        nodes
+    });
+});
+
+// *** Enhanced stats with P2P and node type info ***
+app.get('/api/stats/v2', async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 20;
+    const filter = (req.query.filter as string) || 'all'; // all, online, offline
+    
+    // Build complete node list
+    const allNodes: any[] = [];
+    
+    // Connected WebSocket nodes (definitely online)
+    for (const node of connectedNodes.values()) {
+        const p2pInfo = nodeP2PInfo.get(node.walletAddress.toLowerCase());
+        allNodes.push({
+            tunnelId: node.tunnelId,
+            endpoint: `${config.domain}/node/${node.tunnelId}`,
+            walletAddress: node.walletAddress,
+            connectedUsers: node.connectedUsers.size,
+            messagesRelayed: node.stats.messagesRelayed,
+            connectedAt: node.connectedAt,
+            lastHeartbeat: node.lastHeartbeat,
+            stakedAmount: node.staking?.stakedAmount || 0,
+            rewardsEarned: node.staking?.rewardsEarned || 0,
+            tier: node.staking?.tier || 0,
+            isStaked: node.staking?.isStaked || false,
+            blockchainMessages: node.staking?.messagesRelayed || 0,
+            isOnline: true,
+            nodeType: p2pInfo?.nodeType || 'server',
+            p2pActive: p2pInfo ? (Date.now() - p2pInfo.lastP2PPing) < P2P_PING_INTERVAL * 2 : false,
+            p2pPeers: p2pInfo ? Array.from(p2pInfo.p2pPeers.entries()).map(([w, p]) => ({
+                wallet: w,
+                latencyMs: p.latencyMs,
+                online: p.online
+            })) : [],
+            source: 'websocket'
+        });
+    }
+    
+    // Blockchain nodes not connected via WebSocket
+    const blockchainNodes = await refreshActiveRelayNodes();
+    const connectedWallets = new Set(
+        Array.from(connectedNodes.values()).map(n => n.walletAddress?.toLowerCase()).filter(Boolean)
+    );
+    
+    for (const bcNode of blockchainNodes) {
+        if (!connectedWallets.has(bcNode.walletAddress.toLowerCase())) {
+            allNodes.push({
+                tunnelId: `bc-${bcNode.walletAddress.slice(2, 10).toLowerCase()}`,
+                endpoint: bcNode.endpoint,
+                walletAddress: bcNode.walletAddress,
+                connectedUsers: 0,
+                messagesRelayed: bcNode.messagesRelayed,
+                connectedAt: null,
+                lastHeartbeat: null,
+                stakedAmount: bcNode.stakedAmount,
+                rewardsEarned: bcNode.rewardsEarned,
+                tier: bcNode.tier,
+                isStaked: true,
+                blockchainMessages: bcNode.messagesRelayed,
+                isOnline: bcNode.isOnline,
+                nodeType: 'unknown',
+                p2pActive: false,
+                p2pPeers: [],
+                source: 'blockchain'
+            });
+        }
+    }
+    
+    // Apply filter
+    let filteredNodes = allNodes;
+    if (filter === 'online') {
+        filteredNodes = allNodes.filter(n => n.isOnline);
+    } else if (filter === 'offline') {
+        filteredNodes = allNodes.filter(n => !n.isOnline);
+    }
+    
+    // Pagination
+    const totalNodes = filteredNodes.length;
+    const totalPages = Math.ceil(totalNodes / pageSize);
+    const startIdx = (page - 1) * pageSize;
+    const pagedNodes = filteredNodes.slice(startIdx, startIdx + pageSize);
+    
+    const onlineCount = allNodes.filter(n => n.isOnline).length;
+    const offlineCount = allNodes.filter(n => !n.isOnline).length;
+    
+    res.json({
+        totalNodes: allNodes.length,
+        onlineNodes: onlineCount,
+        offlineNodes: offlineCount,
+        totalUsers: connectedUsers.size,
+        registeredUsers: usersByAddress.size,
+        hubFeePercent: config.hubFeePercent,
+        pagination: {
+            page,
+            pageSize,
+            totalPages,
+            totalItems: totalNodes
+        },
+        nodes: pagedNodes
+    });
 });
 
 // Get available endpoints for users
@@ -741,6 +1030,20 @@ function handleNodeConnection(ws: WebSocket) {
                     }));
                     
                     console.log(`[Hub] ✅ Node connected: ${tunnelId} (wallet: ${walletAddress.slice(0,8)}..., staked: ${stakingInfo.stakedAmount} MCT, tier: ${stakingInfo.tier})`);
+                    
+                    // Start gasless blockchain heartbeat if we have the node's key
+                    startHeartbeatForNode(walletAddress);
+                    
+                    // Initialize P2P info for this node
+                    nodeP2PInfo.set(walletAddress.toLowerCase(), {
+                        walletAddress: walletAddress.toLowerCase(),
+                        nodeType: message.nodeType || message.data?.nodeType || 'server',
+                        lastP2PPing: 0,
+                        p2pPeers: new Map()
+                    });
+                    
+                    // Send peer list to all nodes (including new one)
+                    setTimeout(broadcastPeerList, 2000);
                     break;
 
                 case 'HEARTBEAT':
@@ -780,6 +1083,49 @@ function handleNodeConnection(ws: WebSocket) {
                 case 'MESSAGE_TO_USER':
                     // Node sending message to a user - CHECK CROSS-NODE
                     if (node) {
+                        // P2P ping handling - relay ping to target node
+                        if (message.subtype === 'P2P_PING') {
+                            const targetWallet = message.targetWallet?.toLowerCase();
+                            const targetTunnelId = nodeByWallet.get(targetWallet || '');
+                            if (targetTunnelId) {
+                                const targetNode = connectedNodes.get(targetTunnelId);
+                                if (targetNode && targetNode.socket.readyState === WebSocket.OPEN) {
+                                    targetNode.socket.send(JSON.stringify({
+                                        type: 'P2P_PING',
+                                        fromWallet: node.walletAddress,
+                                        fromTunnelId: node.tunnelId,
+                                        pingId: message.pingId,
+                                        timestamp: Date.now()
+                                    }));
+                                }
+                            }
+                            break;
+                        }
+                        if (message.subtype === 'P2P_PONG') {
+                            const targetWallet = message.targetWallet?.toLowerCase();
+                            const targetTunnelId = nodeByWallet.get(targetWallet || '');
+                            if (targetTunnelId) {
+                                const targetNode = connectedNodes.get(targetTunnelId);
+                                if (targetNode && targetNode.socket.readyState === WebSocket.OPEN) {
+                                    targetNode.socket.send(JSON.stringify({
+                                        type: 'P2P_PONG',
+                                        fromWallet: node.walletAddress,
+                                        pingId: message.pingId,
+                                        latencyMs: message.latencyMs,
+                                        timestamp: Date.now()
+                                    }));
+                                }
+                            }
+                            // Record the ping result
+                            recordP2PPing(
+                                node.walletAddress, 
+                                message.targetWallet || '',
+                                message.latencyMs || 0, 
+                                true
+                            );
+                            break;
+                        }
+                        
                         const { userId, payload } = message;
                         let delivered = false;
                         const senderAddr = (payload.from || payload.senderAddress || '').toLowerCase();
@@ -883,6 +1229,31 @@ function handleNodeConnection(ws: WebSocket) {
                     }
                     break;
 
+                // *** P2P Ping result from a node ***
+                case 'P2P_PING_RESULT':
+                    if (node && message.results) {
+                        for (const result of message.results) {
+                            recordP2PPing(
+                                node.walletAddress,
+                                result.targetWallet,
+                                result.latencyMs || 0,
+                                result.success
+                            );
+                        }
+                    }
+                    break;
+                
+                // *** Node type update (desktop/mobile/server) ***
+                case 'NODE_TYPE_UPDATE':
+                    if (node && message.nodeType) {
+                        const p2pInfo = nodeP2PInfo.get(node.walletAddress.toLowerCase());
+                        if (p2pInfo) {
+                            p2pInfo.nodeType = message.nodeType;
+                        }
+                        console.log(`[Hub] Node ${node.tunnelId} type: ${message.nodeType}`);
+                    }
+                    break;
+
                 case 'BROADCAST':
                     if (node) {
                         for (const [userId, userSocket] of node.connectedUsers) {
@@ -919,6 +1290,16 @@ function handleNodeConnection(ws: WebSocket) {
             
             nodeByWallet.delete(node.walletAddress);
             connectedNodes.delete(tunnelId);
+            
+            // Stop gasless heartbeat for this node
+            stopHeartbeatForNode(node.walletAddress);
+            
+            // Remove P2P info
+            nodeP2PInfo.delete(node.walletAddress.toLowerCase());
+            
+            // Broadcast updated peer list
+            setTimeout(broadcastPeerList, 1000);
+            
             console.log(`[Hub] Node disconnected: ${tunnelId}`);
         }
     });
@@ -1127,6 +1508,9 @@ function handleAutoUserConnection(ws: WebSocket) {
 // Initialize blockchain connection first
 initBlockchain();
 
+// Load node private keys for gasless heartbeat
+loadNodeKeys();
+
 server.listen(config.port, () => {
     console.log('═'.repeat(70));
     console.log('   MumbleChat Relay Hub - WITH STAKING VERIFICATION');
@@ -1142,6 +1526,8 @@ server.listen(config.port, () => {
     console.log('   ✓ Global user registry');
     console.log('   ✓ Load balancing');
     console.log('   ✓ MCT STAKING VERIFICATION');
+    console.log('   ✓ GASLESS HEARTBEAT RELAYER (every 5.5hr)');
+    console.log('   ✓ P2P PEER-TO-PEER PING (every 5min)');
     console.log('═'.repeat(70));
 });
 
@@ -1149,6 +1535,12 @@ server.listen(config.port, () => {
 
 process.on('SIGINT', () => {
     console.log('\n[Hub] Shutting down...');
+    
+    // Stop all heartbeat intervals
+    for (const [addr, interval] of heartbeatIntervals) {
+        clearInterval(interval);
+    }
+    heartbeatIntervals.clear();
     
     for (const node of connectedNodes.values()) {
         node.socket.send(JSON.stringify({
