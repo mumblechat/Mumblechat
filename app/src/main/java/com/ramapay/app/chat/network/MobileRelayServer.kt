@@ -4,12 +4,15 @@ import android.content.Context
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.java_websocket.WebSocket
+import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ClientHandshake
+import org.java_websocket.handshake.ServerHandshake
 import org.java_websocket.server.WebSocketServer
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
 import java.net.InetSocketAddress
+import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -57,6 +60,11 @@ class MobileRelayServer @Inject constructor(
         const val MAX_CONNECTIONS = 50
         const val MESSAGE_EXPIRY_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
         const val MAX_PENDING_MESSAGES = 1000
+        
+        // Hub node connection
+        const val HUB_NODE_URL = "wss://hub.mumblechat.com/node/connect"
+        const val NODE_HEARTBEAT_INTERVAL_MS = 30_000L  // 30 seconds  
+        const val NODE_RECONNECT_DELAY_MS = 5_000L      // 5 seconds
     }
     
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -82,6 +90,11 @@ class MobileRelayServer @Inject constructor(
     private val _serverState = MutableStateFlow(RelayServerState.STOPPED)
     val serverState: StateFlow<RelayServerState> = _serverState
     
+    /**
+     * Check if the mobile relay server is currently running (local server + hub connection).
+     */
+    fun isRunning(): Boolean = _serverState.value == RelayServerState.RUNNING
+    
     private val _stats = MutableStateFlow(RelayStats())
     val stats: StateFlow<RelayStats> = _stats
     
@@ -91,6 +104,16 @@ class MobileRelayServer @Inject constructor(
     
     // Node ID for registration
     private var nodeId: String? = null
+    
+    // *** DEDICATED NODE WebSocket to hub ***
+    // The hub requires NODE_AUTH on /node/connect endpoint (separate from user chat)
+    private var nodeWebSocket: WebSocketClient? = null
+    private var nodeReconnectJob: Job? = null
+    private var nodeHeartbeatJob: Job? = null
+    private var isNodeConnected = false
+    
+    // Wallet address for node registration
+    private var walletAddress: String? = null
     
     // ============ Data Classes ============
     
@@ -141,8 +164,10 @@ class MobileRelayServer @Inject constructor(
     
     /**
      * Start the mobile relay server
+     * @param port Local WebSocket server port
+     * @param wallet Wallet address for hub node registration (must be staked)
      */
-    fun start(port: Int = DEFAULT_PORT): Result<Unit> {
+    fun start(port: Int = DEFAULT_PORT, wallet: String? = null): Result<Unit> {
         if (isRunning) {
             Timber.d("$TAG: Already running")
             return Result.success(Unit)
@@ -151,6 +176,7 @@ class MobileRelayServer @Inject constructor(
         return try {
             _serverState.value = RelayServerState.STARTING
             serverPort = port
+            walletAddress = wallet
             
             // Generate unique node ID
             nodeId = "mobile-${System.currentTimeMillis()}-${(Math.random() * 10000).toInt()}"
@@ -168,13 +194,14 @@ class MobileRelayServer @Inject constructor(
             // Start cleanup loop
             startCleanupLoop()
             
-            // Setup cross-node message listener from hub
-            setupCrossNodeListener()
+            // Cross-node messages are now handled by the dedicated node WebSocket
+            // (no longer via the user's HubConnection)
             
-            // Register with hub as a relay node (for cross-node routing)
+            // *** Connect to hub as a RELAY NODE via dedicated /node/connect ***
+            // This is SEPARATE from the user's chat connection!
             scope.launch {
-                delay(1000) // Wait for hub connection
-                registerWithHub()
+                delay(2000) // Wait for local server to stabilize
+                connectToHubAsNode()
             }
             
             Timber.d("$TAG: Server started on port $port")
@@ -193,9 +220,14 @@ class MobileRelayServer @Inject constructor(
         if (!isRunning) return
         
         try {
-            // Cancel cross-node listeners
+            // Cancel all background jobs
             crossNodeListenerJob?.cancel()
             nodeEventListenerJob?.cancel()
+            nodeReconnectJob?.cancel()
+            nodeHeartbeatJob?.cancel()
+            
+            // Disconnect dedicated node WebSocket
+            disconnectNodeWebSocket()
             
             server?.stop()
             server = null
@@ -504,130 +536,268 @@ class MobileRelayServer @Inject constructor(
         updateStats()
     }
     
-    // ============ Cross-Node Support ============
+    // ============ Hub Node Connection (Dedicated WebSocket) ============
     
     /**
-     * Register this mobile relay with the hub for cross-node routing.
-     * This allows messages to be routed through the hub to users connected to this node.
+     * Connect to hub as a RELAY NODE via dedicated /node/connect WebSocket.
+     * 
+     * This is CRITICAL - the hub has 3 endpoints:
+     *   /node/connect  → For relay nodes (sends NODE_AUTH, gets tunnel)
+     *   /node/{id}     → For users connecting through a specific relay
+     *   /user/connect  → For regular chat users (auto-assigned to a node)
+     * 
+     * The mobile relay MUST connect to /node/connect to be recognized as a node.
+     * The existing HubConnection connects as /user/connect (for chat).
      */
-    private fun registerWithHub() {
-        if (!isRunning || nodeId == null) return
+    private fun connectToHubAsNode() {
+        if (!isRunning) return
         
-        if (hubConnection.connectionState.value == HubConnection.HubConnectionState.AUTHENTICATED) {
-            hubConnection.registerAsRelayNode(nodeId!!, serverPort)
-            Timber.d("$TAG: Registered with hub as relay node: $nodeId")
-        } else {
-            Timber.d("$TAG: Hub not connected, skipping relay node registration")
+        val wallet = walletAddress ?: hubConnection.getWalletAddress()
+        if (wallet == null) {
+            Timber.e("$TAG: No wallet address, can't register as node")
+            return
+        }
+        
+        Timber.d("$TAG: ═══════════════════════════════════════════════")
+        Timber.d("$TAG: Connecting to hub as RELAY NODE")
+        Timber.d("$TAG: Wallet: ${wallet.take(10)}...")
+        Timber.d("$TAG: Endpoint: $HUB_NODE_URL")
+        Timber.d("$TAG: ═══════════════════════════════════════════════")
+        
+        try {
+            disconnectNodeWebSocket()
+            
+            nodeWebSocket = object : WebSocketClient(URI(HUB_NODE_URL)) {
+                override fun onOpen(handshake: ServerHandshake?) {
+                    Timber.d("$TAG: ✅ Node WebSocket CONNECTED to hub")
+                    isNodeConnected = true
+                    
+                    // Send NODE_AUTH immediately
+                    val auth = JSONObject().apply {
+                        put("type", "NODE_AUTH")
+                        put("walletAddress", wallet)
+                        put("nodeId", nodeId ?: "mobile-node")
+                        put("port", serverPort)
+                        put("signature", "mobile-node-v4")
+                        put("timestamp", System.currentTimeMillis())
+                        put("platform", "android")
+                        put("version", "4.4")
+                    }
+                    send(auth.toString())
+                    Timber.d("$TAG: NODE_AUTH sent to hub")
+                }
+                
+                override fun onMessage(message: String?) {
+                    message ?: return
+                    handleNodeHubMessage(message)
+                }
+                
+                override fun onClose(code: Int, reason: String?, remote: Boolean) {
+                    Timber.d("$TAG: Node WebSocket closed: code=$code reason=$reason")
+                    isNodeConnected = false
+                    nodeHeartbeatJob?.cancel()
+                    
+                    // Auto-reconnect if still running
+                    if (isRunning) {
+                        scheduleNodeReconnect()
+                    }
+                }
+                
+                override fun onError(ex: Exception?) {
+                    Timber.e(ex, "$TAG: Node WebSocket error")
+                    isNodeConnected = false
+                }
+            }
+            
+            nodeWebSocket?.connect()
+            
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to connect node WebSocket")
+            if (isRunning) {
+                scheduleNodeReconnect()
+            }
         }
     }
     
     /**
-     * Setup listener for cross-node messages from hub.
-     * When another mobile relay sends a message to a user connected to this node,
-     * the hub routes it here.
+     * Handle messages from the hub on the dedicated node connection
      */
-    private fun setupCrossNodeListener() {
-        // Listen for cross-node messages
-        crossNodeListenerJob = scope.launch {
-            hubConnection.crossNodeMessages.collect { msg ->
-                handleCrossNodeMessage(msg)
+    private fun handleNodeHubMessage(text: String) {
+        try {
+            val json = JSONObject(text)
+            val type = json.optString("type", "")
+            
+            when (type) {
+                "TUNNEL_ESTABLISHED", "NODE_AUTHENTICATED" -> {
+                    val tunnelId = json.optString("tunnelId", "")
+                    val endpoint = json.optString("endpoint", "")
+                    val fee = json.optInt("hubFeePercent", 10)
+                    
+                    hubTunnelEndpoint = endpoint
+                    hubFeePercent = fee
+                    
+                    Timber.d("$TAG: ✅ ═══════════════════════════════════════")
+                    Timber.d("$TAG: ✅ NODE REGISTERED ON HUB!")
+                    Timber.d("$TAG: ✅ Tunnel ID: $tunnelId")
+                    Timber.d("$TAG: ✅ Endpoint: $endpoint")
+                    Timber.d("$TAG: ✅ Hub Fee: $fee%")
+                    Timber.d("$TAG: ✅ ═══════════════════════════════════════")
+                    
+                    // Start node heartbeat loop (30s keepalive)
+                    startNodeHeartbeatLoop()
+                    updateStats()
+                }
+                
+                "NODE_AUTH_FAILED" -> {
+                    val error = json.optString("error", "Unknown")
+                    val message = json.optString("message", "")
+                    Timber.e("$TAG: ❌ Node auth FAILED: $error - $message")
+                    
+                    if (error == "INSUFFICIENT_STAKE") {
+                        Timber.e("$TAG: Need to stake MCT! Current: ${json.optString("currentStake")}, Required: ${json.optString("requiredStake")}")
+                    }
+                }
+                
+                "HEARTBEAT_ACK" -> {
+                    // Hub acknowledged our heartbeat
+                    Timber.d("$TAG: Hub heartbeat ACK")
+                }
+                
+                "message", "relay" -> {
+                    // Cross-node message routed through hub
+                    handleCrossNodeHubMessage(json)
+                }
+                
+                "user_connected" -> {
+                    val sessionId = json.optString("sessionId", "")
+                    val userAddress = json.optString("walletAddress", "")
+                    Timber.d("$TAG: User connected via hub tunnel: $sessionId ($userAddress)")
+                }
+                
+                "user_disconnected" -> {
+                    val sessionId = json.optString("sessionId", "")
+                    Timber.d("$TAG: User disconnected from hub tunnel: $sessionId")
+                }
+                
+                "pong" -> { /* keepalive response */ }
+                
+                else -> {
+                    Timber.d("$TAG: Node hub msg: $type")
+                }
             }
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Error handling node hub message")
         }
-        
-        // Listen for node events (users connecting via hub tunnel)
-        nodeEventListenerJob = scope.launch {
-            hubConnection.nodeEvent.collect { event ->
-                handleNodeEvent(event)
-            }
-        }
-        
-        Timber.d("$TAG: Cross-node listeners setup")
     }
     
     /**
-     * Handle a message routed from another mobile relay via the hub.
-     * This is the key function for cross-node communication!
+     * Handle cross-node message received on the dedicated node connection
      */
-    private fun handleCrossNodeMessage(msg: HubConnection.CrossNodeMessage) {
-        val toAddress = msg.to.lowercase()
+    private fun handleCrossNodeHubMessage(json: JSONObject) {
+        val from = json.optString("from", json.optString("senderAddress", ""))
+        val to = json.optString("to", json.optString("recipientAddress", ""))
+        val payload = json.optString("payload", json.optString("encryptedData", ""))
+        val toAddress = to.lowercase()
         
-        Timber.d("$TAG: Cross-node message: ${msg.from.take(8)} -> ${toAddress.take(8)} from node ${msg.sourceNode}")
+        Timber.d("$TAG: Cross-node msg: ${from.take(8)} -> ${toAddress.take(8)}")
         
         // Check if recipient is connected to THIS relay
         val recipientSessionId = userSessions[toAddress]
         val recipient = recipientSessionId?.let { connectedClients[it] }
         
         if (recipient != null && recipient.socket.isOpen) {
-            // Deliver directly to locally connected client!
-            // Include all field names for web/mobile compatibility
+            // Deliver to local client
             val deliveryMsg = JSONObject().apply {
                 put("type", "message")
-                put("from", msg.from)
-                put("senderAddress", msg.from)
-                put("to", msg.to)
-                put("payload", msg.payload)
-                put("encryptedData", msg.payload)
-                put("encryptedBlob", msg.payload)  // Web compatibility
-                put("encrypted", msg.encrypted)
-                put("senderPublicKey", msg.senderPublicKey)
-                put("signature", msg.signature)
-                put("messageId", msg.messageId)
-                put("timestamp", msg.timestamp)
+                put("from", from)
+                put("senderAddress", from)
+                put("to", to)
+                put("payload", payload)
+                put("encryptedData", payload)
+                put("encryptedBlob", payload)
+                put("encrypted", json.optBoolean("encrypted", true))
+                put("senderPublicKey", json.optString("senderPublicKey", ""))
+                put("signature", json.optString("signature", ""))
+                put("messageId", json.optString("messageId", ""))
+                put("timestamp", json.optLong("timestamp", System.currentTimeMillis()))
                 put("crossNode", true)
-                put("sourceNode", msg.sourceNode)
             }
             recipient.socket.send(deliveryMsg.toString())
-            
             messagesRelayed++
-            Timber.d("$TAG: Cross-node message delivered locally: ${msg.messageId}")
-            
+            Timber.d("$TAG: Cross-node message delivered locally")
         } else {
-            // User not connected locally - store for offline delivery
+            // Store for offline
             storeOfflineMessage(toAddress, StoredMessage(
-                id = msg.messageId,
-                from = msg.from,
+                id = json.optString("messageId", "cross-${System.currentTimeMillis()}"),
+                from = from,
                 to = toAddress,
-                payload = msg.payload,
-                encrypted = msg.encrypted,
-                senderPublicKey = msg.senderPublicKey,
-                signature = msg.signature,
-                timestamp = msg.timestamp,
+                payload = payload,
+                encrypted = json.optBoolean("encrypted", true),
+                senderPublicKey = json.optString("senderPublicKey"),
+                signature = json.optString("signature"),
+                timestamp = json.optLong("timestamp", System.currentTimeMillis()),
                 expiresAt = System.currentTimeMillis() + MESSAGE_EXPIRY_MS
             ))
-            
-            Timber.d("$TAG: Cross-node message stored for offline: ${msg.messageId}")
+            Timber.d("$TAG: Cross-node message stored offline for $toAddress")
         }
         
         updateStats()
     }
     
     /**
-     * Handle node events (users connecting/disconnecting via hub tunnel)
+     * Send periodic heartbeat to hub on node connection (30s keepalive)
      */
-    private fun handleNodeEvent(event: HubConnection.NodeEvent) {
-        when (event) {
-            is HubConnection.NodeEvent.UserConnected -> {
-                Timber.d("$TAG: User connected via hub tunnel: ${event.sessionId}")
-                // User connecting via hub - they appear as if locally connected
-            }
-            is HubConnection.NodeEvent.UserDisconnected -> {
-                Timber.d("$TAG: User disconnected from hub tunnel: ${event.sessionId}")
-            }
-            is HubConnection.NodeEvent.TunnelEstablished -> {
-                // *** IMPORTANT: Store the hub-provided endpoint (secure - no IP exposed!) ***
-                hubTunnelEndpoint = event.endpoint
-                hubFeePercent = event.hubFeePercent
-                Timber.d("$TAG: Hub tunnel established: ${event.tunnelId}")
-                Timber.d("$TAG: Secure endpoint (no IP exposed): ${event.endpoint}")
-                Timber.d("$TAG: Hub fee: ${event.hubFeePercent}% of rewards")
-                
-                // Update stats to include the new endpoint
-                updateStats()
-            }
-            is HubConnection.NodeEvent.CrossNodeDelivery -> {
-                Timber.d("$TAG: Cross-node delivery confirmed: ${event.messageId}")
+    private fun startNodeHeartbeatLoop() {
+        nodeHeartbeatJob?.cancel()
+        nodeHeartbeatJob = scope.launch {
+            while (isActive && isNodeConnected) {
+                delay(NODE_HEARTBEAT_INTERVAL_MS)
+                try {
+                    nodeWebSocket?.let { ws ->
+                        if (ws.isOpen) {
+                            val heartbeat = JSONObject().apply {
+                                put("type", "HEARTBEAT")
+                                put("connectedUsers", connectedClients.size)
+                                put("messagesRelayed", messagesRelayed)
+                                put("uptimeSeconds", (System.currentTimeMillis() - startTime) / 1000)
+                                put("offlineMessages", offlineMessages.values.sumOf { it.size })
+                                put("timestamp", System.currentTimeMillis())
+                            }
+                            ws.send(heartbeat.toString())
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "$TAG: Node heartbeat failed")
+                }
             }
         }
+    }
+    
+    /**
+     * Schedule reconnect to hub node endpoint
+     */
+    private fun scheduleNodeReconnect() {
+        nodeReconnectJob?.cancel()
+        nodeReconnectJob = scope.launch {
+            delay(NODE_RECONNECT_DELAY_MS)
+            if (isRunning && !isNodeConnected) {
+                Timber.d("$TAG: Reconnecting node WebSocket to hub...")
+                connectToHubAsNode()
+            }
+        }
+    }
+    
+    /**
+     * Disconnect the dedicated node WebSocket
+     */
+    private fun disconnectNodeWebSocket() {
+        try {
+            nodeWebSocket?.close()
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Error closing node WebSocket")
+        }
+        nodeWebSocket = null
+        isNodeConnected = false
     }
     
     // ============ Utilities ============

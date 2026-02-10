@@ -1,5 +1,6 @@
 package com.ramapay.app.chat.relay
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,10 +8,15 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import com.ramapay.app.R
 import com.ramapay.app.chat.blockchain.MumbleChatBlockchainService
@@ -18,6 +24,7 @@ import com.ramapay.app.chat.core.WalletBridge
 import com.ramapay.app.chat.crypto.ChatKeyManager
 import com.ramapay.app.chat.crypto.MessageEncryption
 import com.ramapay.app.chat.network.ConnectionState
+import com.ramapay.app.chat.network.MobileRelayServer
 import com.ramapay.app.chat.network.P2PManager
 import com.ramapay.app.ui.HomeActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -64,6 +71,9 @@ class RelayService : Service() {
         // Extras
         const val EXTRA_STORAGE_MB = "storage_mb"
         
+        // Alarm request code for doze-safe heartbeat
+        private const val ALARM_HEARTBEAT_REQUEST_CODE = 1001
+        
         /**
          * Start the relay service.
          */
@@ -105,6 +115,7 @@ class RelayService : Service() {
     @Inject lateinit var walletBridge: WalletBridge
     @Inject lateinit var chatKeyManager: ChatKeyManager
     @Inject lateinit var messageEncryption: MessageEncryption
+    @Inject lateinit var mobileRelayServer: MobileRelayServer
     
     // Service scope
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -162,6 +173,10 @@ class RelayService : Service() {
             }
             ACTION_HEARTBEAT -> {
                 sendHeartbeat()
+                // Re-schedule the next alarm (setExactAndAllowWhileIdle is one-shot)
+                if (_relayState.value == RelayState.RUNNING) {
+                    scheduleHeartbeatAlarm()
+                }
             }
         }
         
@@ -190,6 +205,9 @@ class RelayService : Service() {
         _relayState.value = RelayState.STARTING
         isRunning = true
         sessionStartTime = System.currentTimeMillis()
+        
+        // Mark relay as active for boot receiver
+        BootReceiver.setRelayActive(this, true)
         
         // Start foreground with notification
         startForeground(RelayConfig.FOREGROUND_NOTIFICATION_ID, buildNotification())
@@ -223,11 +241,30 @@ class RelayService : Service() {
                 p2pManager.initialize(chatKeys, walletAddress)
                 p2pManager.connect()
                 
+                // *** Start MobileRelayServer with hub /node/connect ***
+                // This connects to the hub as a RELAY NODE (not user)
+                // so the chatbot can distribute users to this node
+                if (!mobileRelayServer.serverState.value.let { 
+                    it == MobileRelayServer.RelayServerState.RUNNING 
+                }) {
+                    mobileRelayServer.start(
+                        port = MobileRelayServer.DEFAULT_PORT,
+                        wallet = walletAddress
+                    )
+                    Timber.d("$TAG: MobileRelayServer started, connecting to hub as node")
+                }
+                
                 // Start background jobs
                 startHeartbeatJob()
                 startCleanupJob()
                 startMessageListener()
                 startDeliveryJob()
+                
+                // Schedule doze-safe heartbeat alarm (backup for when coroutine is suspended)
+                scheduleHeartbeatAlarm()
+                
+                // Register network connectivity listener for auto-reconnect
+                registerNetworkCallback()
                 
                 _relayState.value = RelayState.RUNNING
                 Timber.d("$TAG: Relay service started successfully")
@@ -259,6 +296,15 @@ class RelayService : Service() {
         // Disconnect P2P
         p2pManager.disconnect()
         
+        // Stop mobile relay server (disconnects from hub node endpoint)
+        mobileRelayServer.stop()
+        
+        // Cancel doze-safe alarm
+        cancelHeartbeatAlarm()
+        
+        // Unregister network callback
+        unregisterNetworkCallback()
+        
         // Release wake lock
         releaseWakeLock()
         
@@ -272,6 +318,9 @@ class RelayService : Service() {
         
         _relayState.value = RelayState.STOPPED
         isRunning = false
+        
+        // Mark relay as inactive for boot receiver
+        BootReceiver.setRelayActive(this, false)
         
         // Log session stats
         val sessionDuration = (System.currentTimeMillis() - sessionStartTime) / 1000
@@ -300,13 +349,19 @@ class RelayService : Service() {
                 // Get current storage usage
                 val storageMB = relayStorage.getCurrentStorageUsageMB()
                 
-                // Send heartbeat to blockchain
-                // Note: This will be called via the blockchain service
-                Timber.d("$TAG: Sending heartbeat - storage: ${storageMB}MB")
+                Timber.d("$TAG: Sending heartbeat - wallet: $walletAddress, storage: ${storageMB}MB")
                 
-                // The actual on-chain heartbeat transaction would be initiated here
-                // For now, we just log it - the actual implementation would call:
-                // blockchainService.sendHeartbeat(storageMB)
+                // Send heartbeat to blockchain
+                val txHash = blockchainService.sendHeartbeat(storageMB)
+                if (txHash != null) {
+                    Timber.i("$TAG: Heartbeat sent successfully! TX: $txHash")
+                    
+                    // Save last heartbeat time
+                    val prefs = getSharedPreferences("relay_prefs", MODE_PRIVATE)
+                    prefs.edit().putLong("last_heartbeat_time", System.currentTimeMillis()).apply()
+                } else {
+                    Timber.w("$TAG: Heartbeat returned null (no tx hash)")
+                }
                 
                 // Update notification
                 updateNotification()
@@ -511,6 +566,126 @@ class RelayService : Service() {
             }
         }
         wakeLock = null
+    }
+    
+    // ============ AlarmManager (Doze-safe heartbeat) ============
+    
+    /**
+     * Schedule an inexact repeating alarm so that even in Doze mode
+     * the service wakes up and sends a heartbeat. AlarmManager alarms
+     * with setExactAndAllowWhileIdle are delivered even in deep Doze.
+     */
+    private fun scheduleHeartbeatAlarm() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, RelayService::class.java).apply {
+            action = ACTION_HEARTBEAT
+        }
+        val pendingIntent = PendingIntent.getService(
+            this,
+            ALARM_HEARTBEAT_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        // Schedule the first alarm after the heartbeat interval
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + RelayConfig.HEARTBEAT_INTERVAL_MS,
+                pendingIntent
+            )
+        } else {
+            alarmManager.setExact(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + RelayConfig.HEARTBEAT_INTERVAL_MS,
+                pendingIntent
+            )
+        }
+        Timber.d("$TAG: Heartbeat alarm scheduled for ${RelayConfig.HEARTBEAT_INTERVAL_MS / 60000}min from now")
+    }
+    
+    private fun cancelHeartbeatAlarm() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, RelayService::class.java).apply {
+            action = ACTION_HEARTBEAT
+        }
+        val pendingIntent = PendingIntent.getService(
+            this,
+            ALARM_HEARTBEAT_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        pendingIntent?.let { alarmManager.cancel(it) }
+        Timber.d("$TAG: Heartbeat alarm cancelled")
+    }
+    
+    // ============ Network Connectivity Monitor ============
+    
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    
+    /**
+     * Register for network connectivity changes so we can auto-reconnect
+     * the P2P manager and MobileRelayServer when network comes back.
+     */
+    private fun registerNetworkCallback() {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Timber.i("$TAG: Network available - attempting reconnection")
+                serviceScope.launch {
+                    try {
+                        // Reconnect P2P if disconnected
+                        if (p2pManager.connectionState.value != ConnectionState.CONNECTED) {
+                            val walletAddress = walletBridge.getCurrentWalletAddress()
+                            if (walletAddress != null) {
+                                p2pManager.connect()
+                                Timber.d("$TAG: P2P reconnected after network change")
+                            }
+                        }
+                        
+                        // Reconnect MobileRelayServer hub connection if disconnected
+                        if (!mobileRelayServer.isRunning()) {
+                            val walletAddress = walletBridge.getCurrentWalletAddress()
+                            if (walletAddress != null) {
+                                mobileRelayServer.start(
+                                    port = MobileRelayServer.DEFAULT_PORT,
+                                    wallet = walletAddress
+                                )
+                                Timber.d("$TAG: MobileRelayServer restarted after network change")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Timber.e(e, "$TAG: Error reconnecting after network change")
+                    }
+                }
+            }
+            
+            override fun onLost(network: Network) {
+                Timber.w("$TAG: Network lost - relay connections may drop")
+            }
+        }
+        
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        
+        connectivityManager.registerNetworkCallback(request, callback)
+        networkCallback = callback
+        Timber.d("$TAG: Network callback registered")
+    }
+    
+    private fun unregisterNetworkCallback() {
+        networkCallback?.let { callback ->
+            try {
+                val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                connectivityManager.unregisterNetworkCallback(callback)
+                Timber.d("$TAG: Network callback unregistered")
+            } catch (e: Exception) {
+                Timber.e(e, "$TAG: Error unregistering network callback")
+            }
+        }
+        networkCallback = null
     }
     
     // ============ Public API ============

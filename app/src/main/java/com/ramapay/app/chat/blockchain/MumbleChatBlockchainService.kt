@@ -49,7 +49,7 @@ class MumbleChatBlockchainService @Inject constructor(
     companion object {
         private const val TAG = "MumbleChatBlockchain"
         private const val CHAIN_ID = MumbleChatContracts.CHAIN_ID
-        private const val MUMBLECHAT_REGISTRY_ADDRESS = MumbleChatContracts.MUMBLECHAT_REGISTRY_PROXY
+        private const val MUMBLECHAT_REGISTRY_ADDRESS = MumbleChatContracts.REGISTRY_PROXY
     }
     
     // ============ Registry Contract Functions ============

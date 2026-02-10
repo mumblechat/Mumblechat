@@ -197,7 +197,7 @@ const REGISTRY_ABI = [
     'function totalRelayNodes() external view returns (uint256)',
     'function getActiveRelayNodes() external view returns (address[] memory)',
     'function minRelayStake() external view returns (uint256)',
-    'function getRelayNode(address node) external view returns (string endpoint, uint256 stakedAmount, uint256 messagesRelayed, uint256 rewardsEarned, bool isActive, uint256 dailyUptimeSeconds, uint256 storageMB, uint8 tier, uint256 rewardMultiplier, bool isOnline)',
+    'function getRelayNode(address node) external view returns (string endpoint, uint256 stakedAmount, uint256 messagesRelayed, uint256 rewardsEarned, bool isActive, uint256 dailyUptimeSeconds, uint256 storageMB, uint8 tier, uint256 rewardMultiplier, bool isOnline, uint256 registeredAt)',
     'function isNodeOnline(address node) external view returns (bool)'
 ];
 
@@ -258,6 +258,7 @@ interface BlockchainNode {
     isOnline: boolean;
     storageMB: number;
     dailyUptimeSeconds: number;
+    registeredAt: number;
 }
 
 let cachedBlockchainNodes: BlockchainNode[] = [];
@@ -298,7 +299,8 @@ async function refreshActiveRelayNodes(): Promise<BlockchainNode[]> {
                         isActive: info.isActive,
                         isOnline: info.isOnline,
                         storageMB: Number(info.storageMB),
-                        dailyUptimeSeconds: Number(info.dailyUptimeSeconds)
+                        dailyUptimeSeconds: Number(info.dailyUptimeSeconds),
+                        registeredAt: Number(info.registeredAt || 0)
                     });
                 }
             } catch (e) {
@@ -642,21 +644,24 @@ app.get('/api/stats/v2', async (req, res) => {
     
     for (const bcNode of blockchainNodes) {
         if (!connectedWallets.has(bcNode.walletAddress.toLowerCase())) {
+            const bcHeartbeat = bcNode.registeredAt > 0 
+                ? new Date(bcNode.registeredAt * 1000).toISOString() 
+                : null;
             allNodes.push({
                 tunnelId: `bc-${bcNode.walletAddress.slice(2, 10).toLowerCase()}`,
                 endpoint: bcNode.endpoint,
                 walletAddress: bcNode.walletAddress,
                 connectedUsers: 0,
                 messagesRelayed: bcNode.messagesRelayed,
-                connectedAt: null,
-                lastHeartbeat: null,
+                connectedAt: bcHeartbeat,
+                lastHeartbeat: bcHeartbeat,
                 stakedAmount: bcNode.stakedAmount,
                 rewardsEarned: bcNode.rewardsEarned,
                 tier: bcNode.tier,
                 isStaked: true,
                 blockchainMessages: bcNode.messagesRelayed,
                 isOnline: bcNode.isOnline,
-                nodeType: 'unknown',
+                nodeType: bcNode.endpoint?.includes('mobile') ? 'mobile' : 'unknown',
                 p2pActive: false,
                 p2pPeers: [],
                 source: 'blockchain'

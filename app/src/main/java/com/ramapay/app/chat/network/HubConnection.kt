@@ -93,6 +93,11 @@ class HubConnection @Inject constructor(
     private var displayName: String? = null
     private var publicKey: String? = null
     
+    /**
+     * Get the current wallet address used for hub connection
+     */
+    fun getWalletAddress(): String? = walletAddress
+    
     // Custom endpoint support
     private var customEndpoint: String? = null
     

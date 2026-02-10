@@ -1089,21 +1089,20 @@ class ChatService @Inject constructor(
      */
     fun startMobileRelayServer(port: Int = 8765): String? {
         return try {
-            mobileRelayServer.start(port)
+            val wallet = walletBridge.getCurrentWalletAddress()
+            mobileRelayServer.start(port, wallet)
             
             // NOTE: Mobile relay server runs LOCALLY on the phone
-            // It does NOT replace the hub user connection!
-            // 
-            // Architecture:
-            // - User chat: hubConnection (as USER) - always active for messaging
-            // - Mobile relay: mobileRelayServer (local WebSocket server) - OPTIONAL
-            // - Node stats: sent via the user connection heartbeat
+            // It also opens a DEDICATED WebSocket to hub at /node/connect
+            // This is SEPARATE from the user's chat connection!
             //
-            // The MobileRelayServer already registers with hub in registerWithHub()
-            // which sends node info via the existing user connection
+            // Architecture:
+            // - User chat: hubConnection (as USER at /user/connect) - always active
+            // - Mobile relay: mobileRelayServer → hub at /node/connect (as NODE)
+            // - Local server: WebSocket server on phone for direct P2P
             
             Timber.d("ChatService: Mobile relay server started on port $port")
-            Timber.d("ChatService: Hub connection remains active for chat messages")
+            Timber.d("ChatService: Node connecting to hub at /node/connect")
             
             mobileRelayServer.getEndpointUrl()
         } catch (e: Exception) {
