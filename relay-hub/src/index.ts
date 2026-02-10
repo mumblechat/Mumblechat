@@ -38,7 +38,9 @@ const REGISTRY_ABI = [
     'function isRegistered(address wallet) external view returns (bool)',
     'function totalRelayNodes() external view returns (uint256)',
     'function getActiveRelayNodes() external view returns (address[] memory)',
-    'function minRelayStake() external view returns (uint256)'
+    'function minRelayStake() external view returns (uint256)',
+    'function getRelayNode(address node) external view returns (string endpoint, uint256 stakedAmount, uint256 messagesRelayed, uint256 rewardsEarned, bool isActive, uint256 dailyUptimeSeconds, uint256 storageMB, uint8 tier, uint256 rewardMultiplier, bool isOnline)',
+    'function isNodeOnline(address node) external view returns (bool)'
 ];
 
 // Function selector for getRelayNode(address) - computed as keccak256("getRelayNode(address)")[:4]
@@ -85,6 +87,84 @@ interface StakingInfo {
 // Cache staking info to reduce RPC calls (cache for 5 minutes)
 const stakingCache: Map<string, { info: StakingInfo, timestamp: number }> = new Map();
 const STAKING_CACHE_TTL = 5 * 60 * 1000;  // 5 minutes
+
+// ============ Dynamic Active Relay Node Discovery ============
+interface BlockchainNode {
+    walletAddress: string;
+    endpoint: string;
+    stakedAmount: number;
+    messagesRelayed: number;
+    rewardsEarned: number;
+    tier: number;
+    isActive: boolean;
+    isOnline: boolean;
+    storageMB: number;
+    dailyUptimeSeconds: number;
+}
+
+let cachedBlockchainNodes: BlockchainNode[] = [];
+let blockchainCacheTimestamp = 0;
+const BLOCKCHAIN_REFRESH_INTERVAL = 60 * 1000; // Refresh every 60 seconds
+
+async function refreshActiveRelayNodes(): Promise<BlockchainNode[]> {
+    if (!registryContract) return cachedBlockchainNodes;
+    
+    // Return cache if fresh
+    if (Date.now() - blockchainCacheTimestamp < BLOCKCHAIN_REFRESH_INTERVAL && cachedBlockchainNodes.length > 0) {
+        return cachedBlockchainNodes;
+    }
+    
+    try {
+        // Get all active relay node addresses from blockchain (deduplicate)
+        const rawAddresses: string[] = await registryContract.getActiveRelayNodes();
+        const activeAddresses = [...new Set(rawAddresses.map((a: string) => a))];
+        console.log(`[Hub] Blockchain: ${activeAddresses.length} unique active relay nodes (${rawAddresses.length} raw)`);
+        
+        const nodes: BlockchainNode[] = [];
+        const seen = new Set<string>();
+        
+        for (const addr of activeAddresses) {
+            const key = addr.toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            try {
+                const info = await registryContract.getRelayNode(addr);
+                if (info.isActive) {
+                    nodes.push({
+                        walletAddress: addr,
+                        endpoint: info.endpoint || `hub.mumblechat.com/node/${addr.slice(2, 10).toLowerCase()}`,
+                        stakedAmount: Number(BigInt(info.stakedAmount)) / 1e18,
+                        messagesRelayed: Number(info.messagesRelayed),
+                        rewardsEarned: Number(BigInt(info.rewardsEarned)) / 1e18,
+                        tier: Number(info.tier),
+                        isActive: info.isActive,
+                        isOnline: info.isOnline,
+                        storageMB: Number(info.storageMB),
+                        dailyUptimeSeconds: Number(info.dailyUptimeSeconds)
+                    });
+                }
+            } catch (e) {
+                // Skip nodes we can't query
+            }
+        }
+        
+        cachedBlockchainNodes = nodes;
+        blockchainCacheTimestamp = Date.now();
+        return nodes;
+    } catch (error: any) {
+        console.error('[Hub] Failed to refresh active relay nodes:', error.message);
+        return cachedBlockchainNodes;
+    }
+}
+
+// Background refresh every 60 seconds
+setInterval(async () => {
+    try {
+        await refreshActiveRelayNodes();
+    } catch (e) {
+        // Silent fail for background refresh
+    }
+}, BLOCKCHAIN_REFRESH_INTERVAL);
 
 async function verifyStaking(walletAddress: string): Promise<StakingInfo> {
     const addr = walletAddress.toLowerCase();
@@ -144,11 +224,11 @@ async function verifyStaking(walletAddress: string): Promise<StakingInfo> {
         
         const stakedAmountWei = BigInt('0x' + (words[1] || '0'));
         const stakedAmount = Number(stakedAmountWei) / 1e18;
-        const messagesRelayed = parseInt(words[2] || '0', 16);
-        const rewardsEarnedWei = BigInt('0x' + (words[3] || '0'));
+        const messagesRelayed = parseInt(words[3] || '0', 16);
+        const rewardsEarnedWei = BigInt('0x' + (words[4] || '0'));
         const rewardsEarned = Number(rewardsEarnedWei) / 1e18;
-        const isActive = words[4]?.endsWith('1') || false;
-        const tier = parseInt(words[7] || '0', 16);
+        const isActive = parseInt(words[5] || '0', 16) === 1;
+        const tier = parseInt(words[13] || '0', 16);
         
         const info: StakingInfo = {
             isStaked: isActive && stakedAmount >= config.minStakeRequired,
@@ -239,8 +319,9 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Get hub stats
-app.get('/api/stats', (req, res) => {
+// Get hub stats - dynamically merges connected WebSocket nodes + all blockchain-registered active nodes
+app.get('/api/stats', async (req, res) => {
+    // Start with connected WebSocket nodes
     const nodeStats = Array.from(connectedNodes.values()).map(node => ({
         tunnelId: node.tunnelId,
         endpoint: `${config.domain}/node/${node.tunnelId}`,
@@ -249,16 +330,44 @@ app.get('/api/stats', (req, res) => {
         messagesRelayed: node.stats.messagesRelayed,
         connectedAt: node.connectedAt,
         lastHeartbeat: node.lastHeartbeat,
-        // Staking info from blockchain
         stakedAmount: (node as any).staking?.stakedAmount || 0,
         rewardsEarned: (node as any).staking?.rewardsEarned || 0,
         tier: (node as any).staking?.tier || 0,
         isStaked: (node as any).staking?.isStaked || false,
-        blockchainMessages: (node as any).staking?.messagesRelayed || 0
+        blockchainMessages: (node as any).staking?.messagesRelayed || 0,
+        isOnline: true  // Connected via WebSocket = online
     }));
 
+    // Fetch all active relay nodes from blockchain (cached, refreshes every 60s)
+    const blockchainNodes = await refreshActiveRelayNodes();
+    
+    // Add blockchain nodes that are NOT already connected via WebSocket
+    const connectedWallets = new Set(
+        Array.from(connectedNodes.values()).map(n => n.walletAddress?.toLowerCase()).filter(Boolean)
+    );
+    
+    for (const bcNode of blockchainNodes) {
+        if (!connectedWallets.has(bcNode.walletAddress.toLowerCase())) {
+            nodeStats.push({
+                tunnelId: `bc-${bcNode.walletAddress.slice(2, 10).toLowerCase()}`,
+                endpoint: bcNode.endpoint,
+                walletAddress: bcNode.walletAddress,
+                connectedUsers: 0,
+                messagesRelayed: bcNode.messagesRelayed,
+                connectedAt: new Date().toISOString(),
+                lastHeartbeat: new Date().toISOString(),
+                stakedAmount: bcNode.stakedAmount,
+                rewardsEarned: bcNode.rewardsEarned,
+                tier: bcNode.tier,
+                isStaked: true,
+                blockchainMessages: bcNode.messagesRelayed,
+                isOnline: bcNode.isOnline  // Based on blockchain heartbeat (5 min timeout)
+            } as any);
+        }
+    }
+
     res.json({
-        totalNodes: connectedNodes.size,
+        totalNodes: nodeStats.length,
         totalUsers: connectedUsers.size,
         registeredUsers: usersByAddress.size,
         hubFeePercent: config.hubFeePercent,
@@ -266,56 +375,33 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
-// *** NEW: Get all registered relay nodes from blockchain ***
+// Get all registered relay nodes from blockchain (fully dynamic, no hardcoded addresses)
 app.get('/api/blockchain/nodes', async (req, res) => {
     try {
         if (!registryContract) {
             return res.status(503).json({ error: 'Blockchain not connected' });
         }
         
-        // Try to get total relay nodes count
-        let totalNodes = 0;
-        try {
-            totalNodes = Number(await registryContract.totalRelayNodes());
-        } catch (e) {
-            console.log('[Hub] totalRelayNodes() not available');
-        }
+        // Fetch all active nodes from blockchain
+        const blockchainNodes = await refreshActiveRelayNodes();
         
-        // For now, check specific known addresses (can be expanded)
-        // In production, the contract should have getActiveRelayNodes() or similar
-        const knownAddresses = [
-            '0x0aDbfCe3A8dEb25Cd1b258b6c074B292e36aa98f',
-            '0x4B9b3BFcB35b57933cDFbD035AA078Cc5A761deF',
-            '0x9C0306E72520e1C138A5749CAbcbeB7307017F0E',
-            '0x33116e4e889338f1C907a50812beA4F49c6b6B32'  // Added user's address
-        ];
-        
-        const blockchainNodes = [];
-        
-        for (const addr of knownAddresses) {
-            try {
-                const stakingInfo = await verifyStaking(addr);
-                if (stakingInfo.isActive) {
-                    blockchainNodes.push({
-                        walletAddress: addr,
-                        endpoint: `hub.mumblechat.com/node/${addr.slice(2, 14).toLowerCase()}`,
-                        stakedAmount: stakingInfo.stakedAmount,
-                        messagesRelayed: stakingInfo.messagesRelayed,
-                        rewardsEarned: stakingInfo.rewardsEarned,
-                        isActive: stakingInfo.isActive,
-                        tier: stakingInfo.tier,
-                        // Check if currently connected to hub
-                        isConnectedToHub: nodeByWallet.has(addr.toLowerCase())
-                    });
-                }
-            } catch (e) {
-                // Skip addresses that aren't registered
-            }
-        }
+        const nodes = blockchainNodes.map(node => ({
+            walletAddress: node.walletAddress,
+            endpoint: node.endpoint,
+            stakedAmount: node.stakedAmount,
+            messagesRelayed: node.messagesRelayed,
+            rewardsEarned: node.rewardsEarned,
+            isActive: node.isActive,
+            isOnline: node.isOnline,
+            tier: node.tier,
+            storageMB: node.storageMB,
+            dailyUptimeSeconds: node.dailyUptimeSeconds,
+            isConnectedToHub: nodeByWallet.has(node.walletAddress.toLowerCase())
+        }));
         
         res.json({
-            totalRegistered: totalNodes,
-            nodes: blockchainNodes
+            totalRegistered: blockchainNodes.length,
+            nodes
         });
     } catch (error: any) {
         console.error('[Hub] Error fetching blockchain nodes:', error.message);
