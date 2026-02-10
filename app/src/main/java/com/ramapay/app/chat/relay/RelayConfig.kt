@@ -43,8 +43,17 @@ object RelayConfig {
     
     // ============ Timing Constants ============
     
-    /** Heartbeat interval in milliseconds (5 minutes) */
-    const val HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000L
+    /** 
+     * Blockchain heartbeat interval in milliseconds (5.5 hours)
+     * Contract HEARTBEAT_TIMEOUT is 6 hours, so we send at 5.5 hours to stay online.
+     * This saves gas vs the old 5-minute interval.
+     */
+    const val HEARTBEAT_INTERVAL_MS = 5 * 60 * 60 * 1000L + 30 * 60 * 1000L  // 5.5 hours
+    
+    /**
+     * Hub ping interval (30 seconds) - for WebSocket keep-alive, NOT blockchain
+     */
+    const val HUB_PING_INTERVAL_MS = 30 * 1000L
     
     /** Message TTL in days */
     const val DEFAULT_MESSAGE_TTL_DAYS = 7

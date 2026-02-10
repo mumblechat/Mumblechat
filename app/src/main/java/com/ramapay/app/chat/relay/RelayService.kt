@@ -42,7 +42,7 @@ import javax.inject.Inject
  * This service:
  * - Runs as Android foreground service with persistent notification
  * - Maintains P2P connections even when app is in background
- * - Sends heartbeats every 5 minutes to update uptime on-chain
+ * - Sends blockchain heartbeats every 5.5 hours (contract timeout is 6 hours)
  * - Accepts and stores messages for offline recipients
  * - Delivers messages when recipients come online
  * - Cleans up expired messages (TTL-based)
