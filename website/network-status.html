@@ -441,12 +441,243 @@
         }
         
         @media (max-width: 768px) {
-            h1 { font-size: 36px; }
+            h1 { font-size: 28px; }
+            .subtitle { font-size: 14px; }
+            
             .nodes-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            
+            .stat-value {
+                font-size: 32px;
+            }
+            
+            .stat-card {
+                padding: 20px 16px;
+            }
+            
+            .heartbeat-icon {
+                font-size: 32px;
+            }
+            
             .nav-links {
                 display: none;
+            }
+            
+            main {
+                padding: 20px 12px;
+            }
+            
+            nav .container {
+                padding: 0 12px;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .section-title {
+                font-size: 20px;
+            }
+            
+            .node-card {
+                padding: 16px;
+            }
+            
+            .node-header {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .node-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            
+            .node-stat {
+                padding: 10px 6px;
+            }
+            
+            .node-stat-value {
+                font-size: 18px;
+            }
+            
+            .node-stat-label {
+                font-size: 9px;
+            }
+            
+            .stake-info {
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .stake-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: left;
+            }
+            
+            .node-wallet {
+                font-size: 10px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            
+            .node-endpoint {
+                font-size: 10px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            
+            .sound-toggle {
+                bottom: 80px;
+                right: 16px;
+                padding: 10px 16px;
+                font-size: 12px;
+            }
+            
+            .last-update {
+                font-size: 11px;
+                padding: 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            
+            .stat-value {
+                font-size: 24px;
+            }
+            
+            .stat-label {
+                font-size: 9px;
+                letter-spacing: 1px;
+            }
+            
+            h1 { font-size: 24px; }
+        }
+
+        /* Bottom Navigation for Mobile */
+        .bottom-nav {
+            display: none;
+            position: fixed !important;
+            top: auto !important;
+            bottom: 0 !important;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.98) !important;
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: none !important;
+            z-index: 1000;
+            padding: 8px 0 !important;
+            padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+        }
+
+        .bottom-nav-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 500;
+            transition: color 0.2s;
+            min-width: 60px;
+            cursor: pointer;
+        }
+
+        .bottom-nav-item.active {
+            color: #10b981;
+        }
+
+        .bottom-nav-item:hover {
+            color: #e2e8f0;
+        }
+
+        .bottom-nav-icon {
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .bottom-nav-label {
+            white-space: nowrap;
+        }
+
+        .bottom-nav-dropdown {
+            position: relative;
+        }
+
+        .bottom-nav-menu {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 8px 0;
+            min-width: 160px;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+            display: none;
+            margin-bottom: 8px;
+        }
+
+        .bottom-nav-dropdown.open .bottom-nav-menu {
+            display: block;
+        }
+
+        .bottom-nav-menu a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            color: #94a3b8;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .bottom-nav-menu a:hover,
+        .bottom-nav-menu a.active {
+            background: rgba(16, 185, 129, 0.1);
+            color: #e2e8f0;
+        }
+
+        .bottom-nav-menu .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 8px 0;
+        }
+
+        @media (max-width: 768px) {
+            .bottom-nav {
+                display: block;
+            }
+
+            body {
+                padding-bottom: 70px;
             }
         }
     </style>
@@ -694,5 +925,52 @@
         setInterval(loadNetworkData, 10000);
     </script>
     </main>
+
+    <!-- Bottom Navigation for Mobile -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-container">
+            <a href="index.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">🏠</span>
+                <span class="bottom-nav-label">Home</span>
+            </a>
+            <div class="bottom-nav-item bottom-nav-dropdown" onclick="toggleNetworkMenu(this)">
+                <span class="bottom-nav-icon">📡</span>
+                <span class="bottom-nav-label">Network</span>
+                <div class="bottom-nav-menu">
+                    <a href="relay-nodes.html">📋 Relay Nodes</a>
+                    <a href="network-status.html" class="active">📡 Network Status</a>
+                    <div class="divider"></div>
+                    <a href="relay-node.html" style="color: #10b981;">🚀 Run a Node</a>
+                </div>
+            </div>
+            <a href="conversations.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">💬</span>
+                <span class="bottom-nav-label">Chat</span>
+            </a>
+            <a href="token.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">🪙</span>
+                <span class="bottom-nav-label">Token</span>
+            </a>
+            <a href="docs.html" class="bottom-nav-item">
+                <span class="bottom-nav-icon">📚</span>
+                <span class="bottom-nav-label">Docs</span>
+            </a>
+        </div>
+    </nav>
+
+    <script>
+        function toggleNetworkMenu(el) {
+            el.classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.bottom-nav-menu a')) {
+                document.querySelectorAll('.bottom-nav-dropdown').forEach(d => d.classList.remove('open'));
+                return;
+            }
+            if (!e.target.closest('.bottom-nav-dropdown')) {
+                document.querySelectorAll('.bottom-nav-dropdown').forEach(d => d.classList.remove('open'));
+            }
+        });
+    </script>
 </body>
 </html>

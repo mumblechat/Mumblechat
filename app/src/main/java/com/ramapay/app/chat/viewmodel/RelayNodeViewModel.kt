@@ -497,12 +497,14 @@ class RelayNodeViewModel @Inject constructor(
                         Timber.d("Generated real P2P endpoint: $it")
                     }
                 } else {
-                    Timber.w("STUN discovery failed, endpoint will be empty")
-                    ""
+                    // STUN failed - use hub-managed fallback endpoint
+                    // Hub routes traffic so real IP not required for registration
+                    Timber.w("STUN discovery failed, using hub-managed endpoint")
+                    "hub.mumblechat.com/node/mobile:19372"
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Failed to discover public address via STUN")
-                ""
+                Timber.e(e, "Failed to discover public address via STUN, using fallback")
+                "hub.mumblechat.com/node/mobile:19372"
             }
         }
     }

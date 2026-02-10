@@ -375,12 +375,13 @@ p {
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 
 @media (max-width: 1024px) {
+  .grid-5 { grid-template-columns: repeat(3, 1fr); }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
-  .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .grid-5, .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
 }
 
 /* Hero Section */
@@ -710,7 +711,8 @@ tr:hover td {
 
 @media (max-width: 768px) {
   .footer-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    gap: 24px;
   }
 }
 
@@ -1347,5 +1349,255 @@ tr:hover td {
   
   .tier-card:hover {
     transform: none;
+  }
+}
+
+/* ==========================================
+   Comprehensive Mobile Responsive Fixes
+   ========================================== */
+
+/* Contract address overflow fix */
+.contract-address {
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.contract-address code {
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+/* Inline grid sections responsive override */
+@media (max-width: 900px) {
+  /* Force any inline 3+ column grids to stack */
+  [style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: 1fr !important;
+  }
+  
+  [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  [style*="grid-template-columns: repeat(5"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  /* Code blocks - scrollable on mobile */
+  .code-block {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .code-block pre {
+    min-width: max-content;
+  }
+  
+  .code-block code {
+    font-size: 0.65rem;
+  }
+  
+  /* Tables - ensure scrollable */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -4px;
+    padding: 0 4px;
+  }
+  
+  table {
+    min-width: 500px;
+  }
+  
+  th, td {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  
+  /* Comparison table */
+  .comparison-table {
+    min-width: 500px;
+  }
+  
+  /* Contract info responsive */
+  .contract-info {
+    overflow: hidden;
+  }
+  
+  .contract-address {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+  
+  .contract-address code {
+    font-size: 0.65rem;
+  }
+  
+  /* Download page step numbers */
+  .step {
+    gap: 12px;
+  }
+  
+  .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+  
+  /* Feature list mobile */
+  .feature-list li {
+    font-size: 0.9rem;
+  }
+  
+  /* Info rows */
+  .info-row {
+    font-size: 0.9rem;
+  }
+  
+  .download-info {
+    padding: 12px;
+  }
+  
+  /* Inline flex/grid gap reduction */
+  [style*="gap: 32px"] {
+    gap: 16px !important;
+  }
+  
+  /* Pool stats display fix */
+  [style*="display: flex"][style*="justify-content: center"][style*="gap: 32px"] {
+    gap: 16px !important;
+    flex-wrap: wrap;
+  }
+  
+  /* Large stat value text reduction */
+  [style*="font-size: 36px"] {
+    font-size: 24px !important;
+  }
+  
+  [style*="font-size: 42px"] {
+    font-size: 28px !important;
+  }
+  
+  [style*="font-size: 32px"] {
+    font-size: 22px !important;
+  }
+  
+  [style*="font-size: 48px"] {
+    font-size: 32px !important;
+  }
+  
+  /* Pool breakdown grid */
+  [style*="grid-template-columns: repeat(auto-fit, minmax(250px"] {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Redistribution result grid */
+  [style*="grid-template-columns: repeat(3, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Missed rewards table */
+  .table-container table {
+    font-size: 0.75rem;
+  }
+  
+  .table-container table th,
+  .table-container table td {
+    padding: 8px 6px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Even smaller screens - stack everything */
+  [style*="grid-template-columns: repeat(2"] {
+    grid-template-columns: 1fr !important;
+  }
+  
+  [style*="display: grid"][style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Reduce card icon sizes */
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  [style*="font-size: 4rem"] {
+    font-size: 2.5rem !important;
+  }
+  
+  [style*="font-size: 3rem"] {
+    font-size: 2rem !important;
+  }
+  
+  /* Table minimum width for very small screens */
+  table {
+    min-width: 400px;
+  }
+  
+  .code-block code {
+    font-size: 0.6rem;
+  }
+  
+  /* Contract address wrapping */
+  .contract-address {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .contract-address button {
+    align-self: flex-end;
+  }
+
+  /* Footer mobile - force single column */
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+
+  .footer {
+    padding: 30px 0 20px !important;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  /* Smart contracts cards - full width stacking */
+  .grid.grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Card contract address fix for very small screens */
+  .card .contract-address {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px !important;
+  }
+
+  .card .contract-address code {
+    font-size: 0.6rem !important;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    display: block;
+    line-height: 1.4;
+  }
+
+  .card .contract-address button {
+    align-self: flex-end;
+    margin-left: 0 !important;
+    margin-top: 6px;
+  }
+
+  /* Card inline style overrides */
+  .card[style*="padding: 32px"] {
+    padding: 20px 16px !important;
   }
 }
