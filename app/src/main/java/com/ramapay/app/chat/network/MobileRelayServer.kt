@@ -86,6 +86,27 @@ class MobileRelayServer @Inject constructor(
     private var messagesRelayed = 0L
     private var startTime = 0L
     
+    // Persistent stats via SharedPreferences
+    private val prefs by lazy { 
+        context.getSharedPreferences("mumblechat_relay_stats", Context.MODE_PRIVATE) 
+    }
+    private var totalMessagesRelayed: Long
+        get() = prefs.getLong("total_messages_relayed", 0)
+        set(value) = prefs.edit().putLong("total_messages_relayed", value).apply()
+    private var lastHeartbeatMessages: Long
+        get() = prefs.getLong("last_heartbeat_messages", 0)
+        set(value) = prefs.edit().putLong("last_heartbeat_messages", value).apply()
+    private var messagesSinceLastHeartbeat: Long
+        get() = prefs.getLong("messages_since_heartbeat", 0)
+        set(value) = prefs.edit().putLong("messages_since_heartbeat", value).apply()
+    
+    /** Track a relayed message - updates both session and persistent counters */
+    private fun recordMessageRelayed() {
+        messagesRelayed++
+        totalMessagesRelayed++
+        messagesSinceLastHeartbeat++
+    }
+    
     // State
     private val _serverState = MutableStateFlow(RelayServerState.STOPPED)
     val serverState: StateFlow<RelayServerState> = _serverState
@@ -150,6 +171,7 @@ class MobileRelayServer @Inject constructor(
         val port: Int = 0,
         val connectedClients: Int = 0,
         val messagesRelayed: Long = 0,
+        val totalMessagesRelayed: Long = 0,  // Persistent count across sessions
         val offlineMessagesStored: Int = 0,
         val uptimeSeconds: Long = 0,
         val hubEndpoint: String? = null,  // Hub-provided tunnel endpoint (no IP exposed!)
@@ -451,7 +473,7 @@ class MobileRelayServer @Inject constructor(
         }
         sender.socket.send(ack.toString())
         
-        messagesRelayed++
+        recordMessageRelayed()
         updateStats()
     }
     
@@ -723,7 +745,7 @@ class MobileRelayServer @Inject constructor(
                 put("crossNode", true)
             }
             recipient.socket.send(deliveryMsg.toString())
-            messagesRelayed++
+            recordMessageRelayed()
             Timber.d("$TAG: Cross-node message delivered locally")
         } else {
             // Store for offline
@@ -755,15 +777,22 @@ class MobileRelayServer @Inject constructor(
                 try {
                     nodeWebSocket?.let { ws ->
                         if (ws.isOpen) {
+                            val sinceLast = messagesSinceLastHeartbeat
                             val heartbeat = JSONObject().apply {
                                 put("type", "HEARTBEAT")
                                 put("connectedUsers", connectedClients.size)
                                 put("messagesRelayed", messagesRelayed)
+                                put("totalMessagesRelayed", totalMessagesRelayed)
+                                put("messagesSinceLastHeartbeat", sinceLast)
                                 put("uptimeSeconds", (System.currentTimeMillis() - startTime) / 1000)
                                 put("offlineMessages", offlineMessages.values.sumOf { it.size })
                                 put("timestamp", System.currentTimeMillis())
                             }
                             ws.send(heartbeat.toString())
+                            
+                            // Reset per-heartbeat counter after sending
+                            lastHeartbeatMessages = totalMessagesRelayed
+                            messagesSinceLastHeartbeat = 0
                         }
                     }
                 } catch (e: Exception) {
@@ -844,6 +873,7 @@ class MobileRelayServer @Inject constructor(
             port = serverPort,
             connectedClients = connectedClients.size,
             messagesRelayed = messagesRelayed,
+            totalMessagesRelayed = totalMessagesRelayed,
             offlineMessagesStored = totalOffline,
             uptimeSeconds = uptimeSeconds,
             hubEndpoint = hubTunnelEndpoint,

@@ -1148,30 +1148,41 @@ function handleNodeConnection(ws: WebSocket) {
                             const targetAddr = payload.to.toLowerCase();
                             const targetUser = usersByAddress.get(targetAddr);
                             
-                            if (targetUser && targetUser.tunnelId !== node.tunnelId) {
-                                // User is on DIFFERENT node - route through that node
+                            if (targetUser) {
+                                // Try direct delivery to user socket first
                                 const targetNode = connectedNodes.get(targetUser.tunnelId);
-                                if (targetNode && targetNode.socket.readyState === WebSocket.OPEN) {
-                                    // Forward to target node
-                                    targetNode.socket.send(JSON.stringify({
-                                        type: 'CROSS_NODE_MESSAGE',
-                                        targetSessionId: targetUser.sessionId,
-                                        payload: payload
-                                    }));
-                                    node.stats.messagesRelayed++;
-                                    console.log(`[Hub] Cross-node relay: ${node.tunnelId} -> ${targetUser.tunnelId} for ${targetAddr.slice(0,8)}...`);
-                                    delivered = true;
+                                if (targetNode) {
+                                    const targetUserSocket = targetNode.connectedUsers.get(targetUser.sessionId);
+                                    if (targetUserSocket && targetUserSocket.readyState === WebSocket.OPEN) {
+                                        targetUserSocket.send(JSON.stringify(payload));
+                                        node.stats.messagesRelayed++;
+                                        delivered = true;
+                                        console.log(`[Hub] Direct delivery: ${node.tunnelId} -> user ${targetAddr.slice(0,8)}... on ${targetUser.tunnelId}`);
+                                    } else if (targetNode.socket.readyState === WebSocket.OPEN) {
+                                        // Fallback: send CROSS_NODE_MESSAGE to node
+                                        targetNode.socket.send(JSON.stringify({
+                                            type: 'CROSS_NODE_MESSAGE',
+                                            targetSessionId: targetUser.sessionId,
+                                            payload: payload
+                                        }));
+                                        node.stats.messagesRelayed++;
+                                        console.log(`[Hub] Cross-node relay fallback: ${node.tunnelId} -> ${targetUser.tunnelId} for ${targetAddr.slice(0,8)}...`);
+                                        delivered = true;
+                                    }
                                     
-                                    // *** Send delivery confirmation back to sender's node ***
-                                    ws.send(JSON.stringify({
-                                        type: 'DELIVERY_RECEIPT',
-                                        messageId: payload.messageId,
-                                        to: targetAddr,
-                                        status: 'delivered',
-                                        timestamp: Date.now()
-                                    }));
+                                    if (delivered) {
+                                        ws.send(JSON.stringify({
+                                            type: 'DELIVERY_RECEIPT',
+                                            messageId: payload.messageId,
+                                            to: targetAddr,
+                                            status: 'delivered',
+                                            timestamp: Date.now()
+                                        }));
+                                    }
                                 }
-                            } else if (!targetUser) {
+                            }
+                            
+                            if (!delivered) {
                                 // *** USER IS OFFLINE - Store for later delivery ***
                                 const msgId = storeOfflineMessage(
                                     payload.from || payload.senderAddress,
@@ -1269,6 +1280,108 @@ function handleNodeConnection(ws: WebSocket) {
                         node.stats.messagesRelayed += node.connectedUsers.size;
                     }
                     break;
+
+                // *** RELAY_TO_HUB: Node couldn't deliver locally, asking hub to route cross-node ***
+                case 'RELAY_TO_HUB':
+                    if (node && message.to) {
+                        const targetAddr = message.to.toLowerCase();
+                        const fromAddr = (message.from || '').toLowerCase();
+                        const targetInfo = usersByAddress.get(targetAddr);
+                        
+                        if (targetInfo) {
+                            const targetNode = connectedNodes.get(targetInfo.tunnelId);
+                            if (targetNode) {
+                                // *** DIRECT DELIVERY: Send to user's socket via hub ***
+                                const targetUserSocket = targetNode.connectedUsers.get(targetInfo.sessionId);
+                                if (targetUserSocket && targetUserSocket.readyState === WebSocket.OPEN) {
+                                    targetUserSocket.send(JSON.stringify({
+                                        type: 'message',
+                                        from: fromAddr,
+                                        senderAddress: fromAddr,
+                                        to: targetAddr,
+                                        payload: message.payload,
+                                        encryptedBlob: message.encryptedBlob || message.payload,
+                                        encrypted: message.encrypted || false,
+                                        senderPublicKey: message.senderPublicKey,
+                                        signature: message.signature,
+                                        messageId: message.messageId,
+                                        timestamp: message.timestamp || Date.now(),
+                                        crossNode: true
+                                    }));
+                                    node.stats.messagesRelayed++;
+                                    console.log(`[Hub] RELAY_TO_HUB direct delivery: ${node.tunnelId} -> user ${targetAddr.slice(0,8)}... on ${targetInfo.tunnelId}`);
+                                    
+                                    // Send delivery confirmation back to source node
+                                    ws.send(JSON.stringify({
+                                        type: 'DELIVERY_RECEIPT',
+                                        messageId: message.messageId,
+                                        to: targetAddr,
+                                        status: 'delivered',
+                                        timestamp: Date.now()
+                                    }));
+                                } else {
+                                    // Also try CROSS_NODE_MESSAGE as fallback (for locally connected clients)
+                                    targetNode.socket.send(JSON.stringify({
+                                        type: 'CROSS_NODE_MESSAGE',
+                                        targetSessionId: targetInfo.sessionId,
+                                        targetWallet: targetAddr,
+                                        sourceNode: message.sourceNode,
+                                        sourceTunnel: message.sourceTunnel || node.tunnelId,
+                                        payload: {
+                                            type: 'message',
+                                            from: fromAddr,
+                                            senderAddress: fromAddr,
+                                            to: targetAddr,
+                                            payload: message.payload,
+                                            encryptedBlob: message.encryptedBlob || message.payload,
+                                            encrypted: message.encrypted || false,
+                                            senderPublicKey: message.senderPublicKey,
+                                            signature: message.signature,
+                                            messageId: message.messageId,
+                                            timestamp: message.timestamp || Date.now(),
+                                            crossNode: true
+                                        }
+                                    }));
+                                    node.stats.messagesRelayed++;
+                                    console.log(`[Hub] RELAY_TO_HUB cross-node fallback: ${node.tunnelId} -> ${targetInfo.tunnelId} for ${targetAddr.slice(0,8)}...`);
+                                }
+                            }
+                        } else {
+                            // User offline - store for later delivery
+                            const msgId = storeOfflineMessage(fromAddr, targetAddr, {
+                                type: 'message',
+                                from: fromAddr,
+                                senderAddress: fromAddr,
+                                to: targetAddr,
+                                payload: message.payload,
+                                encryptedBlob: message.encryptedBlob || message.payload,
+                                encrypted: message.encrypted || false,
+                                senderPublicKey: message.senderPublicKey,
+                                signature: message.signature,
+                                messageId: message.messageId,
+                                timestamp: message.timestamp || Date.now()
+                            });
+                            console.log(`[Hub] RELAY_TO_HUB: User ${targetAddr.slice(0,8)}... offline, queued ${msgId.slice(0,12)}...`);
+                            
+                            // Send queued confirmation back to source node
+                            ws.send(JSON.stringify({
+                                type: 'MESSAGE_QUEUED',
+                                messageId: message.messageId,
+                                queuedId: msgId,
+                                status: 'queued_offline',
+                                recipient: targetAddr,
+                                expiresIn: `${MESSAGE_EXPIRY_DAYS} days`
+                            }));
+                        }
+                    }
+                    break;
+
+                // *** CROSS_NODE_DELIVERY_ACK: Node confirms it delivered a cross-node message ***
+                case 'CROSS_NODE_DELIVERY_ACK':
+                    if (node && message.messageId) {
+                        console.log(`[Hub] Cross-node delivery ACK from ${node.tunnelId}: ${message.messageId} delivered=${message.delivered}`);
+                    }
+                    break;
             }
         } catch (error) {
             console.error('[Hub] Error handling node message:', error);
@@ -1360,8 +1473,8 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
             const payload = JSON.parse(data.toString());
             
             // *** NEW: Handle authentication to register user address ***
-            if (payload.type === 'authenticate' && payload.address || payload.walletAddress) {
-                const addr = payload.address || payload.walletAddress.toLowerCase();
+            if ((payload.type === 'authenticate') && (payload.address || payload.walletAddress)) {
+                const addr = (payload.address || payload.walletAddress).toLowerCase();
                 user.walletAddress = addr;
                 
                 // Register in global user registry
@@ -1375,67 +1488,77 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
             // *** Direct hub routing for relay messages ***
             if (payload.type === 'relay' && payload.to) {
                 const targetAddr = payload.to.toLowerCase();
+                const fromAddr = (payload.from || user.walletAddress || '').toLowerCase();
                 const targetInfo = usersByAddress.get(targetAddr);
                 
                 if (targetInfo) {
                     const targetNode = connectedNodes.get(targetInfo.tunnelId);
                     if (targetNode) {
-                        if (targetInfo.tunnelId === tunnelId) {
-                            // Same node - forward to node
-                            node.socket.send(JSON.stringify({
-                                type: 'MESSAGE_FROM_USER',
-                                sessionId,
-                                payload
-                            }));
-                        } else {
-                            // Different node - CROSS-NODE RELAY
-                            targetNode.socket.send(JSON.stringify({
-                                type: 'CROSS_NODE_MESSAGE',
-                                targetSessionId: targetInfo.sessionId,
-                                sourceSessionId: sessionId,
-                                payload: {
-                                    type: 'message',
-                                    from: payload.from,
-                                    senderAddress: payload.from,
-                                    to: targetAddr,
-                                    payload: payload.encryptedBlob || payload.payload,
-                                    encryptedBlob: payload.encryptedBlob || payload.payload,
-                                    messageId: payload.messageId,
-                                    timestamp: payload.timestamp || Date.now()
-                                }
+                        // *** DIRECT DELIVERY: Send to user's socket via hub (not through node) ***
+                        const targetUserSocket = targetNode.connectedUsers.get(targetInfo.sessionId);
+                        if (targetUserSocket && targetUserSocket.readyState === WebSocket.OPEN) {
+                            targetUserSocket.send(JSON.stringify({
+                                type: 'message',
+                                from: fromAddr,
+                                senderAddress: fromAddr,
+                                to: targetAddr,
+                                payload: payload.encryptedBlob || payload.payload,
+                                encryptedBlob: payload.encryptedBlob || payload.payload,
+                                encrypted: payload.encrypted || false,
+                                senderPublicKey: payload.senderPublicKey,
+                                signature: payload.signature,
+                                messageId: payload.messageId,
+                                timestamp: payload.timestamp || Date.now(),
+                                crossNode: targetInfo.tunnelId !== tunnelId
                             }));
                             node.stats.messagesRelayed++;
-                            console.log(`[Hub] Cross-node: ${tunnelId} -> ${targetInfo.tunnelId} for ${targetAddr.slice(0,8)}...`);
+                            
+                            const routeType = targetInfo.tunnelId === tunnelId ? 'same-node' : 'cross-node';
+                            console.log(`[Hub] Direct delivery (${routeType}): ${fromAddr.slice(0,8)}... -> ${targetAddr.slice(0,8)}... on ${targetInfo.tunnelId}`);
                             
                             // Send delivery confirmation
                             ws.send(JSON.stringify({
-                                type: 'delivery_receipt',
+                                type: 'relay_ack',
                                 messageId: payload.messageId,
-                                status: 'routed'
+                                status: 'delivered',
+                                timestamp: Date.now()
+                            }));
+                        } else {
+                            // User socket gone but still in registry - clean up and queue
+                            usersByAddress.delete(targetAddr);
+                            const msgId = storeOfflineMessage(fromAddr, targetAddr, payload);
+                            console.log(`[Hub] User ${targetAddr.slice(0,8)}... socket gone, queued ${msgId.slice(0,12)}...`);
+                            ws.send(JSON.stringify({
+                                type: 'message_queued',
+                                messageId: payload.messageId,
+                                queuedId: msgId,
+                                status: 'queued_offline',
+                                recipient: targetAddr,
+                                expiresIn: `${MESSAGE_EXPIRY_DAYS} days`
                             }));
                         }
-                        return;  // Don't forward to node again
+                        return;
                     }
-                } else {
-                    // *** USER IS OFFLINE - Queue message for later delivery ***
-                    const msgId = storeOfflineMessage(
-                        payload.from,
-                        targetAddr,
-                        payload
-                    );
-                    console.log(`[Hub] User ${targetAddr.slice(0,8)}... offline, queued message ${msgId.slice(0,12)}...`);
-                    
-                    // Send queued confirmation
-                    ws.send(JSON.stringify({
-                        type: 'message_queued',
-                        messageId: payload.messageId,
-                        queuedId: msgId,
-                        status: 'queued_offline',
-                        recipient: targetAddr,
-                        expiresIn: `${MESSAGE_EXPIRY_DAYS} days`
-                    }));
-                    return;
                 }
+                
+                // *** USER IS OFFLINE - Queue message for later delivery ***
+                const msgId = storeOfflineMessage(
+                    fromAddr,
+                    targetAddr,
+                    payload
+                );
+                console.log(`[Hub] User ${targetAddr.slice(0,8)}... offline, queued message ${msgId.slice(0,12)}...`);
+                
+                // Send queued confirmation
+                ws.send(JSON.stringify({
+                    type: 'message_queued',
+                    messageId: payload.messageId,
+                    queuedId: msgId,
+                    status: 'queued_offline',
+                    recipient: targetAddr,
+                    expiresIn: `${MESSAGE_EXPIRY_DAYS} days`
+                }));
+                return;
             }
             
             // Forward all other messages to the node
