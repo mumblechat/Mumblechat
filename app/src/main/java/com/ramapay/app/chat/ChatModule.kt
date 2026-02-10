@@ -150,9 +150,10 @@ object ChatModule {
     @Provides
     @Singleton
     fun provideBlockchainService(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        walletBridge: WalletBridge
     ): MumbleChatBlockchainService {
-        return MumbleChatBlockchainService(context)
+        return MumbleChatBlockchainService(context, walletBridge)
     }
 
     @Provides

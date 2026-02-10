@@ -992,7 +992,11 @@ class HubConnection @Inject constructor(
      */
     fun setEnabled(enabled: Boolean) {
         if (enabled) {
-            connect()
+            // connect() is suspend and requires params - use reconnect logic
+            scope.launch {
+                val addr = walletAddress ?: return@launch
+                connect(addr, displayName, publicKey)
+            }
         } else {
             disconnect()
         }

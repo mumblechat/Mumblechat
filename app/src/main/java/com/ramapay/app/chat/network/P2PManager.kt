@@ -1505,7 +1505,7 @@ class P2PManager @Inject constructor(
      * Get the count of currently connected P2P peers
      */
     fun getConnectedPeerCount(): Int {
-        return connectedPeers.values.count { it.connectionState == ConnectionState.CONNECTED }
+        return connectedPeers.values.count { it.isOnline }
     }
     
     /**
@@ -1513,12 +1513,12 @@ class P2PManager @Inject constructor(
      */
     fun setP2PEnabled(enabled: Boolean) {
         if (enabled) {
-            if (!isStarted) {
-                start()
+            if (_connectionState.value == ConnectionState.DISCONNECTED) {
+                connect()
             }
         } else {
-            if (isStarted) {
-                stop()
+            if (_connectionState.value != ConnectionState.DISCONNECTED) {
+                disconnect()
             }
         }
     }

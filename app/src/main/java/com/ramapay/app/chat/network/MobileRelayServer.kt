@@ -899,7 +899,7 @@ class MobileRelayServer @Inject constructor(
         
         offlineMessages.forEach { (_, messages) ->
             messages.forEach { msg ->
-                totalBytes += msg.encryptedContent.length
+                totalBytes += msg.payload.length
             }
         }
         
