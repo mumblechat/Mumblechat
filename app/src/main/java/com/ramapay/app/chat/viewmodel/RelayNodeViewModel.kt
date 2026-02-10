@@ -36,9 +36,13 @@ import org.web3j.abi.datatypes.Utf8String
 import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.abi.datatypes.Bool
 import org.web3j.utils.Numeric
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 import timber.log.Timber
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /**
@@ -191,7 +195,16 @@ class RelayNodeViewModel @Inject constructor(
                     _mctBalance.value = mctBalance
 
                     // Get relay node status (V2 with tier info)
-                    val relayInfo = getRelayNodeInfo(wallet.address)
+                    var relayInfo = getRelayNodeInfo(wallet.address)
+                    
+                    // V4.4.1: Fetch real messages relayed count from hub API
+                    if (relayInfo != null) {
+                        val hubMessages = fetchHubMessagesRelayed(wallet.address)
+                        if (hubMessages > relayInfo.messagesRelayed) {
+                            relayInfo = relayInfo.copy(messagesRelayed = hubMessages)
+                        }
+                    }
+                    
                     _relayStatus.value = relayInfo
 
                     // Parse tier info from relay status
@@ -273,6 +286,46 @@ class RelayNodeViewModel @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "Failed to get relay node info")
             null
+        }
+    }
+
+    /**
+     * V4.4.1: Fetch actual messages relayed count from hub API.
+     * The hub tracks real message counts per node, matched by wallet address.
+     * Blockchain on-chain count is often 0 since messages aren't written on-chain.
+     */
+    private fun fetchHubMessagesRelayed(walletAddress: String): Long {
+        return try {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .build()
+            
+            val request = Request.Builder()
+                .url("https://hub.mumblechat.com/api/stats")
+                .build()
+            
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return 0
+            
+            val body = response.body?.string() ?: return 0
+            val json = JSONObject(body)
+            val nodes = json.getJSONArray("nodes")
+            
+            var totalMessages = 0L
+            for (i in 0 until nodes.length()) {
+                val node = nodes.getJSONObject(i)
+                val nodeWallet = node.optString("walletAddress", "")
+                if (nodeWallet.equals(walletAddress, ignoreCase = true)) {
+                    totalMessages += node.optLong("messagesRelayed", 0)
+                }
+            }
+            
+            Timber.d("Hub stats: $totalMessages messages for wallet $walletAddress")
+            totalMessages
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to fetch hub stats")
+            0
         }
     }
 

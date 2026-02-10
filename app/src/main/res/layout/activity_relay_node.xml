@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground">
+    android:background="@color/mumblechat_background">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -37,6 +37,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:cardCornerRadius="12dp">
 
                 <LinearLayout
@@ -71,7 +72,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Not Active"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="20sp"
                                 android:textStyle="bold" />
 
@@ -80,7 +81,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Become a relay node to earn MCT tokens"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="14sp"
                                 android:alpha="0.7" />
 
@@ -139,6 +140,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:cardCornerRadius="12dp">
 
                 <LinearLayout
@@ -151,7 +153,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Requirements"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp" />
@@ -177,7 +179,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:text="Registered on MumbleChat"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                     </LinearLayout>
@@ -203,7 +205,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:text="100 MCT stake required"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                     </LinearLayout>
@@ -232,14 +234,14 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Uptime: Keep app running"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="14sp" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Recommended: 4+ hours/day for rewards"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="12sp"
                                 android:alpha="0.6" />
 
@@ -271,14 +273,14 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Storage: ~50 MB cache"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="14sp" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Temporary message relay, auto-cleaned"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="12sp"
                                 android:alpha="0.6" />
 
@@ -310,14 +312,14 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Battery: Low impact"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="14sp" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Uses ~2-5% per hour when relaying"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="12sp"
                                 android:alpha="0.6" />
 
@@ -343,7 +345,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Your MCT Balance"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -369,6 +371,7 @@
                 android:layout_marginBottom="16dp"
                 android:visibility="gone"
                 app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:cardCornerRadius="12dp">
 
                 <LinearLayout
@@ -381,7 +384,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Node Statistics"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="16dp" />
@@ -413,7 +416,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Messages Relayed"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="12sp"
                                 android:alpha="0.7" />
 
@@ -440,7 +443,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="MCT Earned"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="12sp"
                                 android:alpha="0.7" />
 
@@ -466,7 +469,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Staked Amount"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -492,7 +495,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Node Active Since"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -500,7 +503,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="--"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                     </LinearLayout>
@@ -520,7 +523,7 @@
                 android:visibility="gone"
                 app:cardElevation="6dp"
                 app:cardCornerRadius="16dp"
-                app:cardBackgroundColor="?attr/colorSurface">
+                app:cardBackgroundColor="@color/mumblechat_card">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -547,7 +550,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Earnings Dashboard"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="20sp"
                             android:textStyle="bold" />
 
@@ -556,7 +559,7 @@
                             android:layout_width="32dp"
                             android:layout_height="32dp"
                             android:src="@drawable/ic_sync"
-                            android:tint="?attr/colorOnSurface"
+                            android:tint="@color/mumblechat_text_primary"
                             android:padding="4dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:contentDescription="Refresh" />
@@ -573,7 +576,7 @@
                         app:tabGravity="fill"
                         app:tabIndicatorColor="@color/lima"
                         app:tabSelectedTextColor="@color/lima"
-                        app:tabTextColor="?attr/colorOnSurface"
+                        app:tabTextColor="@color/mumblechat_text_secondary"
                         app:tabBackground="@drawable/rounded_background"
                         app:tabRippleColor="@color/lima_alpha_30">
 
@@ -614,7 +617,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Today's Earnings"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp"
                             android:alpha="0.8" />
 
@@ -709,7 +712,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:text="0"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="24sp"
                                 android:textStyle="bold" />
 
@@ -717,7 +720,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Messages"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="11sp"
                                 android:alpha="0.6" />
 
@@ -749,7 +752,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:text="0.001"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="24sp"
                                 android:textStyle="bold" />
 
@@ -757,7 +760,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="MCT/Msg"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="11sp"
                                 android:alpha="0.6" />
 
@@ -794,7 +797,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:text="0h"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="24sp"
                                 android:textStyle="bold" />
 
@@ -802,7 +805,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Uptime"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="11sp"
                                 android:alpha="0.6" />
 
@@ -834,7 +837,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:text="0%"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="24sp"
                                 android:textStyle="bold" />
 
@@ -842,7 +845,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Network Share"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="11sp"
                                 android:alpha="0.6" />
 
@@ -869,7 +872,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="Best Day Earnings"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="13sp"
                                 android:alpha="0.7" />
 
@@ -901,7 +904,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="Total Days Active"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="13sp"
                                 android:alpha="0.7" />
 
@@ -910,7 +913,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="15 days"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="14sp"
                                 android:textStyle="bold" />
 
@@ -933,7 +936,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="Average Daily Earnings"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="13sp"
                                 android:alpha="0.7" />
 
@@ -965,7 +968,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="Tier Bonus Earned"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="13sp"
                                 android:alpha="0.7" />
 
@@ -995,6 +998,7 @@
                 android:visibility="gone"
                 app:cardElevation="4dp"
                 app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:strokeColor="@color/primary"
                 app:strokeWidth="2dp">
 
@@ -1028,7 +1032,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Today's Reward Pool"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="18sp"
                                 android:textStyle="bold" />
 
@@ -1036,7 +1040,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Fair daily distribution to all contributors"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="12sp"
                                 android:alpha="0.7" />
 
@@ -1075,7 +1079,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Your Relays"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="12sp"
                                 android:alpha="0.7" />
 
@@ -1108,7 +1112,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Network Total"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="12sp"
                                 android:alpha="0.7" />
 
@@ -1137,14 +1141,14 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Your Estimated Share"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="14sp" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Includes tier bonus"
-                                android:textColor="?attr/colorOnSurface"
+                                android:textColor="@color/mumblechat_text_primary"
                                 android:textSize="11sp"
                                 android:alpha="0.6" />
 
@@ -1167,7 +1171,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:text="Daily pool: 100 MCT distributed proportionally based on relay count × tier multiplier"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="11sp"
                         android:alpha="0.6"
                         android:gravity="center" />
@@ -1199,7 +1203,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Yesterday's reward: "
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -1226,6 +1230,7 @@
                 android:visibility="gone"
                 app:cardElevation="2dp"
                 app:cardCornerRadius="12dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:strokeColor="@color/lima"
                 app:strokeWidth="2dp">
 
@@ -1245,7 +1250,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Your Tier"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
@@ -1281,7 +1286,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Reward Multiplier"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -1315,7 +1320,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Today's Uptime"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -1323,7 +1328,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0h 0m"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                     </LinearLayout>
@@ -1348,7 +1353,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Storage Provided"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -1356,7 +1361,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="50 MB"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                     </LinearLayout>
@@ -1372,7 +1377,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Next Tier Progress"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="12sp"
                         android:alpha="0.7"
                         android:layout_marginBottom="8dp" />
@@ -1392,7 +1397,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:text="4 more hours + 50 MB storage for Silver (1.5x)"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="12sp"
                         android:alpha="0.6" />
 
@@ -1422,6 +1427,7 @@
                 android:visibility="gone"
                 app:cardElevation="2dp"
                 app:cardCornerRadius="12dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:strokeColor="@color/gold"
                 app:strokeWidth="2dp">
 
@@ -1449,7 +1455,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Fee Pool Bonus"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
@@ -1469,7 +1475,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:text="Tier-based bonus rewards from the transaction fee pool. Higher tier = higher bonus multiplier!"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="12sp"
                         android:alpha="0.7" />
 
@@ -1490,7 +1496,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Available to Claim"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -1526,6 +1532,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:cardCornerRadius="12dp">
 
                 <LinearLayout
@@ -1538,7 +1545,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Tier Rewards System"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp" />
@@ -1570,7 +1577,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="0-4h, 0-50MB"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="12sp"
                             android:alpha="0.7" />
 
@@ -1611,7 +1618,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="4-8h, 50-200MB"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="12sp"
                             android:alpha="0.7" />
 
@@ -1652,7 +1659,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="8-16h, 200-500MB"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="12sp"
                             android:alpha="0.7" />
 
@@ -1693,7 +1700,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="16h+, 500MB+"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="12sp"
                             android:alpha="0.7" />
 
@@ -1717,6 +1724,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:cardCornerRadius="12dp">
 
                 <LinearLayout
@@ -1729,7 +1737,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="How It Works"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp" />
@@ -1738,7 +1746,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="1. Stake 100 MCT tokens to become a relay node\n\n2. Your device relays encrypted messages between users\n\n3. Earn 0.001 MCT per 1,000 messages relayed\n\n4. Higher uptime + storage = Higher tier = More fee pool rewards (up to 3x)\n\n5. Claim fee pool bonus rewards anytime\n\n6. Withdraw stake anytime by deactivating"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="14sp"
                         android:alpha="0.8"
                         android:lineSpacingMultiplier="1.2" />
@@ -1753,6 +1761,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/mumblechat_card"
                 app:cardCornerRadius="12dp">
 
                 <LinearLayout
@@ -1765,7 +1774,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="MCT Tokenomics"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/mumblechat_text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp" />
@@ -1783,7 +1792,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Reward Rate"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp"
                             android:alpha="0.7" />
 
@@ -1811,7 +1820,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Max Supply"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp"
                             android:alpha="0.7" />
 
@@ -1819,7 +1828,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="1,000,000 MCT"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                     </LinearLayout>
@@ -1837,7 +1846,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Daily Mint Cap"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp"
                             android:alpha="0.7" />
 
@@ -1845,7 +1854,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="100 MCT"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                     </LinearLayout>
@@ -1863,7 +1872,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Halving Every"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp"
                             android:alpha="0.7" />
 
@@ -1871,7 +1880,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="100,000 MCT minted"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="@color/mumblechat_text_primary"
                             android:textSize="14sp" />
 
                     </LinearLayout>
@@ -1908,6 +1917,7 @@
             android:layout_gravity="center"
             android:layout_margin="32dp"
             app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="@color/mumblechat_card"
             app:cardElevation="8dp">
 
             <LinearLayout
@@ -1929,7 +1939,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:gravity="center"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/mumblechat_text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -1940,7 +1950,7 @@
                     android:layout_marginTop="8dp"
                     android:gravity="center"
                     android:text="Please wait..."
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/mumblechat_text_primary"
                     android:textSize="14sp"
                     android:alpha="0.7" />
 
