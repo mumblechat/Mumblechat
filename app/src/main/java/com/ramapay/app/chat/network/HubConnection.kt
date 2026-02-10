@@ -979,4 +979,17 @@ class HubConnection @Inject constructor(
             }
         }
     }
+    
+    // ============ Advanced Features ============
+    
+    /**
+     * Enable or disable hub connection
+     */
+    fun setEnabled(enabled: Boolean) {
+        if (enabled) {
+            connect()
+        } else {
+            disconnect()
+        }
+    }
 }

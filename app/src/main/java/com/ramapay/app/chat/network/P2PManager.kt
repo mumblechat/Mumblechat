@@ -1498,4 +1498,28 @@ class P2PManager @Inject constructor(
         check(length % 2 == 0) { "Hex string must have even length" }
         return chunked(2).map { it.toInt(16).toByte() }.toByteArray()
     }
+    
+    // ============ Advanced Features ============
+    
+    /**
+     * Get the count of currently connected P2P peers
+     */
+    fun getConnectedPeerCount(): Int {
+        return connectedPeers.values.count { it.connectionState == ConnectionState.CONNECTED }
+    }
+    
+    /**
+     * Enable or disable P2P networking
+     */
+    fun setP2PEnabled(enabled: Boolean) {
+        if (enabled) {
+            if (!isStarted) {
+                start()
+            }
+        } else {
+            if (isStarted) {
+                stop()
+            }
+        }
+    }
 }

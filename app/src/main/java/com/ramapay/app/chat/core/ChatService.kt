@@ -1,6 +1,7 @@
 package com.ramapay.app.chat.core
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.ramapay.app.chat.blockchain.MumbleChatBlockchainService
 import com.ramapay.app.chat.crypto.ChatKeyManager
 import com.ramapay.app.chat.crypto.MessageEncryption
@@ -69,6 +70,11 @@ class ChatService @Inject constructor(
     private val hybridNetworkManager: HybridNetworkManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    
+    // Shared preferences for relay settings
+    private val preferences: SharedPreferences by lazy {
+        context.getSharedPreferences("mumblechat_relay_prefs", Context.MODE_PRIVATE)
+    }
     
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized
@@ -1160,5 +1166,88 @@ class ChatService @Inject constructor(
      */
     fun requestHubSync() {
         hubConnection.requestSync()
+    }
+    
+    // ═══════════ ADVANCED RELAY FEATURES ═══════════
+    
+    /**
+     * Result of a heartbeat operation
+     */
+    data class HeartbeatResult(
+        val success: Boolean,
+        val txHash: String? = null,
+        val error: String? = null
+    )
+    
+    /**
+     * Send a manual heartbeat to the blockchain.
+     * This is useful when the user wants to ensure their node is active
+     * without waiting for the automatic 5.5 hour interval.
+     */
+    suspend fun sendManualHeartbeat(): HeartbeatResult {
+        return try {
+            val walletAddress = walletBridge.getCurrentWalletAddress()
+                ?: return HeartbeatResult(false, error = "No wallet connected")
+            
+            // Get current storage usage
+            val storageMB = mobileRelayServer.getCurrentStorageMB()
+            
+            // Send heartbeat via blockchain service
+            val txHash = blockchainService.sendHeartbeat(storageMB)
+            
+            if (txHash != null) {
+                // Store last heartbeat time
+                preferences.edit().putLong(KEY_LAST_HEARTBEAT, System.currentTimeMillis()).apply()
+                HeartbeatResult(true, txHash = txHash)
+            } else {
+                HeartbeatResult(false, error = "Transaction failed")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to send manual heartbeat")
+            HeartbeatResult(false, error = e.message)
+        }
+    }
+    
+    /**
+     * Get the last heartbeat timestamp
+     */
+    fun getLastHeartbeatTime(): Long {
+        return preferences.getLong(KEY_LAST_HEARTBEAT, 0L)
+    }
+    
+    /**
+     * Get the number of connected P2P peers
+     */
+    fun getConnectedP2PPeers(): Int {
+        return p2pManager.getConnectedPeerCount()
+    }
+    
+    /**
+     * Set the connection mode for relay operations
+     */
+    fun setConnectionMode(mode: com.ramapay.app.chat.ui.ConnectionMode) {
+        when (mode) {
+            com.ramapay.app.chat.ui.ConnectionMode.HUB_BASED -> {
+                // Use only hub connections
+                p2pManager.setP2PEnabled(false)
+                hubConnection.setEnabled(true)
+            }
+            com.ramapay.app.chat.ui.ConnectionMode.DIRECT_P2P -> {
+                // Use only P2P connections
+                p2pManager.setP2PEnabled(true)
+                hubConnection.setEnabled(false)
+            }
+            com.ramapay.app.chat.ui.ConnectionMode.HYBRID -> {
+                // Use both
+                p2pManager.setP2PEnabled(true)
+                hubConnection.setEnabled(true)
+            }
+        }
+        preferences.edit().putString(KEY_CONNECTION_MODE, mode.name).apply()
+    }
+    
+    companion object {
+        private const val KEY_LAST_HEARTBEAT = "last_heartbeat_time"
+        private const val KEY_CONNECTION_MODE = "connection_mode"
     }
 }

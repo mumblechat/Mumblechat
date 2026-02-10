@@ -718,4 +718,21 @@ class MobileRelayServer @Inject constructor(
             updateStats()
         }
     }
+    
+    // ============ Advanced Features ============
+    
+    /**
+     * Get the current storage usage in MB
+     */
+    fun getCurrentStorageMB(): Long {
+        var totalBytes = 0L
+        
+        offlineMessages.forEach { (_, messages) ->
+            messages.forEach { msg ->
+                totalBytes += msg.encryptedContent.length
+            }
+        }
+        
+        return totalBytes / (1024 * 1024)
+    }
 }

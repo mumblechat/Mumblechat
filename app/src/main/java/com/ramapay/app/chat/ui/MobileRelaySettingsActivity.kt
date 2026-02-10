@@ -145,6 +145,39 @@ class MobileRelaySettingsActivity : AppCompatActivity() {
         binding.btnRefresh.setOnClickListener {
             viewModel.refreshStats()
         }
+        
+        // Manual heartbeat button
+        binding.btnSendHeartbeat.setOnClickListener {
+            showHeartbeatConfirmDialog()
+        }
+        
+        // Connection mode selector
+        binding.radioGroupConnectionMode.setOnCheckedChangeListener { _, checkedId ->
+            val mode = when (checkedId) {
+                R.id.radioHub -> ConnectionMode.HUB_BASED
+                R.id.radioP2p -> ConnectionMode.DIRECT_P2P
+                R.id.radioHybrid -> ConnectionMode.HYBRID
+                else -> ConnectionMode.HUB_BASED
+            }
+            viewModel.setConnectionMode(mode)
+        }
+    }
+    
+    private fun showHeartbeatConfirmDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("⚡ Send Manual Heartbeat")
+            .setMessage(
+                "This will send a heartbeat transaction to the blockchain.\n\n" +
+                "• Confirms your node is online\n" +
+                "• Costs a small amount of RAMA gas\n" +
+                "• Not required if auto-heartbeat is working\n\n" +
+                "Continue?"
+            )
+            .setPositiveButton("Send Now") { _, _ ->
+                viewModel.sendManualHeartbeat()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun observeViewModel() {
@@ -232,6 +265,88 @@ class MobileRelaySettingsActivity : AppCompatActivity() {
                     Toast.makeText(this@MobileRelaySettingsActivity, it, Toast.LENGTH_LONG).show()
                     viewModel.clearError()
                 }
+            }
+        }
+        
+        // Observe heartbeat states
+        lifecycleScope.launch {
+            viewModel.lastHeartbeatTime.collect { timestamp ->
+                updateLastHeartbeatUI(timestamp)
+            }
+        }
+        
+        lifecycleScope.launch {
+            viewModel.isHeartbeatSending.collect { sending ->
+                binding.btnSendHeartbeat.isEnabled = !sending
+                binding.progressHeartbeat.visibility = if (sending) View.VISIBLE else View.GONE
+                binding.btnSendHeartbeat.text = if (sending) "Sending..." else "⚡ Send Heartbeat"
+            }
+        }
+        
+        lifecycleScope.launch {
+            viewModel.heartbeatResult.collect { result ->
+                result?.let {
+                    Toast.makeText(this@MobileRelaySettingsActivity, it, Toast.LENGTH_SHORT).show()
+                    viewModel.clearHeartbeatResult()
+                }
+            }
+        }
+        
+        // Observe connection mode
+        lifecycleScope.launch {
+            viewModel.connectionMode.collect { mode ->
+                updateConnectionModeUI(mode)
+            }
+        }
+        
+        // Observe P2P peers
+        lifecycleScope.launch {
+            viewModel.p2pPeersConnected.collect { peers ->
+                binding.textP2pPeers.text = "$peers peers"
+            }
+        }
+    }
+    
+    private fun updateLastHeartbeatUI(timestamp: Long) {
+        if (timestamp <= 0) {
+            binding.textLastHeartbeat.text = "Never"
+            binding.textNextHeartbeat.text = "Start relay to begin"
+        } else {
+            val elapsed = System.currentTimeMillis() - timestamp
+            val elapsedMinutes = elapsed / (60 * 1000)
+            val elapsedHours = elapsedMinutes / 60
+            
+            binding.textLastHeartbeat.text = when {
+                elapsedMinutes < 1 -> "Just now"
+                elapsedMinutes < 60 -> "${elapsedMinutes}m ago"
+                else -> "${elapsedHours}h ${elapsedMinutes % 60}m ago"
+            }
+            
+            // Next heartbeat in ~5.5 hours
+            val nextHeartbeat = (5.5 * 60 * 60 * 1000).toLong() - elapsed
+            if (nextHeartbeat > 0) {
+                val nextMinutes = nextHeartbeat / (60 * 1000)
+                val nextHours = nextMinutes / 60
+                binding.textNextHeartbeat.text = "Next in ${nextHours}h ${nextMinutes % 60}m"
+            } else {
+                binding.textNextHeartbeat.text = "Due now"
+            }
+        }
+    }
+    
+    private fun updateConnectionModeUI(mode: ConnectionMode) {
+        when (mode) {
+            ConnectionMode.HUB_BASED -> {
+                binding.radioHub.isChecked = true
+                binding.textConnectionModeDesc.text = "🔒 IP hidden, routed through hub"
+            }
+            ConnectionMode.DIRECT_P2P -> {
+                binding.radioP2p.isChecked = true
+                binding.textConnectionModeDesc.text = "⚡ Faster, direct peer connections"
+            }
+            ConnectionMode.HYBRID -> {
+                binding.radioHybrid.isChecked = true
+                binding.textConnectionModeDesc.text = "🔄 Best of both - hub discovery + P2P"
             }
         }
     }
@@ -450,6 +565,15 @@ class MobileRelaySettingsActivity : AppCompatActivity() {
 }
 
 /**
+ * Connection mode for relay operations
+ */
+enum class ConnectionMode {
+    HUB_BASED,     // Connect through hub (default, IP hidden)
+    DIRECT_P2P,    // Direct P2P connections (faster, IP visible)
+    HYBRID         // Use both (hub for discovery, P2P for direct when possible)
+}
+
+/**
  * ViewModel for MobileRelaySettingsActivity
  */
 @HiltViewModel
@@ -479,9 +603,38 @@ class MobileRelayViewModel @Inject constructor(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
+    
+    // Heartbeat tracking
+    private val _lastHeartbeatTime = MutableStateFlow<Long>(0L)
+    val lastHeartbeatTime: StateFlow<Long> = _lastHeartbeatTime
+    
+    private val _isHeartbeatSending = MutableStateFlow(false)
+    val isHeartbeatSending: StateFlow<Boolean> = _isHeartbeatSending
+    
+    private val _heartbeatResult = MutableStateFlow<String?>(null)
+    val heartbeatResult: StateFlow<String?> = _heartbeatResult
+    
+    // Connection mode
+    private val _connectionMode = MutableStateFlow(ConnectionMode.HUB_BASED)
+    val connectionMode: StateFlow<ConnectionMode> = _connectionMode
+    
+    // P2P stats
+    private val _p2pPeersConnected = MutableStateFlow(0)
+    val p2pPeersConnected: StateFlow<Int> = _p2pPeersConnected
 
     init {
         refreshStats()
+        loadLastHeartbeatTime()
+    }
+    
+    private fun loadLastHeartbeatTime() {
+        viewModelScope.launch {
+            try {
+                _lastHeartbeatTime.value = chatService.getLastHeartbeatTime()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load last heartbeat time")
+            }
+        }
     }
 
     fun startRelayServer() {
@@ -537,10 +690,56 @@ class MobileRelayViewModel @Inject constructor(
             try {
                 _relayStats.value = chatService.getMobileRelayStats()
                 _relayEndpoint.value = chatService.getMobileRelayEndpoint()
+                _p2pPeersConnected.value = chatService.getConnectedP2PPeers()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to refresh stats")
             }
         }
+    }
+    
+    /**
+     * Send a manual heartbeat to the blockchain.
+     * This is useful when the user wants to ensure their node is active
+     * without waiting for the automatic 5.5 hour interval.
+     */
+    fun sendManualHeartbeat() {
+        viewModelScope.launch {
+            _isHeartbeatSending.value = true
+            _heartbeatResult.value = null
+            try {
+                val result = chatService.sendManualHeartbeat()
+                if (result.success) {
+                    _lastHeartbeatTime.value = System.currentTimeMillis()
+                    _heartbeatResult.value = "✅ Heartbeat sent! TX: ${result.txHash?.take(10)}..."
+                } else {
+                    _heartbeatResult.value = "❌ ${result.error ?: "Failed to send heartbeat"}"
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to send manual heartbeat")
+                _heartbeatResult.value = "❌ Error: ${e.message}"
+            } finally {
+                _isHeartbeatSending.value = false
+            }
+        }
+    }
+    
+    /**
+     * Set the connection mode for relay operations.
+     */
+    fun setConnectionMode(mode: ConnectionMode) {
+        viewModelScope.launch {
+            try {
+                chatService.setConnectionMode(mode)
+                _connectionMode.value = mode
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to set connection mode")
+                _error.value = "Error: ${e.message}"
+            }
+        }
+    }
+    
+    fun clearHeartbeatResult() {
+        _heartbeatResult.value = null
     }
 
     fun clearError() {

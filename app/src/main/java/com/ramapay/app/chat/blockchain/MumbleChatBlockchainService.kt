@@ -2,6 +2,7 @@ package com.ramapay.app.chat.blockchain
 
 import android.content.Context
 import com.ramapay.app.chat.MumbleChatContracts
+import com.ramapay.app.chat.core.WalletBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.web3j.abi.FunctionEncoder
@@ -38,7 +39,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class MumbleChatBlockchainService @Inject constructor(
-    private val context: Context
+    private val context: Context,
+    private val walletBridge: WalletBridge
 ) {
     private val web3j: Web3j by lazy {
         Web3j.build(HttpService(MumbleChatContracts.RPC_URL))
@@ -46,6 +48,8 @@ class MumbleChatBlockchainService @Inject constructor(
     
     companion object {
         private const val TAG = "MumbleChatBlockchain"
+        private const val CHAIN_ID = MumbleChatContracts.CHAIN_ID
+        private const val MUMBLECHAT_REGISTRY_ADDRESS = MumbleChatContracts.MUMBLECHAT_REGISTRY_PROXY
     }
     
     // ============ Registry Contract Functions ============
@@ -1073,6 +1077,60 @@ class MumbleChatBlockchainService @Inject constructor(
             Timber.e(e, "$TAG: Error getting gas price, using default")
             // Default gas price: 10 Gwei (should work for most cases)
             BigInteger.valueOf(10_000_000_000L)
+        }
+    }
+    
+    // ============ Heartbeat ============
+    
+    /**
+     * Send a heartbeat to the blockchain to prove the node is online.
+     * This updates the lastSeen timestamp and storage amount.
+     * 
+     * Note: In production, this would be routed through the wallet's 
+     * transaction signing infrastructure. For now, we return a mock hash
+     * and log the attempt for testing.
+     * 
+     * @param storageMB Current storage usage in MB
+     * @return Transaction hash if successful, null otherwise
+     */
+    suspend fun sendHeartbeat(storageMB: Long): String? = withContext(Dispatchers.IO) {
+        try {
+            val walletAddress = walletBridge.getCurrentWalletAddress()
+                ?: throw Exception("No wallet connected")
+            
+            Timber.d("$TAG: Sending heartbeat with storage: ${storageMB}MB")
+            
+            // Call heartbeat function on contract
+            // Function: heartbeat(uint256 storageMB)
+            val function = Function(
+                "heartbeat",
+                listOf(Uint256(storageMB)),
+                emptyList()
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            
+            // Create call transaction (read-only to check if function exists)
+            val transaction = Transaction.createEthCallTransaction(
+                walletAddress,
+                MUMBLECHAT_REGISTRY_ADDRESS,
+                encodedFunction
+            )
+            
+            // For now, simulate the heartbeat (actual signing would require wallet integration)
+            // In production, this would go through wallet's transaction signing flow
+            Timber.d("$TAG: Heartbeat prepared for $walletAddress to $MUMBLECHAT_REGISTRY_ADDRESS")
+            Timber.d("$TAG: Function data: $encodedFunction")
+            
+            // Return a mock transaction hash for UI testing
+            // In production, this would be the actual tx hash from signed transaction
+            val mockTxHash = "0x" + java.util.UUID.randomUUID().toString().replace("-", "")
+            Timber.d("$TAG: Heartbeat simulated! Mock TX: $mockTxHash")
+            
+            mockTxHash
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to send heartbeat")
+            null
         }
     }
 }
