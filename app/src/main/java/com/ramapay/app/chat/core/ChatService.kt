@@ -298,63 +298,56 @@ class ChatService @Inject constructor(
                 message.id         // AEAD: prevents replay attacks
             )
 
-            // 6. Send via P2P (try new protocol first, fallback to legacy)
-            val encryptedBytes = encrypted.toBytes()
-            val sendResult = try {
-                // Try MumbleChat Protocol v1.0 (P2PTransport)
-                val protocolMessage = messageCodec.encodeMessage(
+            // 6. Send via Hub relay FIRST for cross-platform compatibility
+            // NOTE: Mobile and web use incompatible E2EE schemes, so we send plaintext via hub
+            // Hub connection is TLS encrypted, providing transport security
+            val publicKeyBase64 = android.util.Base64.encodeToString(
+                keys.sessionPublic,
+                android.util.Base64.NO_WRAP
+            )
+            
+            val hubSent = try {
+                hubConnection.sendMessage(
+                    to = recipientAddress,
+                    encryptedPayload = content,  // Send plaintext for cross-platform
                     messageId = message.id,
-                    payload = encryptedBytes,
-                    flags = MessageCodec.FLAG_ENCRYPTED
+                    encrypted = false,  // Mark as unencrypted for web compatibility
+                    senderPublicKey = publicKeyBase64
                 )
-                val p2pResult = p2pTransport.sendMessage(recipientAddress, protocolMessage)
-                if (p2pResult.isSuccess) {
-                    val result = p2pResult.getOrNull()
-                    P2PManager.SendResult(
-                        direct = result?.direct ?: false,
-                        relayed = result?.relayed ?: false
-                    )
-                } else {
-                    // Fallback to legacy P2PManager
-                    Timber.d("Falling back to legacy P2P for $recipientAddress")
-                    p2pManager.sendMessage(recipientAddress, encrypted, message.id)
-                }
             } catch (e: Exception) {
-                Timber.w(e, "Protocol transport failed, using legacy")
-                p2pManager.sendMessage(recipientAddress, encrypted, message.id)
+                Timber.w(e, "Hub relay failed")
+                false
             }
-
-            // 6b. If P2P failed, fallback to Hub relay (critical for mobile→web messaging)
-            // NOTE: Send plaintext via hub for cross-platform compatibility
-            // (mobile and web use incompatible encryption schemes)
-            val finalSendResult = if (!sendResult.direct && !sendResult.relayed) {
-                Timber.d("P2P delivery failed, falling back to Hub relay for $recipientAddress")
+            
+            // 6b. If Hub relay succeeded, we're done. Otherwise try P2P (encrypted)
+            val finalSendResult = if (hubSent) {
+                Timber.d("Message sent via Hub relay: ${message.id}")
+                P2PManager.SendResult(direct = false, relayed = true)
+            } else {
+                // Hub unavailable, fall back to P2P encrypted (mobile-to-mobile)
+                Timber.d("Hub relay failed, trying P2P for $recipientAddress")
+                val encryptedBytes = encrypted.toBytes()
                 try {
-                    val publicKeyBase64 = android.util.Base64.encodeToString(
-                        keys.sessionPublic,
-                        android.util.Base64.NO_WRAP
-                    )
-                    // Send plaintext for cross-platform (hub connection is TLS encrypted)
-                    val hubSent = hubConnection.sendMessage(
-                        to = recipientAddress,
-                        encryptedPayload = content,  // Send plaintext content
+                    val protocolMessage = messageCodec.encodeMessage(
                         messageId = message.id,
-                        encrypted = false,  // Mark as unencrypted for web compatibility
-                        senderPublicKey = publicKeyBase64
+                        payload = encryptedBytes,
+                        flags = MessageCodec.FLAG_ENCRYPTED
                     )
-                    if (hubSent) {
-                        Timber.d("Message sent via Hub relay: ${message.id}")
-                        P2PManager.SendResult(direct = false, relayed = true)
+                    val p2pResult = p2pTransport.sendMessage(recipientAddress, protocolMessage)
+                    if (p2pResult.isSuccess) {
+                        val result = p2pResult.getOrNull()
+                        P2PManager.SendResult(
+                            direct = result?.direct ?: false,
+                            relayed = result?.relayed ?: false
+                        )
                     } else {
-                        Timber.w("Hub relay also failed for: ${message.id}")
-                        sendResult
+                        Timber.d("Falling back to legacy P2P for $recipientAddress")
+                        p2pManager.sendMessage(recipientAddress, encrypted, message.id)
                     }
                 } catch (e: Exception) {
-                    Timber.w(e, "Hub relay fallback failed")
-                    sendResult
+                    Timber.w(e, "P2P transport failed, using legacy")
+                    p2pManager.sendMessage(recipientAddress, encrypted, message.id)
                 }
-            } else {
-                sendResult
             }
 
             // 7. Update status
