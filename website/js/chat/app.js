@@ -51,45 +51,58 @@ injectStyles();
 export async function initializeApp() {
     console.log('🚀 Initializing MumbleChat...');
     
-    // Load persisted data
-    loadPersistedData();
-    
-    // Load public keys for E2EE
-    loadPublicKeys();
-    
-    // Setup wallet listeners
-    setupWalletListeners();
-    
-    // Check if user is authenticated
-    const walletCheck = await checkWalletConnection();
-    
-    // Initialize cryptography if wallet connected
-    if (walletCheck && state.address) {
-        console.log('🔐 Initializing E2E encryption...');
-        await initCrypto();
-    }
-    
-    if (walletCheck.connected && state.isRegistered) {
-        // User is authenticated - show main app
-        renderMainApp();
-        connectToRelay();
+    try {
+        // Add timeout to prevent infinite loading
+        const initTimeout = setTimeout(() => {
+            console.warn('⚠️ Init taking too long, showing login screen');
+            renderLoginView();
+        }, 8000);
         
-        // Start periodic online status check (every 15 seconds)
-        setInterval(() => {
-            refreshAllContactsOnlineStatus();
-        }, 15000);
+        // Load persisted data
+        loadPersistedData();
         
-        // Initial check after 2 seconds
-        setTimeout(() => {
-            refreshAllContactsOnlineStatus();
-        }, 2000);
-    } else {
-        // Show login screen
+        // Load public keys for E2EE
+        loadPublicKeys();
+        
+        // Setup wallet listeners
+        setupWalletListeners();
+        
+        // Check if user is authenticated
+        const walletCheck = await checkWalletConnection();
+        
+        // Initialize cryptography if wallet connected
+        if (walletCheck && state.address) {
+            console.log('🔐 Initializing E2E encryption...');
+            await initCrypto();
+        }
+        
+        clearTimeout(initTimeout);
+        
+        if (walletCheck.connected && state.isRegistered) {
+            // User is authenticated - show main app
+            renderMainApp();
+            connectToRelay();
+            
+            // Start periodic online status check (every 15 seconds)
+            setInterval(() => {
+                refreshAllContactsOnlineStatus();
+            }, 15000);
+            
+            // Initial check after 2 seconds
+            setTimeout(() => {
+                refreshAllContactsOnlineStatus();
+            }, 2000);
+        } else {
+            // Show login screen
+            renderLoginView();
+        }
+        
+        // Setup global event listeners
+        setupEventListeners();
+    } catch (error) {
+        console.error('❌ Init error:', error);
         renderLoginView();
     }
-    
-    // Setup global event listeners
-    setupEventListeners();
 }
 
 /**

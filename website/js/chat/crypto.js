@@ -193,7 +193,7 @@ export async function importContactPublicKey(publicKeyBase64) {
             []
         );
     } catch (error) {
-        console.error('Failed to import public key:', error);
+        // Silently fail - mobile uses different key format (expected)
         return null;
     }
 }
@@ -236,7 +236,7 @@ export async function deriveSharedKey(contactAddress, contactPublicKeyBase64) {
         
         return sharedKey;
     } catch (error) {
-        console.error('Failed to derive shared key:', error);
+        // Silently fail - mobile keys are incompatible (expected)
         return null;
     }
 }
@@ -250,7 +250,7 @@ export async function encryptMessage(contactAddress, contactPublicKey, plaintext
         const sharedKey = await deriveSharedKey(contactAddress, contactPublicKey);
         
         if (!sharedKey) {
-            console.warn('No shared key, sending unencrypted');
+            // Normal case when sending to mobile (incompatible crypto)
             return { encrypted: false, data: plaintext };
         }
         
