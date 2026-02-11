@@ -71,15 +71,15 @@
                 android:layout_height="12dp"
                 android:visibility="gone" />
 
-            <!-- Status Icon (sent, delivered, read) -->
-            <ImageView
+            <!-- Status Icon (sent, delivered, read) - Using TextView for tick symbols -->
+            <TextView
                 android:id="@+id/iconStatus"
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_check"
-                android:tint="@android:color/white"
-                android:alpha="0.8"
-                android:contentDescription="@null" />
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✓"
+                android:textSize="12sp"
+                android:textColor="@android:color/white"
+                android:alpha="0.8" />
 
             <!-- Retry Button -->
             <ImageButton
