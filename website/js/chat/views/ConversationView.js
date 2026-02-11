@@ -109,7 +109,7 @@ export function renderMessages(address) {
  * sending: clock ⏳
  * sent: single gray tick ✓
  * pending: clock (recipient offline) 🕐
- * delivered: double gray ticks ✓✓
+ * delivered: double GREEN ticks ✓✓ (green)
  * read: double blue ticks ✓✓ (blue)
  * failed: red X ❌
  */
@@ -122,7 +122,7 @@ function getStatusIcon(status) {
         case 'pending': 
             return '<span class="status-icon pending" title="Recipient offline - queued for delivery">⏳</span>';
         case 'delivered': 
-            return '<span class="status-icon delivered" title="Delivered">✓✓</span>';
+            return '<span class="status-icon delivered" title="Delivered" style="color: #10b981;">✓✓</span>';
         case 'read': 
             return '<span class="status-icon read" title="Read" style="color: #1b8cff;">✓✓</span>';
         case 'failed': 

@@ -93,30 +93,40 @@ class MessageListAdapter(
             binding.textMessage.text = message.content
             binding.textTime.text = formatTime(message.timestamp)
 
-            // Status indicator
+            // Status indicator with tick icons
             when (message.status) {
                 MessageStatus.PENDING, MessageStatus.SENDING -> {
+                    binding.iconStatus.text = "🕐"  // Clock for sending
+                    binding.iconStatus.setTextColor(0xFFB0B0B0.toInt())
                     binding.iconStatus.isVisible = true
                     binding.progressSending.isVisible = true
                     binding.buttonRetry.isVisible = false
                 }
                 MessageStatus.SENT_DIRECT, MessageStatus.SENT_TO_RELAY -> {
+                    binding.iconStatus.text = "✓"   // Single tick
+                    binding.iconStatus.setTextColor(0xFF808080.toInt())
                     binding.iconStatus.isVisible = true
                     binding.progressSending.isVisible = false
                     binding.buttonRetry.isVisible = false
                 }
                 MessageStatus.DELIVERED -> {
+                    binding.iconStatus.text = "✓✓"  // Double tick - GREEN for delivered
+                    binding.iconStatus.setTextColor(0xFF10B981.toInt())  // Green
                     binding.iconStatus.isVisible = true
                     binding.progressSending.isVisible = false
                     binding.buttonRetry.isVisible = false
                 }
                 MessageStatus.READ -> {
+                    binding.iconStatus.text = "✓✓"  // Double tick - BLUE for read
+                    binding.iconStatus.setTextColor(0xFF1B8CFF.toInt())  // Blue
                     binding.iconStatus.isVisible = true
                     binding.progressSending.isVisible = false
                     binding.buttonRetry.isVisible = false
                 }
                 MessageStatus.FAILED -> {
-                    binding.iconStatus.isVisible = false
+                    binding.iconStatus.text = "❌"  // X for failed
+                    binding.iconStatus.setTextColor(0xFFF43F5E.toInt())
+                    binding.iconStatus.isVisible = true
                     binding.progressSending.isVisible = false
                     binding.buttonRetry.isVisible = true
                 }

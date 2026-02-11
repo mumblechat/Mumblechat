@@ -25,7 +25,14 @@ This document tracks the implementation status of the MumbleChat Protocol V4.
 | V4.1 | Jan 26, 2026 | Fix relay dashboard registeredAt timestamp display |
 | V4.2 | Jan 2026 | Battery optimization exemption dialog |
 | V4.3 | Feb 10, 2026 | Fix heartbeat interval 5min → 5.5 hours |
-| **V4.4** | **Feb 10, 2026** | **Hub node connection fix, background reliability, AlarmManager, BootReceiver** |
+| V4.4 | Feb 10, 2026 | Hub node connection fix, background reliability, AlarmManager, BootReceiver |
+| V4.4.1 | Feb 11, 2026 | Web app deployment with hub relay + E2EE |
+| V4.4.2 | Feb 11, 2026 | Fix crypto key import errors in cross-platform messaging |
+| V4.4.3 | Feb 11, 2026 | DELIVER_OFFLINE_MESSAGE handler, console spam reduction |
+| V4.4.4 | Feb 11, 2026 | Fixed button text visibility, plaintext hub relay |
+| V4.4.5 | Feb 11, 2026 | Hub relay FIRST, P2P fallback for better mobile→web |
+| V4.4.6 | Feb 11, 2026 | Custom button drawables, suppress expected crypto warnings |
+| **V4.4.7** | **Feb 11, 2026** | **✅ GREEN TICK system for delivered messages (mobile + web)** |
 
 ---
 
