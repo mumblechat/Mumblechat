@@ -72,14 +72,13 @@ export const HUB_CONFIG = {
 };
 
 export const RELAY_DEFAULTS = {
-    primary: 'wss://hub.mumblechat.com/node/76bc8b54',
+    primary: 'wss://hub.mumblechat.com/user/connect',
     fallback: [
-        'wss://hub.mumblechat.com/node/1d32a3a0',
-        'wss://hub.mumblechat.com/node/d4996d0d'
+        'wss://hub.mumblechat.com/user/connect'
     ],
     desktop: 'ws://localhost:19371',
     mobile: 'ws://localhost:8444',
-    default: 'wss://hub.mumblechat.com/node/76bc8b54'
+    default: 'wss://hub.mumblechat.com/user/connect'
 };
 
 // Get best relay endpoint with load balancing - FAST with timeout
@@ -88,26 +87,28 @@ export async function getBestRelayEndpoint() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        const response = await fetch(`${HUB_CONFIG.apiUrl}/api/stats`, {
+        // Use /api/endpoints which only returns REAL connected nodes (not blockchain-only)
+        const response = await fetch(`${HUB_CONFIG.apiUrl}/api/endpoints`, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);
         
         const data = await response.json();
         
-        if (data.nodes && data.nodes.length > 0) {
+        if (data.endpoints && data.endpoints.length > 0) {
             // Load balance - find node with least connections
-            const bestNode = data.nodes.reduce((best, node) => 
-                (node.connectedUsers || 0) < (best.connectedUsers || 0) ? node : best
+            const bestNode = data.endpoints.reduce((best, node) => 
+                (node.users || 0) < (best.users || 0) ? node : best
             );
-            console.log('[Config] Selected node:', bestNode.tunnelId, 'users:', bestNode.connectedUsers);
-            return `wss://hub.mumblechat.com/node/${bestNode.tunnelId}`;
+            console.log('[Config] Selected endpoint:', bestNode.tunnelId, 'users:', bestNode.users);
+            return bestNode.endpoint;
         }
     } catch (e) {
-        console.warn('Could not fetch relay endpoints, using default');
+        console.warn('Could not fetch relay endpoints, using fallback');
     }
     
-    return RELAY_DEFAULTS.default;
+    // Fallback: use auto-connect endpoint (hub picks best node)
+    return `${HUB_CONFIG.wsUrl}/user/connect`;
 }
 
 export const MESSAGE_TYPES = {

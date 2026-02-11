@@ -1294,13 +1294,16 @@ function handleNodeConnection(ws: WebSocket) {
                                 // *** DIRECT DELIVERY: Send to user's socket via hub ***
                                 const targetUserSocket = targetNode.connectedUsers.get(targetInfo.sessionId);
                                 if (targetUserSocket && targetUserSocket.readyState === WebSocket.OPEN) {
+                                    const content = message.encryptedBlob || message.encryptedData || message.payload;
                                     targetUserSocket.send(JSON.stringify({
                                         type: 'message',
                                         from: fromAddr,
                                         senderAddress: fromAddr,
                                         to: targetAddr,
-                                        payload: message.payload,
-                                        encryptedBlob: message.encryptedBlob || message.payload,
+                                        payload: content,
+                                        encryptedBlob: content,
+                                        encryptedData: content,
+                                        text: content,
                                         encrypted: message.encrypted || false,
                                         senderPublicKey: message.senderPublicKey,
                                         signature: message.signature,
@@ -1333,7 +1336,9 @@ function handleNodeConnection(ws: WebSocket) {
                                             senderAddress: fromAddr,
                                             to: targetAddr,
                                             payload: message.payload,
-                                            encryptedBlob: message.encryptedBlob || message.payload,
+                                            encryptedBlob: message.encryptedBlob || message.encryptedData || message.payload,
+                                            encryptedData: message.encryptedData || message.encryptedBlob || message.payload,
+                                            text: message.payload,
                                             encrypted: message.encrypted || false,
                                             senderPublicKey: message.senderPublicKey,
                                             signature: message.signature,
@@ -1472,7 +1477,7 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
         try {
             const payload = JSON.parse(data.toString());
             
-            // *** NEW: Handle authentication to register user address ***
+            // *** Handle authentication to register user address ***
             if ((payload.type === 'authenticate') && (payload.address || payload.walletAddress)) {
                 const addr = (payload.address || payload.walletAddress).toLowerCase();
                 user.walletAddress = addr;
@@ -1483,10 +1488,19 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
                     tunnelId
                 });
                 console.log(`[Hub] User ${addr.slice(0,8)}... authenticated on node ${tunnelId}`);
+                
+                // Send authenticated response directly from hub
+                ws.send(JSON.stringify({
+                    type: 'authenticated',
+                    success: true,
+                    sessionId,
+                    timestamp: Date.now()
+                }));
             }
             
             // *** Direct hub routing for relay messages ***
             if (payload.type === 'relay' && payload.to) {
+                console.log(`[Hub] Relay intercepted: ${(payload.from || user.walletAddress || '?').slice(0,8)}... -> ${payload.to.slice(0,8)}... (registered users: ${usersByAddress.size})`);
                 const targetAddr = payload.to.toLowerCase();
                 const fromAddr = (payload.from || user.walletAddress || '').toLowerCase();
                 const targetInfo = usersByAddress.get(targetAddr);
@@ -1497,14 +1511,19 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
                         // *** DIRECT DELIVERY: Send to user's socket via hub (not through node) ***
                         const targetUserSocket = targetNode.connectedUsers.get(targetInfo.sessionId);
                         if (targetUserSocket && targetUserSocket.readyState === WebSocket.OPEN) {
+                            // Normalize content: support encryptedBlob, encryptedData, and payload
+                            const content = payload.encryptedBlob || payload.encryptedData || payload.payload;
                             targetUserSocket.send(JSON.stringify({
                                 type: 'message',
                                 from: fromAddr,
                                 senderAddress: fromAddr,
                                 to: targetAddr,
-                                payload: payload.encryptedBlob || payload.payload,
-                                encryptedBlob: payload.encryptedBlob || payload.payload,
+                                payload: content,
+                                encryptedBlob: content,
+                                encryptedData: content,
+                                text: content,
                                 encrypted: payload.encrypted || false,
+                                algorithm: payload.algorithm,
                                 senderPublicKey: payload.senderPublicKey,
                                 signature: payload.signature,
                                 messageId: payload.messageId,
@@ -1584,9 +1603,16 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
     });
 
     ws.on('close', () => {
-        // Remove from global registry
+        // Remove from global registry ONLY if this session is still the current one
+        // (prevents race condition when user reconnects on a different node)
         if (user.walletAddress) {
-            usersByAddress.delete(user.walletAddress);
+            const current = usersByAddress.get(user.walletAddress);
+            if (current && current.sessionId === sessionId) {
+                usersByAddress.delete(user.walletAddress);
+                console.log(`[Hub] User ${user.walletAddress.slice(0,8)}... unregistered (session closed)`);
+            } else {
+                console.log(`[Hub] User ${user.walletAddress.slice(0,8)}... session ${sessionId.slice(0,8)} closed but already re-registered on another session, keeping registry`);
+            }
         }
         
         connectedUsers.delete(sessionId);
