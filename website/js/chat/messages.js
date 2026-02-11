@@ -226,7 +226,14 @@ export async function receiveMessage(data) {
     // Check for duplicate message
     const existingMsg = state.messages[from].find(m => m.id === data.messageId);
     if (existingMsg) {
-        console.log('Duplicate message ignored:', data.messageId);
+        // If this is an offline delivery confirmation, update status to delivered
+        if (data.isOfflineMessage && data.status === 'delivered') {
+            existingMsg.status = 'delivered';
+            saveMessages();
+            console.log('✅ Updated offline message to DELIVERED:', data.messageId);
+        } else {
+            console.log('Duplicate message ignored:', data.messageId);
+        }
         return;
     }
     
@@ -235,7 +242,7 @@ export async function receiveMessage(data) {
         id: data.messageId || Date.now(),
         text,
         sent: false,
-        status: 'received',
+        status: data.isOfflineMessage ? 'delivered' : 'received',  // Mark offline messages as delivered
         encrypted: isEncrypted,
         signatureValid: signatureValid,
         time: new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

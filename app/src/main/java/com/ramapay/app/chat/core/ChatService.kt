@@ -691,6 +691,15 @@ class ChatService @Inject constructor(
             // Get or create conversation
             val conversation = conversationRepository.getOrCreate(myAddress, hubMessage.from)
             
+            // Determine message status:
+            // - If offline message with status='delivered', mark as DELIVERED
+            // - Otherwise, default to DELIVERED
+            val messageStatus = if (hubMessage.isOfflineMessage && hubMessage.status == "delivered") {
+                MessageStatus.DELIVERED
+            } else {
+                MessageStatus.DELIVERED  // Default for received messages
+            }
+            
             // Create message entity
             val message = MessageEntity(
                 id = hubMessage.messageId,
@@ -702,7 +711,7 @@ class ChatService @Inject constructor(
                 content = decryptedContent ?: "[Encrypted]",
                 encryptedContent = if (hubMessage.encrypted) encryptedPayload.toByteArray(Charsets.UTF_8) else null,
                 timestamp = hubMessage.timestamp,
-                status = MessageStatus.DELIVERED,
+                status = messageStatus,
                 replyToId = null,
                 isDeleted = false,
                 signature = hubMessage.signature?.let { 
@@ -713,6 +722,12 @@ class ChatService @Inject constructor(
             
             // Save to database (ignores if already exists)
             messageRepository.insertIfNotExists(message)
+            
+            // If this is an offline message that was just delivered, update the message status
+            if (hubMessage.isOfflineMessage && hubMessage.status == "delivered") {
+                messageRepository.updateStatus(hubMessage.messageId, MessageStatus.DELIVERED)
+                Timber.d("ChatService: Offline message marked as DELIVERED: ${hubMessage.messageId}")
+            }
             
             // Update conversation
             conversationRepository.updateLastMessage(

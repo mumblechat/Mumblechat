@@ -32,7 +32,8 @@ This document tracks the implementation status of the MumbleChat Protocol V4.
 | V4.4.4 | Feb 11, 2026 | Fixed button text visibility, plaintext hub relay |
 | V4.4.5 | Feb 11, 2026 | Hub relay FIRST, P2P fallback for better mobile→web |
 | V4.4.6 | Feb 11, 2026 | Custom button drawables, suppress expected crypto warnings |
-| **V4.4.7** | **Feb 11, 2026** | **✅ GREEN TICK system for delivered messages (mobile + web)** |
+| V4.4.7 | Feb 11, 2026 | ✅ GREEN TICK system for delivered messages (mobile + web) |
+| **V4.4.8** | **Feb 11, 2026** | **✅ Offline message delivery status tracking & feature parity** |
 
 ---
 

@@ -123,7 +123,8 @@ class HubConnection @Inject constructor(
         val senderPublicKey: String?,
         val signature: String?,
         val timestamp: Long,
-        val isOfflineMessage: Boolean = false
+        val isOfflineMessage: Boolean = false,
+        val status: String? = null      // Message delivery status (sent, delivered, read, etc.)
     )
     
     data class DeliveryStatus(
@@ -639,7 +640,8 @@ class HubConnection @Inject constructor(
             senderPublicKey = if (json.has("senderPublicKey")) json.optString("senderPublicKey") else null,
             signature = if (json.has("signature")) json.optString("signature") else null,
             timestamp = json.optLong("timestamp", System.currentTimeMillis()),
-            isOfflineMessage = isOffline || json.optBoolean("isOfflineMessage", false)
+            isOfflineMessage = isOffline || json.optBoolean("isOfflineMessage", false),
+            status = json.optString("status", null)  // Capture delivery status (delivered, read, etc.)
         )
     }
     
