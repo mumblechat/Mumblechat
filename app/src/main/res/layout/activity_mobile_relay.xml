@@ -209,7 +209,7 @@
 
                     </LinearLayout>
 
-                    <Button
+                    <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnSendHeartbeat"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
@@ -218,6 +218,7 @@
                         android:textColor="#000000"
                         android:textStyle="bold"
                         android:background="@drawable/btn_orange_rounded"
+                        app:backgroundTint="@null"
                         android:textAllCaps="false" />
 
                     <TextView
@@ -408,7 +409,7 @@
                         android:layout_marginTop="16dp"
                         android:orientation="horizontal">
 
-                        <Button
+                        <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/btnStartServer"
                             android:layout_width="0dp"
                             android:layout_height="52dp"
@@ -418,9 +419,10 @@
                             android:textColor="#000000"
                             android:textStyle="bold"
                             android:background="@drawable/btn_green_rounded"
+                            app:backgroundTint="@null"
                             android:textAllCaps="false" />
 
-                        <Button
+                        <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/btnStopServer"
                             android:layout_width="0dp"
                             android:layout_height="52dp"
@@ -430,6 +432,7 @@
                             android:textColor="#FFFFFF"
                             android:textStyle="bold"
                             android:background="@drawable/btn_red_rounded"
+                            app:backgroundTint="@null"
                             android:visibility="gone"
                             android:textAllCaps="false" />
 
