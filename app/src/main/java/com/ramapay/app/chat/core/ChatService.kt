@@ -324,10 +324,44 @@ class ChatService @Inject constructor(
                 p2pManager.sendMessage(recipientAddress, encrypted, message.id)
             }
 
+            // 6b. If P2P failed, fallback to Hub relay (critical for mobile→web messaging)
+            val finalSendResult = if (!sendResult.direct && !sendResult.relayed) {
+                Timber.d("P2P delivery failed, falling back to Hub relay for $recipientAddress")
+                try {
+                    val publicKeyBase64 = android.util.Base64.encodeToString(
+                        keys.sessionPublic,
+                        android.util.Base64.NO_WRAP
+                    )
+                    val encryptedPayload = android.util.Base64.encodeToString(
+                        encryptedBytes,
+                        android.util.Base64.NO_WRAP
+                    )
+                    val hubSent = hubConnection.sendMessage(
+                        to = recipientAddress,
+                        encryptedPayload = encryptedPayload,
+                        messageId = message.id,
+                        encrypted = true,
+                        senderPublicKey = publicKeyBase64
+                    )
+                    if (hubSent) {
+                        Timber.d("Message sent via Hub relay: ${message.id}")
+                        P2PManager.SendResult(direct = false, relayed = true)
+                    } else {
+                        Timber.w("Hub relay also failed for: ${message.id}")
+                        sendResult
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "Hub relay fallback failed")
+                    sendResult
+                }
+            } else {
+                sendResult
+            }
+
             // 7. Update status
             val newStatus = when {
-                sendResult.direct -> MessageStatus.SENT_DIRECT
-                sendResult.relayed -> MessageStatus.SENT_TO_RELAY
+                finalSendResult.direct -> MessageStatus.SENT_DIRECT
+                finalSendResult.relayed -> MessageStatus.SENT_TO_RELAY
                 else -> MessageStatus.FAILED
             }
             messageRepository.updateStatus(message.id, newStatus)

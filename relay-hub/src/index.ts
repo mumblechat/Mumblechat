@@ -1198,17 +1198,19 @@ function handleNodeConnection(ws: WebSocket) {
                                     queuedId: msgId,
                                     status: 'queued_offline',
                                     recipient: targetAddr,
+                                    sender: (payload.from || payload.senderAddress || '').toLowerCase(),
                                     expiresIn: `${MESSAGE_EXPIRY_DAYS} days`
                                 }));
                             }
                         }
                         
                         // *** If delivered locally on same node, send confirmation ***
-                        if (delivered && !payload.to) {
+                        if (delivered && payload.messageId) {
                             ws.send(JSON.stringify({
                                 type: 'DELIVERY_RECEIPT',
                                 messageId: payload.messageId,
-                                to: payload.to,
+                                to: (payload.to || '').toLowerCase(),
+                                sender: (payload.from || payload.senderAddress || '').toLowerCase(),
                                 status: 'delivered',
                                 timestamp: Date.now()
                             }));
@@ -1375,6 +1377,7 @@ function handleNodeConnection(ws: WebSocket) {
                                 queuedId: msgId,
                                 status: 'queued_offline',
                                 recipient: targetAddr,
+                                sender: (message.from || message.senderAddress || '').toLowerCase(),
                                 expiresIn: `${MESSAGE_EXPIRY_DAYS} days`
                             }));
                         }
@@ -1476,6 +1479,9 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
     ws.on('message', (data: Buffer) => {
         try {
             const payload = JSON.parse(data.toString());
+            
+            // Debug: log ALL message types from users
+            console.log(`[Hub] User msg from ${user.walletAddress?.slice(0,8) || sessionId.slice(0,8)}: type=${payload.type} to=${payload.to?.slice(0,8) || 'N/A'}`);
             
             // *** Handle authentication to register user address ***
             if ((payload.type === 'authenticate') && (payload.address || payload.walletAddress)) {

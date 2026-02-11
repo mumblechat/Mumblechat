@@ -719,9 +719,17 @@
                         android:id="@+id/textVersion"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Version 4.4"
+                        android:text="Version 4.4.3"
                         android:textColor="@color/dove"
                         android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/textBuildTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Build: ---"
+                        android:textColor="@color/dove"
+                        android:textSize="11sp" />
 
                 </LinearLayout>
 

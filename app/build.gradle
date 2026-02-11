@@ -53,8 +53,8 @@ android {
         applicationId "io.ramestta.wallet"
         minSdk 24
         targetSdk 35
-        versionCode 278
-        versionName "4.4"
+        versionCode 279
+        versionName "4.4.3"
 
         android.buildFeatures.buildConfig true
 
@@ -69,6 +69,7 @@ android {
         def DEFAULT_AURORA_API_KEY = "\"HFDDY5BNKGXBB82DE2G8S64C3C41B76PYI\""; //Put your Aurorascan.dev API key here - this one will rate limit as it is common
 
         buildConfigField 'int', 'DB_VERSION', '57'
+        buildConfigField "String", "BUILD_TIME", "\"${new Date().format('yyyy-MM-dd HH:mm')}\""
 
         buildConfigField "String", XInfuraAPI, DEFAULT_INFURA_API_KEY
         buildConfigField "String", "WALLETCONNECT_PROJECT_ID", DEFAULT_WALLETCONNECT_PROJECT_ID

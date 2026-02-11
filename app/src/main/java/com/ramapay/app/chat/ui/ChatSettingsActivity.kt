@@ -199,6 +199,24 @@ class ChatSettingsActivity : AppCompatActivity() {
         binding.itemAbout.setOnClickListener {
             showAboutDialog()
         }
+
+        // Set version info dynamically so user can identify which APK they have
+        try {
+            val versionName = packageManager.getPackageInfo(packageName, 0).versionName
+            val versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                packageManager.getPackageInfo(packageName, 0).longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, 0).versionCode.toLong()
+            }
+            binding.textVersion.text = "Version $versionName (Build $versionCode)"
+            try {
+                val buildTime = io.ramestta.wallet.BuildConfig.BUILD_TIME
+                binding.textBuildTime.text = "Built: $buildTime"
+            } catch (_: Exception) {
+                binding.textBuildTime.text = "MumbleChat Protocol v1.0"
+            }
+        } catch (_: Exception) { }
     }
     
     // ============ Backup/Restore ============
