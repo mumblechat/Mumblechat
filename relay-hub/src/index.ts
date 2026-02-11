@@ -1229,8 +1229,8 @@ function handleNodeConnection(ws: WebSocket) {
 
                 // *** User registered their address with the node ***
                 case 'USER_AUTHENTICATED':
-                    if (node && message.sessionId && message.address) {
-                        const addr = message.address.toLowerCase();
+                    if (node && message.sessionId && (message.address || message.walletAddress)) {
+                        const addr = (message.address || message.walletAddress).toLowerCase();
                         usersByAddress.set(addr, {
                             sessionId: message.sessionId,
                             tunnelId: node.tunnelId

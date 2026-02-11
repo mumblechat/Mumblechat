@@ -329,8 +329,9 @@ async function authenticateWithRelay() {
         
         // Send auth to relay
         state.relaySocket.send(JSON.stringify({
-            type: 'auth',
+            type: 'authenticate',
             address: state.address,
+            walletAddress: state.address,
             publicKey: state.publicKey,
             timestamp,
             signature
