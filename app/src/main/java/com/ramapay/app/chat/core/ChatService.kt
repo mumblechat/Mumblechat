@@ -325,6 +325,8 @@ class ChatService @Inject constructor(
             }
 
             // 6b. If P2P failed, fallback to Hub relay (critical for mobile→web messaging)
+            // NOTE: Send plaintext via hub for cross-platform compatibility
+            // (mobile and web use incompatible encryption schemes)
             val finalSendResult = if (!sendResult.direct && !sendResult.relayed) {
                 Timber.d("P2P delivery failed, falling back to Hub relay for $recipientAddress")
                 try {
@@ -332,15 +334,12 @@ class ChatService @Inject constructor(
                         keys.sessionPublic,
                         android.util.Base64.NO_WRAP
                     )
-                    val encryptedPayload = android.util.Base64.encodeToString(
-                        encryptedBytes,
-                        android.util.Base64.NO_WRAP
-                    )
+                    // Send plaintext for cross-platform (hub connection is TLS encrypted)
                     val hubSent = hubConnection.sendMessage(
                         to = recipientAddress,
-                        encryptedPayload = encryptedPayload,
+                        encryptedPayload = content,  // Send plaintext content
                         messageId = message.id,
-                        encrypted = true,
+                        encrypted = false,  // Mark as unencrypted for web compatibility
                         senderPublicKey = publicKeyBase64
                     )
                     if (hubSent) {

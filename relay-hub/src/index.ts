@@ -1480,8 +1480,14 @@ function handleUserConnection(ws: WebSocket, tunnelId: string) {
         try {
             const payload = JSON.parse(data.toString());
             
-            // Debug: log ALL message types from users
-            console.log(`[Hub] User msg from ${user.walletAddress?.slice(0,8) || sessionId.slice(0,8)}: type=${payload.type} to=${payload.to?.slice(0,8) || 'N/A'}`);
+            // Only log non-ping/pong message types
+            if (payload.type && payload.type !== 'ping' && payload.type !== 'pong') {
+                if (payload.type === 'relay') {
+                    console.log(`[Hub] Relay: ${(payload.from || user.walletAddress || '?').slice(0,8)}... -> ${(payload.to || '?').slice(0,8)}...`);
+                } else if (payload.type !== 'authenticate') {
+                    console.log(`[Hub] User ${user.walletAddress?.slice(0,8) || sessionId.slice(0,8)}: ${payload.type}`);
+                }
+            }
             
             // *** Handle authentication to register user address ***
             if ((payload.type === 'authenticate') && (payload.address || payload.walletAddress)) {

@@ -216,7 +216,8 @@
                         android:layout_height="48dp"
                         android:layout_marginTop="12dp"
                         android:text="⚡ Send Heartbeat"
-                        app:backgroundTint="@color/warning" />
+                        android:textColor="#FFFFFF"
+                        app:backgroundTint="#FF9800" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -414,7 +415,8 @@
                             android:layout_weight="1"
                             android:layout_marginEnd="8dp"
                             android:text="Start Server"
-                            app:backgroundTint="@color/green" />
+                            android:textColor="#FFFFFF"
+                            app:backgroundTint="#4CAF50" />
 
                         <com.google.android.material.button.MaterialButton
                             style="@style/Aw.Component.Button.Relay"
@@ -424,8 +426,9 @@
                             android:layout_weight="1"
                             android:layout_marginStart="8dp"
                             android:text="Stop Server"
+                            android:textColor="#FFFFFF"
                             android:visibility="gone"
-                            app:backgroundTint="@color/error" />
+                            app:backgroundTint="#F44336" />
 
                     </LinearLayout>
 
