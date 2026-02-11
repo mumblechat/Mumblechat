@@ -628,10 +628,10 @@ class ChatService @Inject constructor(
             conversationRepository.incrementUnread(conversation.id)
 
             // Show notification for the incoming message
-            val contact = contactDao.getContact(myAddress, incoming.senderAddress)
+            val contact = contactDao.getByAddress(myAddress, incoming.senderAddress)
             chatNotificationHelper.showMessageNotification(
                 message = message,
-                senderName = contact?.displayName,
+                senderName = contact?.nickname,
                 conversationId = conversation.id
             )
 
@@ -750,10 +750,10 @@ class ChatService @Inject constructor(
             conversationRepository.incrementUnread(conversation.id)
             
             // Show notification for the incoming message
-            val contact = contactDao.getContact(myAddress, hubMessage.from)
+            val contact = contactDao.getByAddress(myAddress, hubMessage.from)
             chatNotificationHelper.showMessageNotification(
                 message = message,
-                senderName = contact?.displayName,
+                senderName = contact?.nickname,
                 conversationId = conversation.id
             )
             

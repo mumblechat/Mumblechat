@@ -50,7 +50,11 @@ import com.google.android.material.card.MaterialCardView;
 
 import androidx.core.content.ContextCompat;
 
+import org.web3j.crypto.Credentials;
+import org.web3j.crypto.WalletUtils;
 import org.web3j.utils.Numeric;
+
+import java.io.File;
 
 import wallet.core.jni.CoinType;
 import wallet.core.jni.HDWallet;
@@ -408,15 +412,37 @@ public class BackupKeyActivity extends BaseActivity implements
         {
             String privateKeyHex;
             
-            // For KEYSTORE wallets (imported via private key), the secretData IS the private key
+            // For KEYSTORE wallets (imported via private key), secretData is the keystore password
+            // We need to decrypt the keystore to get the actual private key
             if (wallet.type == WalletType.KEYSTORE || wallet.type == WalletType.KEYSTORE_LEGACY)
             {
-                // secretData is already the private key
-                privateKeyHex = secretData;
-                // Ensure it has 0x prefix
-                if (!privateKeyHex.startsWith("0x") && !privateKeyHex.startsWith("0X"))
+                // secretData is the keystore password, use it to decrypt and get the private key
+                File keyFolder = new File(getFilesDir(), "keystore");
+                String address = Numeric.cleanHexPrefix(wallet.address);
+                File[] contents = keyFolder.listFiles();
+                Credentials credentials = null;
+                
+                if (contents != null)
                 {
-                    privateKeyHex = "0x" + privateKeyHex;
+                    for (File f : contents)
+                    {
+                        if (f.getName().toLowerCase().contains(address.toLowerCase()))
+                        {
+                            credentials = WalletUtils.loadCredentials(secretData, f);
+                            break;
+                        }
+                    }
+                }
+                
+                if (credentials != null)
+                {
+                    // Get the private key from the credentials
+                    privateKeyHex = "0x" + Numeric.toHexStringNoPrefixZeroPadded(
+                        credentials.getEcKeyPair().getPrivateKey(), 64);
+                }
+                else
+                {
+                    throw new Exception("Could not load wallet credentials");
                 }
             }
             else
