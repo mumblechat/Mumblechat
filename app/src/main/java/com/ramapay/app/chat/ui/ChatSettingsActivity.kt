@@ -211,7 +211,7 @@ class ChatSettingsActivity : AppCompatActivity() {
             }
             binding.textVersion.text = "Version $versionName (Build $versionCode)"
             try {
-                val buildTime = io.ramestta.wallet.BuildConfig.BUILD_TIME
+                val buildTime = com.ramapay.app.BuildConfig.BUILD_TIME
                 binding.textBuildTime.text = "Built: $buildTime"
             } catch (_: Exception) {
                 binding.textBuildTime.text = "MumbleChat Protocol v1.0"
