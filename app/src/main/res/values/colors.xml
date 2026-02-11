@@ -33,11 +33,11 @@
     <!-- ?colorOnError -->
     <color name="error_inverse">@color/white</color>
     <!-- ?android:colorBackground -->
-    <color name="background">#0D0D1A</color>
+    <color name="background">@color/white</color>
     <!-- ?colorOnBackground -->
-    <color name="background_inverse">@color/white</color>
+    <color name="background_inverse">@color/black</color>
     <!-- ?colorSurface -->
-    <color name="surface">#0D0D1A</color>
+    <color name="surface">@color/white</color>
     <!-- ?colorSurfaceSecondary -->
     <color name="surface_secondary">@color/alabaster</color>
     <!-- ?colorSurfaceTertiary -->
