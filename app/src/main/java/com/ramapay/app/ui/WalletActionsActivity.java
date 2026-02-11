@@ -276,14 +276,21 @@ public class WalletActionsActivity extends BaseActivity implements Runnable, Vie
 
         if (wallet.type == WalletType.KEYSTORE)
         {
+            // For private key imported wallets:
+            // - Show "Export Keystore JSON" option
+            // - ALSO show "Show Private Key" option (user-friendly!)
             backUpSetting.setTitle(getString(R.string.export_keystore_json));
             TextView backupDetail = findViewById(R.id.backup_text);
             backupDetail.setText(R.string.export_keystore_detail);
-            // Hide show private key for keystore wallets (they don't have seed phrase)
+            
+            // Show private key option for KEYSTORE wallets (imported via private key)
             if (showPrivateKeySetting != null)
             {
-                showPrivateKeySetting.setVisibility(View.GONE);
-                findViewById(R.id.private_key_text).setVisibility(View.GONE);
+                showPrivateKeySetting.setVisibility(View.VISIBLE);
+                showPrivateKeySetting.setTitle(getString(R.string.show_private_key));
+                TextView privateKeyText = findViewById(R.id.private_key_text);
+                privateKeyText.setVisibility(View.VISIBLE);
+                privateKeyText.setText(R.string.export_private_key_detail);
             }
         }
         else if (wallet.type == WalletType.KEYSTORE_LEGACY)

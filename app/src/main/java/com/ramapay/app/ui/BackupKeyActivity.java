@@ -402,27 +402,44 @@ public class BackupKeyActivity extends BaseActivity implements
         viewModel.getAuthentication(wallet, this, this);
     }
     
-    private void displayPrivateKey(String mnemonic)
+    private void displayPrivateKey(String secretData)
     {
         try
         {
-            HDWallet hdWallet = new HDWallet(mnemonic, "");
-            PrivateKey pk;
+            String privateKeyHex;
             
-            // For derived HD accounts, use the correct account index
-            if (wallet.isDerivedHDAccount())
+            // For KEYSTORE wallets (imported via private key), the secretData IS the private key
+            if (wallet.type == WalletType.KEYSTORE || wallet.type == WalletType.KEYSTORE_LEGACY)
             {
-                // Use wallet's hdKeyIndex for the derivation path
-                String derivationPath = "m/44'/60'/0'/0/" + wallet.hdKeyIndex;
-                pk = hdWallet.getKey(CoinType.ETHEREUM, derivationPath);
+                // secretData is already the private key
+                privateKeyHex = secretData;
+                // Ensure it has 0x prefix
+                if (!privateKeyHex.startsWith("0x") && !privateKeyHex.startsWith("0X"))
+                {
+                    privateKeyHex = "0x" + privateKeyHex;
+                }
             }
             else
             {
-                // For master wallet (index 0), use default derivation
-                pk = hdWallet.getKeyForCoin(CoinType.ETHEREUM);
+                // For HD wallets, derive the private key from the mnemonic
+                HDWallet hdWallet = new HDWallet(secretData, "");
+                PrivateKey pk;
+                
+                // For derived HD accounts, use the correct account index
+                if (wallet.isDerivedHDAccount())
+                {
+                    // Use wallet's hdKeyIndex for the derivation path
+                    String derivationPath = "m/44'/60'/0'/0/" + wallet.hdKeyIndex;
+                    pk = hdWallet.getKey(CoinType.ETHEREUM, derivationPath);
+                }
+                else
+                {
+                    // For master wallet (index 0), use default derivation
+                    pk = hdWallet.getKeyForCoin(CoinType.ETHEREUM);
+                }
+                
+                privateKeyHex = "0x" + Numeric.toHexStringNoPrefix(pk.data());
             }
-            
-            String privateKeyHex = "0x" + Numeric.toHexStringNoPrefix(pk.data());
             
             TextView privateKeyText = findViewById(R.id.text_private_key);
             TextView walletAddressText = findViewById(R.id.text_wallet_address);
