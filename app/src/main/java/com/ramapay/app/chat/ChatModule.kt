@@ -30,6 +30,7 @@ import com.ramapay.app.chat.p2p.KademliaDHT
 import com.ramapay.app.chat.p2p.P2PTransport
 import com.ramapay.app.chat.p2p.PeerCache
 import com.ramapay.app.chat.p2p.QRCodePeerExchange
+import com.ramapay.app.chat.notification.ChatNotificationHelper
 import com.ramapay.app.chat.protocol.MessageCodec
 import com.ramapay.app.chat.registry.RegistrationManager
 import com.ramapay.app.chat.relay.RelayMessageService
@@ -106,6 +107,14 @@ object ChatModule {
     @Singleton
     fun provideMessageEncryption(): MessageEncryption {
         return MessageEncryption()
+    }
+
+    @Provides
+    @Singleton
+    fun provideChatNotificationHelper(
+        @ApplicationContext context: Context
+    ): ChatNotificationHelper {
+        return ChatNotificationHelper(context)
     }
 
     @Provides
@@ -343,7 +352,8 @@ object ChatModule {
         contactDao: ContactDao,
         hubConnection: HubConnection,
         mobileRelayServer: MobileRelayServer,
-        hybridNetworkManager: HybridNetworkManager
+        hybridNetworkManager: HybridNetworkManager,
+        chatNotificationHelper: ChatNotificationHelper
     ): ChatService {
         return ChatService(
             context,
@@ -362,7 +372,8 @@ object ChatModule {
             contactDao,
             hubConnection,
             mobileRelayServer,
-            hybridNetworkManager
+            hybridNetworkManager,
+            chatNotificationHelper
         )
     }
 }

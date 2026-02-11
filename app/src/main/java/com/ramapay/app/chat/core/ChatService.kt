@@ -16,6 +16,7 @@ import com.ramapay.app.chat.network.HubConnection
 import com.ramapay.app.chat.network.HybridNetworkManager
 import com.ramapay.app.chat.network.MobileRelayServer
 import com.ramapay.app.chat.network.P2PManager
+import com.ramapay.app.chat.notification.ChatNotificationHelper
 import com.ramapay.app.chat.p2p.P2PTransport
 import com.ramapay.app.chat.p2p.QRCodePeerExchange
 import com.ramapay.app.chat.protocol.MessageCodec
@@ -67,7 +68,9 @@ class ChatService @Inject constructor(
     // NEW: Hub connection for web app compatibility
     private val hubConnection: HubConnection,
     private val mobileRelayServer: MobileRelayServer,
-    private val hybridNetworkManager: HybridNetworkManager
+    private val hybridNetworkManager: HybridNetworkManager,
+    // NEW: Chat notification helper
+    private val chatNotificationHelper: ChatNotificationHelper
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
@@ -624,6 +627,14 @@ class ChatService @Inject constructor(
             )
             conversationRepository.incrementUnread(conversation.id)
 
+            // Show notification for the incoming message
+            val contact = contactDao.getContact(myAddress, incoming.senderAddress)
+            chatNotificationHelper.showMessageNotification(
+                message = message,
+                senderName = contact?.displayName,
+                conversationId = conversation.id
+            )
+
             // Send delivery acknowledgment
             p2pManager.sendDeliveryAck(incoming.senderAddress, incoming.messageId)
 
@@ -737,6 +748,14 @@ class ChatService @Inject constructor(
                 message.timestamp
             )
             conversationRepository.incrementUnread(conversation.id)
+            
+            // Show notification for the incoming message
+            val contact = contactDao.getContact(myAddress, hubMessage.from)
+            chatNotificationHelper.showMessageNotification(
+                message = message,
+                senderName = contact?.displayName,
+                conversationId = conversation.id
+            )
             
             // Send read receipt back via hub
             hubConnection.sendReadReceipt(hubMessage.messageId, hubMessage.from)

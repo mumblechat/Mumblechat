@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ramapay.app.R
 import com.ramapay.app.chat.core.ChatService
+import com.ramapay.app.chat.notification.ChatNotificationHelper
 import com.ramapay.app.chat.ui.adapter.MessageListAdapter
 import com.ramapay.app.chat.viewmodel.ConversationViewModel
 import com.ramapay.app.chat.viewmodel.SendingState
@@ -48,6 +49,9 @@ class ConversationActivity : AppCompatActivity() {
     
     @Inject
     lateinit var chatService: ChatService
+    
+    @Inject
+    lateinit var chatNotificationHelper: ChatNotificationHelper
     
     // File picker for attachments
     private val filePickerLauncher = registerForActivityResult(
@@ -82,6 +86,9 @@ class ConversationActivity : AppCompatActivity() {
 
         viewModel.loadConversation(conversationId, peerAddress)
         observeViewModel()
+        
+        // Cancel any existing notifications for this conversation
+        chatNotificationHelper.cancelNotification(conversationId)
         
         // Initialize ChatService if needed
         initializeChatService()
