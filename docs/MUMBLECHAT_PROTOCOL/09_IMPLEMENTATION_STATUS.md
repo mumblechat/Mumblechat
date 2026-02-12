@@ -1,6 +1,6 @@
 # MumbleChat Protocol - Implementation Status
 
-## Version 4.4 | February 10, 2026
+## Version 4.5 | February 12, 2026
 
 ---
 
@@ -15,7 +15,7 @@ This document tracks the implementation status of the MumbleChat Protocol V4.
 - **Active Relay Nodes:** 6 registered on-chain (3 connected via hub WebSocket)
 - **Connected Users:** 50+ (bot network + real users)
 - **Chat Bot:** Running 24/7 distributing users across relay nodes
-- **Android App:** V4.4 (versionCode 278) — deployed via GitHub Actions
+- **Android App:** V4.5.0 (versionCode 288) — deployed via GitHub Actions
 - **Network Status Dashboard:** `hub.mumblechat.com` (web UI)
 
 ### 📱 App Version History
@@ -33,11 +33,59 @@ This document tracks the implementation status of the MumbleChat Protocol V4.
 | V4.4.5 | Feb 11, 2026 | Hub relay FIRST, P2P fallback for better mobile→web |
 | V4.4.6 | Feb 11, 2026 | Custom button drawables, suppress expected crypto warnings |
 | V4.4.7 | Feb 11, 2026 | ✅ GREEN TICK system for delivered messages (mobile + web) |
-| **V4.4.8** | **Feb 11, 2026** | **✅ Offline message delivery status tracking & feature parity** |
+| V4.4.8 | Feb 11, 2026 | Offline message delivery status tracking & feature parity |
+| V4.4.9 | Feb 12, 2026 | Notifications fix, private key display fix |
+| **V4.5.0** | **Feb 12, 2026** | **✅ Display names (on-chain + local), stay unlocked in chat, contact details** |
 
 ---
 
-## 🆕 V4.4 NEW FEATURES
+## 🆕 V4.5 NEW FEATURES
+
+### 👤 Display Name System (NEW)
+Two-tier display name support for better contact identification.
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| On-Chain Display Name | ✅ **NEW** | Name registered by address owner on blockchain |
+| Local Nickname | ✅ **NEW** | Custom name you set for any contact (stored locally) |
+| Auto-Fetch On-Chain Name | ✅ **NEW** | NewChatViewModel fetches from Registry contract |
+| Auto-Fill Display Name | ✅ **NEW** | Pre-populates with on-chain name when available |
+| Priority System | ✅ **NEW** | Local nickname > On-chain name > Truncated address |
+
+### 🔓 Stay Unlocked in Chat (NEW)
+Prevents auto-lock while actively chatting.
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Bypass Lock Setting | ✅ **NEW** | Toggle in Security Settings |
+| Session Refresh Loop | ✅ **NEW** | Handler refreshes every 30 seconds in chat |
+| Lifecycle Management | ✅ **NEW** | Starts onResume, stops onPause/onDestroy |
+
+### 📇 Contact Details Screen (NEW)
+Complete contact management UI.
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| View Contact Menu | ✅ **FIXED** | Now opens ContactDetailsActivity |
+| Local Nickname | ✅ **NEW** | View and edit custom nicknames |
+| On-Chain Name Display | ✅ **NEW** | Shows owner's registered name |
+| "Use This Name" | ✅ **NEW** | One-tap to use on-chain name |
+| Block/Unblock | ✅ **NEW** | Toggle block status from contact screen |
+| Favorite Toggle | ✅ **NEW** | Add/remove contact from favorites |
+| Copy Address | ✅ **NEW** | Tap to copy full wallet address |
+
+### 📤 Export Chat (NEW)
+Functional chat export feature.
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Export Menu | ✅ **FIXED** | Now exports chat as formatted text |
+| Share Intent | ✅ **NEW** | Opens system share sheet |
+| Message Format | ✅ **NEW** | [timestamp] Sender: message |
+
+---
+
+## 🆕 V4.4 FEATURES
 
 ### 🔗 Mobile Relay Hub Connection (CRITICAL FIX)
 Mobile relay nodes now properly connect to the hub as **relay nodes** (not users).

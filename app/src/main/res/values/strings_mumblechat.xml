@@ -183,4 +183,24 @@
     <string name="remove_member_confirm">Remove %1$s from this group?</string>
     <string name="remove">Remove</string>
     <string name="save">Save</string>
+    
+    <!-- Contact Details -->
+    <string name="contact_details">Contact Details</string>
+    <string name="local_nickname">Local Nickname</string>
+    <string name="on_chain_display_name">On-Chain Display Name</string>
+    <string name="no_nickname_set">No nickname set</string>
+    <string name="not_set">Not set</string>
+    <string name="error_loading">Error loading</string>
+    <string name="enter_nickname">Enter nickname</string>
+    <string name="edit_nickname">Edit Nickname</string>
+    <string name="nickname_saved">Nickname saved</string>
+    <string name="use_this_name">Use this</string>
+    <string name="edit">Edit</string>
+    <string name="add_favorite">Add to Favorites</string>
+    <string name="remove_favorite">Remove from Favorites</string>
+    <string name="added_to_favorites">Added to favorites</string>
+    <string name="removed_from_favorites">Removed from favorites</string>
+    <string name="wallet_address">Wallet Address</string>
+    <string name="copy_address">Copy address</string>
+    <string name="tap_to_copy">Tap to copy</string>
 </resources>

@@ -225,6 +225,11 @@
                 android:name=".chat.ui.BlockedContactsActivity"
                 android:theme="@style/AppTheme.NoActionBar"
                 android:label="@string/blocked_users" />
+                
+        <activity
+                android:name=".chat.ui.ContactDetailsActivity"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:label="@string/contact_details" />
 
         <activity
                 android:name=".chat.ui.group.NewGroupActivity"

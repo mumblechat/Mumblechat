@@ -24,6 +24,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ramapay.app.R
 import com.ramapay.app.chat.core.ChatService
 import com.ramapay.app.chat.notification.ChatNotificationHelper
+import com.ramapay.app.chat.ui.ContactDetailsActivity
 import com.ramapay.app.chat.ui.adapter.MessageListAdapter
 import com.ramapay.app.chat.viewmodel.ConversationViewModel
 import com.ramapay.app.chat.viewmodel.SendingState
@@ -32,7 +33,6 @@ import com.ramapay.app.service.AppSecurityManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
 /**
  * Activity for 1:1 conversation.
  */
@@ -190,8 +190,11 @@ class ConversationActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_view_contact -> {
-                // TODO: Open contact details
-                Toast.makeText(this, "Contact details coming soon", Toast.LENGTH_SHORT).show()
+                ContactDetailsActivity.start(
+                    this,
+                    contactAddress = peerAddress,
+                    ownerWallet = viewModel.currentWalletAddress
+                )
                 true
             }
             R.id.action_block_user -> {
@@ -320,8 +323,40 @@ class ConversationActivity : AppCompatActivity() {
     }
     
     private fun exportChat() {
-        // TODO: Implement export
-        Toast.makeText(this, "Export coming soon", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val messages = viewModel.messages.value
+            if (messages.isEmpty()) {
+                Toast.makeText(this@ConversationActivity, "No messages to export", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            
+            val chatExport = StringBuilder()
+            chatExport.appendLine("MumbleChat Export")
+            chatExport.appendLine("================")
+            chatExport.appendLine("Chat with: $peerAddress")
+            chatExport.appendLine("Exported: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())}")
+            chatExport.appendLine()
+            chatExport.appendLine("Messages:")
+            chatExport.appendLine("---------")
+            
+            messages.forEach { msg ->
+                val sender = if (msg.senderAddress == viewModel.currentWalletAddress) "You" else formatAddress(msg.senderAddress)
+                val time = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(msg.timestamp))
+                chatExport.appendLine("[$time] $sender: ${msg.content}")
+            }
+            
+            // Share via intent
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "MumbleChat Export - ${formatAddress(peerAddress)}")
+                putExtra(Intent.EXTRA_TEXT, chatExport.toString())
+            }
+            startActivity(Intent.createChooser(shareIntent, getString(R.string.export_chat)))
+        }
+    }
+    
+    private fun formatAddress(address: String): String {
+        return if (address.length > 12) "${address.take(6)}...${address.takeLast(4)}" else address
     }
 
     private fun setupRecyclerView() {
