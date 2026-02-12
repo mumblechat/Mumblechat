@@ -1280,8 +1280,8 @@
     <string name="action_proceed">Proceed</string>
     <string name="setting_title_notification_incoming_tokens">Incoming Tokens</string>
     <string name="setting_description_notification_incoming_tokens">Show notifications when tokens are received by your active wallet.</string>
-    <string name="notification_message_incoming_token_with_recipient">Wallet %1s has received %2s from %3s. Tap here to view transaction details.</string>
-    <string name="notification_message_incoming_token">Wallet %1s has received %2s. Tap here to view transaction details.</string>
+    <string name="notification_message_incoming_token_with_recipient">Wallet %1$s has received %2$s from %3$s. Tap here to view transaction details.</string>
+    <string name="notification_message_incoming_token">Wallet %1$s has received %2$s. Tap here to view transaction details.</string>
     <string name="btn_ok_request_post_notifications_permission">I want to receive notifications</string>
     <string name="btn_skip">Skip for now</string>
     <string name="body_request_post_notifications_permission">While RamaPay is in the background, it can send you notifications for various events, like when your wallet receives tokens.</string>
