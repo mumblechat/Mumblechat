@@ -417,7 +417,8 @@ public class BackupKeyActivity extends BaseActivity implements
             if (wallet.type == WalletType.KEYSTORE || wallet.type == WalletType.KEYSTORE_LEGACY)
             {
                 // secretData is the keystore password, use it to decrypt and get the private key
-                File keyFolder = new File(getFilesDir(), "keystore");
+                // Note: KEYSTORE_FOLDER is "keystore/keystore"
+                File keyFolder = new File(getFilesDir(), "keystore/keystore");
                 String address = Numeric.cleanHexPrefix(wallet.address);
                 File[] contents = keyFolder.listFiles();
                 Credentials credentials = null;
