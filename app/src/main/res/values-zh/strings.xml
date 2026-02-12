@@ -219,7 +219,7 @@
     <string name="ticket">门票</string>
     <string name="tickets">门票</string>
     <string name="failed">失效</string>
-    <string name="total_cost_for_x_tickets">%1d %2$s 成本价:</string>
+    <string name="total_cost_for_x_tickets">%1$d %2$s 成本价:</string>
     <string name="title_import_token">导入门票</string>
     <string name="action_cancel">取消</string>
     <string name="confirm_purchase">确认购买</string>
