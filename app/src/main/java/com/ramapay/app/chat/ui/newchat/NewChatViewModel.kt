@@ -2,7 +2,9 @@ package com.ramapay.app.chat.ui.newchat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ramapay.app.chat.blockchain.MumbleChatBlockchainService
 import com.ramapay.app.chat.core.WalletBridge
+import com.ramapay.app.chat.data.repository.ContactRepository
 import com.ramapay.app.chat.data.repository.ConversationRepository
 import com.ramapay.app.chat.registry.RegistrationManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +22,11 @@ sealed class NewChatState {
     object Loading : NewChatState()
     data class Success(val conversationId: String, val peerAddress: String) : NewChatState()
     data class Error(val message: String) : NewChatState()
-    data class AddressVerified(val address: String, val isRegistered: Boolean) : NewChatState()
+    data class AddressVerified(
+        val address: String, 
+        val isRegistered: Boolean,
+        val onChainDisplayName: String? = null  // Display name set by the address owner
+    ) : NewChatState()
 }
 
 /**
@@ -30,7 +36,9 @@ sealed class NewChatState {
 class NewChatViewModel @Inject constructor(
     private val walletBridge: WalletBridge,
     private val conversationRepository: ConversationRepository,
-    private val registrationManager: RegistrationManager
+    private val contactRepository: ContactRepository,
+    private val registrationManager: RegistrationManager,
+    private val blockchainService: MumbleChatBlockchainService
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<NewChatState>(NewChatState.Idle)
@@ -45,13 +53,26 @@ class NewChatViewModel @Inject constructor(
     
     /**
      * Check if an address is registered for MumbleChat.
+     * Also fetches the on-chain display name if available.
      */
     fun checkIfRegistered(address: String) {
         viewModelScope.launch {
             try {
-                // Clear cache and force fresh check
+                // Check registration and get on-chain display name
                 val isRegistered = registrationManager.isRegistered(address)
-                _state.value = NewChatState.AddressVerified(address, isRegistered)
+                
+                // Fetch on-chain display name (set by address owner)
+                val onChainName = if (isRegistered) {
+                    blockchainService.getOnChainDisplayName(address)
+                } else {
+                    null
+                }
+                
+                _state.value = NewChatState.AddressVerified(
+                    address = address, 
+                    isRegistered = isRegistered,
+                    onChainDisplayName = onChainName
+                )
             } catch (e: Exception) {
                 Timber.e(e, "Failed to check registration for $address")
                 _state.value = NewChatState.AddressVerified(address, false)
@@ -61,8 +82,10 @@ class NewChatViewModel @Inject constructor(
 
     /**
      * Start a conversation with a wallet address.
+     * @param peerAddress The wallet address to chat with
+     * @param nickname Optional display name to save for the contact
      */
-    fun startConversation(peerAddress: String) {
+    fun startConversation(peerAddress: String, nickname: String? = null) {
         val walletAddress = walletBridge.getCurrentWalletAddress()
         if (walletAddress == null) {
             _state.value = NewChatState.Error("No wallet connected")
@@ -87,6 +110,11 @@ class NewChatViewModel @Inject constructor(
 
                 // Create or get conversation
                 val conversation = conversationRepository.getOrCreate(walletAddress, peerAddress)
+                
+                // Save nickname if provided
+                if (!nickname.isNullOrBlank()) {
+                    contactRepository.addOrUpdateContact(walletAddress, peerAddress, nickname)
+                }
 
                 _state.value = NewChatState.Success(
                     conversationId = conversation.id,

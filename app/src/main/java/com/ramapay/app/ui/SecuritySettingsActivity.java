@@ -40,6 +40,7 @@ public class SecuritySettingsActivity extends BaseActivity {
     private SwitchMaterial transactionAuthSwitch;
     private SwitchMaterial biometricSwitch;
     private SwitchMaterial screenOffLockSwitch;
+    private SwitchMaterial bypassLockChatSwitch;
     private MaterialButton btnChangePassword;
     private ImageView iconBiometric;
 
@@ -78,6 +79,7 @@ public class SecuritySettingsActivity extends BaseActivity {
         transactionAuthSwitch = findViewById(R.id.transaction_auth_switch);
         biometricSwitch = findViewById(R.id.biometric_switch);
         screenOffLockSwitch = findViewById(R.id.screen_off_lock_switch);
+        bypassLockChatSwitch = findViewById(R.id.bypass_lock_chat_switch);
         btnChangePassword = findViewById(R.id.btn_change_password);
         iconBiometric = findViewById(R.id.icon_biometric);
 
@@ -125,6 +127,9 @@ public class SecuritySettingsActivity extends BaseActivity {
         
         // Load screen off lock setting (default is true)
         screenOffLockSwitch.setChecked(securityManager.isLockOnScreenOffEnabled());
+        
+        // Load bypass lock in chat setting (default is true)
+        bypassLockChatSwitch.setChecked(securityManager.isBypassLockInChatEnabled());
     }
 
     private int getTimeoutPosition(long timeout) {
@@ -178,6 +183,16 @@ public class SecuritySettingsActivity extends BaseActivity {
                 Toast.makeText(this, R.string.lock_on_screen_off_enabled, Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, R.string.lock_on_screen_off_disabled, Toast.LENGTH_SHORT).show();
+            }
+        });
+        
+        // Bypass lock in chat toggle
+        bypassLockChatSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            securityManager.setBypassLockInChatEnabled(isChecked);
+            if (isChecked) {
+                Toast.makeText(this, R.string.bypass_lock_in_chat_enabled, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, R.string.bypass_lock_in_chat_disabled, Toast.LENGTH_SHORT).show();
             }
         });
 

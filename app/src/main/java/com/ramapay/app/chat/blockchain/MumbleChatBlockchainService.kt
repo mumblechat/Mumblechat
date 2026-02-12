@@ -616,6 +616,23 @@ class MumbleChatBlockchainService @Inject constructor(
     }
     
     /**
+     * Get on-chain display name for an address.
+     * This is the name the address owner has registered on-chain.
+     * 
+     * @param address The wallet address to lookup
+     * @return The display name if set, null otherwise
+     */
+    suspend fun getOnChainDisplayName(address: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val identity = getIdentity(address)
+            identity?.displayName?.takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to get display name for $address")
+            null
+        }
+    }
+    
+    /**
      * Get total number of registered users.
      */
     suspend fun getTotalUsers(): Long = withContext(Dispatchers.IO) {
@@ -1188,3 +1205,11 @@ data class RelayNodeStatus(
         get() = dailyUptimeSeconds / 3600.0
 }
 
+/**
+ * Data class for on-chain display name.
+ */
+data class OnChainDisplayName(
+    val address: String,
+    val displayName: String,
+    val registeredAt: Long
+)

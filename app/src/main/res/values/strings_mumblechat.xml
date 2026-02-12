@@ -43,6 +43,7 @@
     <string name="address_copied">Address copied to clipboard</string>
     <string name="verifying_address">Verifying address…</string>
     <string name="user_registered">User is registered ✓</string>
+    <string name="user_registered_with_name">%1$s ✓ (registered user)</string>
     <string name="user_not_registered">This address is not registered for MumbleChat</string>
     <string name="cannot_chat_unregistered">You cannot chat with unregistered users</string>
     

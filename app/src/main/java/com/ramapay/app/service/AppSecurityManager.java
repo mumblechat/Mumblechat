@@ -50,6 +50,7 @@ public class AppSecurityManager {
     private static final String KEY_FAILED_ATTEMPTS = "failed_attempts";
     private static final String KEY_LOCKOUT_END_TIME = "lockout_end_time";
     private static final String KEY_LOCK_ON_SCREEN_OFF = "lock_on_screen_off";
+    private static final String KEY_BYPASS_LOCK_IN_CHAT = "bypass_lock_in_chat";
     
     // Timeout options in milliseconds
     public static final long TIMEOUT_1_MIN = 1 * 60 * 1000;
@@ -504,6 +505,22 @@ public class AppSecurityManager {
      */
     public void setLockOnScreenOffEnabled(boolean enabled) {
         securePrefs.edit().putBoolean(KEY_LOCK_ON_SCREEN_OFF, enabled).apply();
+    }
+    
+    /**
+     * Check if bypass auto-lock in chat is enabled
+     * When enabled, the session is kept alive while user is actively in chat
+     * Default is true for better chat experience
+     */
+    public boolean isBypassLockInChatEnabled() {
+        return securePrefs.getBoolean(KEY_BYPASS_LOCK_IN_CHAT, true);
+    }
+    
+    /**
+     * Enable or disable bypass auto-lock in chat
+     */
+    public void setBypassLockInChatEnabled(boolean enabled) {
+        securePrefs.edit().putBoolean(KEY_BYPASS_LOCK_IN_CHAT, enabled).apply();
     }
     
     /**

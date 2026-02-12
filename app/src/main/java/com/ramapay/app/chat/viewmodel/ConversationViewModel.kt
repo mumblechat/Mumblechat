@@ -285,4 +285,18 @@ class ConversationViewModel @Inject constructor(
             false
         }
     }
+    
+    /**
+     * Get contact's display name (nickname) if available.
+     * Returns null if no nickname is set.
+     */
+    suspend fun getContactDisplayName(peerAddress: String): String? {
+        return try {
+            val contact = contactDao.getByAddress(currentWalletAddress, peerAddress)
+            contact?.nickname?.takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to get contact display name for: $peerAddress")
+            null
+        }
+    }
 }

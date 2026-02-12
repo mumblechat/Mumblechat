@@ -5,6 +5,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
 import android.view.inputmethod.EditorInfo
@@ -26,6 +28,7 @@ import com.ramapay.app.chat.ui.adapter.MessageListAdapter
 import com.ramapay.app.chat.viewmodel.ConversationViewModel
 import com.ramapay.app.chat.viewmodel.SendingState
 import com.ramapay.app.databinding.ActivityConversationBinding
+import com.ramapay.app.service.AppSecurityManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -52,6 +55,21 @@ class ConversationActivity : AppCompatActivity() {
     
     @Inject
     lateinit var chatNotificationHelper: ChatNotificationHelper
+    
+    @Inject
+    lateinit var appSecurityManager: AppSecurityManager
+    
+    // Handler for session refresh
+    private val sessionRefreshHandler = Handler(Looper.getMainLooper())
+    private val sessionRefreshRunnable = object : Runnable {
+        override fun run() {
+            if (appSecurityManager.isBypassLockInChatEnabled()) {
+                appSecurityManager.refreshSession()
+            }
+            // Refresh every 30 seconds while in chat
+            sessionRefreshHandler.postDelayed(this, 30_000L)
+        }
+    }
     
     // File picker for attachments
     private val filePickerLauncher = registerForActivityResult(
@@ -148,6 +166,15 @@ class ConversationActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.title = formatAddress(peerAddress)
         binding.toolbar.setNavigationOnClickListener { finish() }
+        
+        // Load and display contact's nickname if available
+        lifecycleScope.launch {
+            val displayName = viewModel.getContactDisplayName(peerAddress)
+            if (!displayName.isNullOrBlank()) {
+                supportActionBar?.title = displayName
+                supportActionBar?.subtitle = formatAddress(peerAddress)
+            }
+        }
     }
     
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -452,5 +479,25 @@ class ConversationActivity : AppCompatActivity() {
         } else {
             address
         }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Start refreshing session to bypass auto-lock while in chat
+        if (appSecurityManager.isBypassLockInChatEnabled()) {
+            appSecurityManager.refreshSession()
+            sessionRefreshHandler.postDelayed(sessionRefreshRunnable, 30_000L)
+        }
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Stop refreshing session when leaving chat
+        sessionRefreshHandler.removeCallbacks(sessionRefreshRunnable)
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        sessionRefreshHandler.removeCallbacks(sessionRefreshRunnable)
     }
 }

@@ -321,6 +321,13 @@
     <string name="tx_label">Transactions</string>
     <string name="browser_label">Browser</string>
     <string name="chat_label">Chat</string>
+    
+    <!-- New Chat / Display Name -->
+    <string name="display_name_optional">Display Name (Optional)</string>
+    <string name="display_name_helper_text">Set a personal nickname for this contact</string>
+    <string name="onchain_name_detected">On-chain name: %1$s</string>
+    <string name="use_onchain_name">Use on-chain name</string>
+    
     <string name="settings_label">Settings</string>
     <string name="activity_label">Activity</string>
     <string name="toolbar_header_importing_tickets">Importing Tokens</string>
@@ -1075,6 +1082,12 @@
     <string name="lock_on_screen_off_description">Require password when screen turns off</string>
     <string name="lock_on_screen_off_enabled">App will lock when screen turns off</string>
     <string name="lock_on_screen_off_disabled">App will not lock when screen turns off</string>
+    
+    <!-- Bypass Lock in Chat -->
+    <string name="bypass_lock_in_chat">Stay Unlocked in Chat</string>
+    <string name="bypass_lock_in_chat_description">Keep app unlocked while actively chatting</string>
+    <string name="bypass_lock_in_chat_enabled">App will stay unlocked while in chat</string>
+    <string name="bypass_lock_in_chat_disabled">Auto-lock timer will run even in chat</string>
     
     <!-- Change Password Activity (unique strings only) -->
     <string name="change_password_description">Enter your current password and create a new one</string>

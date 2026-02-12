@@ -48,7 +48,8 @@
                 android:layout_weight="1"
                 android:hint="@string/wallet_address"
                 app:boxStrokeColor="@color/mumblechat_accent"
-                app:hintTextColor="@color/mumblechat_accent">
+                app:hintTextColor="@color/mumblechat_accent"
+                app:boxBackgroundColor="?android:colorBackground">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editAddress"
@@ -56,7 +57,9 @@
                     android:layout_height="wrap_content"
                     android:imeOptions="actionDone"
                     android:inputType="textNoSuggestions"
-                    android:maxLines="1" />
+                    android:maxLines="1"
+                    android:textColor="?android:textColorPrimary"
+                    android:textColorHint="?android:textColorSecondary" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -72,6 +75,32 @@
                 app:tint="@color/mumblechat_accent" />
 
         </LinearLayout>
+
+        <!-- Display Name Input (Optional) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/inputLayoutDisplayName"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/display_name_optional"
+            app:boxStrokeColor="@color/mumblechat_accent"
+            app:hintTextColor="@color/mumblechat_accent"
+            app:boxBackgroundColor="?android:colorBackground"
+            app:helperText="@string/display_name_helper_text"
+            app:helperTextEnabled="true">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editDisplayName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textPersonName"
+                android:maxLines="1"
+                android:textColor="?android:textColorPrimary"
+                android:textColorHint="?android:textColorSecondary" />
+
+        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Registration Status Card -->
         <com.google.android.material.card.MaterialCardView

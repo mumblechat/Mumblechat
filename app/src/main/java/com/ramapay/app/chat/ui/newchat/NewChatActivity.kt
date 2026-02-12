@@ -173,13 +173,24 @@ class NewChatActivity : AppCompatActivity() {
         viewModel.checkIfRegistered(address)
     }
     
-    private fun showRegisteredStatus() {
+    private fun showRegisteredStatus(onChainDisplayName: String? = null) {
         binding.registrationStatusCard.isVisible = true
         binding.statusIcon.isVisible = true
         binding.statusProgress.isVisible = false
         binding.statusIcon.setImageResource(R.drawable.ic_check_circle)
         binding.statusIcon.setColorFilter(getColor(R.color.success))
-        binding.statusText.text = getString(R.string.user_registered)
+        
+        // Show on-chain display name if available
+        if (!onChainDisplayName.isNullOrBlank()) {
+            binding.statusText.text = getString(R.string.user_registered_with_name, onChainDisplayName)
+            // Auto-fill display name if user hasn't entered one
+            if (binding.editDisplayName.text.isNullOrEmpty()) {
+                binding.editDisplayName.setText(onChainDisplayName)
+            }
+        } else {
+            binding.statusText.text = getString(R.string.user_registered)
+        }
+        
         binding.statusText.setTextColor(getColor(R.color.success))
         binding.registrationStatusCard.strokeColor = getColor(R.color.success)
         binding.buttonStartChat.isEnabled = true
@@ -289,6 +300,7 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun startChat() {
         val address = binding.editAddress.text.toString().trim()
+        val displayName = binding.editDisplayName.text.toString().trim().takeIf { it.isNotEmpty() }
         
         if (address.isEmpty()) {
             binding.inputLayout.error = getString(R.string.enter_wallet_address)
@@ -301,7 +313,7 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         binding.inputLayout.error = null
-        viewModel.startConversation(address)
+        viewModel.startConversation(address, displayName)
     }
 
     private fun isValidAddress(address: String): Boolean {
@@ -339,7 +351,7 @@ class NewChatActivity : AppCompatActivity() {
                         // Store verified address to prevent re-verification
                         lastVerifiedAddress = state.address
                         if (state.isRegistered) {
-                            showRegisteredStatus()
+                            showRegisteredStatus(state.onChainDisplayName)
                         } else {
                             showNotRegisteredStatus()
                         }

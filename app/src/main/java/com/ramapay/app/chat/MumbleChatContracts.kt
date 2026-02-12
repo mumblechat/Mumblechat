@@ -20,6 +20,10 @@ object MumbleChatContracts {
     const val REGISTRY_PROXY = "0x4f8D4955F370881B05b68D2344345E749d8632e3"
     const val REGISTRY_IMPL = "0xC69C387a67324A08d1410aEB770dB0AC18c9ad15"
     
+    // Display Name Registry (Allows users to register on-chain display names)
+    // This will be deployed - using placeholder for now
+    const val DISPLAY_NAME_REGISTRY = "0x0000000000000000000000000000000000000000"
+    
     // MCT Token V3 Tokenomics
     const val MAX_SUPPLY = 1_000_000L              // 1,000,000 MCT (can be changed via governance)
     const val ABSOLUTE_MAX_SUPPLY = 10_000_000L   // 10M absolute limit (cannot exceed)
