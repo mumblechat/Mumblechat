@@ -36,7 +36,7 @@ import com.ramapay.app.chat.data.entity.MessageStatus
         ContactEntity::class
     ],
     version = 2,
-    exportSchema = true
+    exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class ChatDatabase : RoomDatabase() {

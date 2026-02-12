@@ -196,6 +196,14 @@ android {
     ndkVersion '27.1.12297006'
 }
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = true
+    javacOptions {
+        option("-Xmaxerrs", 500)
+    }
+}
+
 tasks.register("printVersionName") {
     doLast {
         println android.defaultConfig.versionName
