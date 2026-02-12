@@ -2,6 +2,8 @@ package com.ramapay.app.ui;
 
 import static com.ramapay.app.C.Key.WALLET;
 
+import static com.ramapay.app.service.KeystoreAccountService.KEYSTORE_FOLDER;
+
 import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -37,6 +39,7 @@ import com.ramapay.app.entity.Wallet;
 import com.ramapay.app.entity.WalletType;
 import com.ramapay.hardware.SignatureFromKey;
 import com.ramapay.app.service.KeyService;
+import com.ramapay.app.service.KeystoreAccountService;
 import com.ramapay.app.ui.QRScanning.DisplayUtils;
 import com.ramapay.app.viewmodel.BackupKeyViewModel;
 import com.ramapay.app.widget.AWalletAlertDialog;
@@ -416,24 +419,9 @@ public class BackupKeyActivity extends BaseActivity implements
             // We need to decrypt the keystore to get the actual private key
             if (wallet.type == WalletType.KEYSTORE || wallet.type == WalletType.KEYSTORE_LEGACY)
             {
-                // secretData is the keystore password, use it to decrypt and get the private key
-                // Note: KEYSTORE_FOLDER is "keystore/keystore"
-                File keyFolder = new File(getFilesDir(), "keystore/keystore");
-                String address = Numeric.cleanHexPrefix(wallet.address);
-                File[] contents = keyFolder.listFiles();
-                Credentials credentials = null;
-                
-                if (contents != null)
-                {
-                    for (File f : contents)
-                    {
-                        if (f.getName().toLowerCase().contains(address.toLowerCase()))
-                        {
-                            credentials = WalletUtils.loadCredentials(secretData, f);
-                            break;
-                        }
-                    }
-                }
+                // Use the same method as KeystoreAccountService for consistency
+                File keyFolder = new File(getFilesDir(), KEYSTORE_FOLDER);
+                Credentials credentials = KeystoreAccountService.getCredentials(keyFolder, wallet.address, secretData);
                 
                 if (credentials != null)
                 {
@@ -443,7 +431,7 @@ public class BackupKeyActivity extends BaseActivity implements
                 }
                 else
                 {
-                    throw new Exception("Could not load wallet credentials");
+                    throw new Exception("Could not load wallet credentials. Please check your keystore.");
                 }
             }
             else

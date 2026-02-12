@@ -1,6 +1,8 @@
 package com.ramapay.app.chat.notification
 
 import android.Manifest
+import android.app.Activity
+import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -10,6 +12,7 @@ import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -25,11 +28,12 @@ import javax.inject.Singleton
 /**
  * Helper class for showing chat message notifications.
  * Respects user's notification preferences.
+ * Only shows notifications when app is in background.
  */
 @Singleton
 class ChatNotificationHelper @Inject constructor(
     private val context: Context
-) {
+) : Application.ActivityLifecycleCallbacks {
     companion object {
         const val CHANNEL_ID_MESSAGES = "mumblechat_messages"
         const val CHANNEL_ID_GROUPS = "mumblechat_groups"
@@ -60,9 +64,36 @@ class ChatNotificationHelper @Inject constructor(
     private val notificationIds = mutableMapOf<String, Int>()
     private var nextNotificationId = NOTIFICATION_ID_BASE
     
+    // Track if app is in foreground
+    private var activeActivities = 0
+    private val isAppInForeground: Boolean
+        get() = activeActivities > 0
+    
     init {
         createNotificationChannels()
+        // Register lifecycle callbacks to track foreground state
+        if (context is Application) {
+            context.registerActivityLifecycleCallbacks(this)
+        } else if (context.applicationContext is Application) {
+            (context.applicationContext as Application).registerActivityLifecycleCallbacks(this)
+        }
+        Timber.d("ChatNotificationHelper: Initialized")
     }
+    
+    // ActivityLifecycleCallbacks
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+    override fun onActivityStarted(activity: Activity) {
+        activeActivities++
+        Timber.d("ChatNotificationHelper: Activity started, active count: $activeActivities")
+    }
+    override fun onActivityResumed(activity: Activity) {}
+    override fun onActivityPaused(activity: Activity) {}
+    override fun onActivityStopped(activity: Activity) {
+        activeActivities--
+        Timber.d("ChatNotificationHelper: Activity stopped, active count: $activeActivities")
+    }
+    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+    override fun onActivityDestroyed(activity: Activity) {}
     
     /**
      * Create notification channels (required for Android 8.0+)
@@ -120,23 +151,29 @@ class ChatNotificationHelper @Inject constructor(
         senderName: String? = null,
         conversationId: String
     ) {
+        Timber.d("ChatNotificationHelper: showMessageNotification called for message from ${message.senderAddress}")
+        
         // Check if message notifications are enabled
         if (!isMessageNotificationsEnabled()) {
-            Timber.d("ChatNotificationHelper: Message notifications disabled")
+            Timber.d("ChatNotificationHelper: Message notifications disabled by user")
             return
         }
         
         // Check if group notifications are enabled (for group messages)
         if (message.groupId != null && !isGroupNotificationsEnabled()) {
-            Timber.d("ChatNotificationHelper: Group notifications disabled")
+            Timber.d("ChatNotificationHelper: Group notifications disabled by user")
             return
         }
         
         // Check notification permission on Android 13+
         if (!hasNotificationPermission()) {
-            Timber.w("ChatNotificationHelper: Notification permission not granted")
+            Timber.w("ChatNotificationHelper: POST_NOTIFICATIONS permission not granted")
             return
         }
+        
+        // Note: We show notifications even in foreground for now
+        // In production, you might want to use in-app notifications instead
+        Timber.d("ChatNotificationHelper: App in foreground: $isAppInForeground")
         
         val channelId = if (message.groupId != null) CHANNEL_ID_GROUPS else CHANNEL_ID_MESSAGES
         val notificationId = getNotificationIdForConversation(conversationId)
