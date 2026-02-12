@@ -959,7 +959,7 @@
     <string name="use_hardware_card">Gunakan Kartu Perangkat Keras</string>
     <string name="unsupported_network">Jaringan Tidak Didukung (ID Rantai: %s)</string>
     <string name="error_eip712_unsupported_network">Anda diminta menandatangani pesan untuk rantai yang tidak didukung. (ID: %s)</string>
-    <string name="error_eip712_incompatible_network">Anda diminta menandatangani pesan untuk rantai %1s. Anda saat ini berada di rantai %2s.</string>
+    <string name="error_eip712_incompatible_network">Anda diminta menandatangani pesan untuk rantai %1$s. Anda saat ini berada di rantai %2$s.</string>
     <string name="error_eip712_wc2_disabled_network">Anda diminta menandatangani pesan untuk %s. Aktifkan rantai ini untuk sesi WalletConnect Anda.</string>
     <string name="action_view_session">Lihat Sesi</string>
     <string name="error_walletconnect_session_request_unsupported_network">Tidak dapat menangani permintaan sesi dari rantai yang tidak didukung. (ID: %s)</string>
@@ -978,8 +978,8 @@
     <string name="action_proceed">Melanjutkan</string>
     <string name="setting_title_notification_incoming_tokens">Token Masuk</string>
     <string name="setting_description_notification_incoming_tokens">Tampilkan pemberitahuan saat token diterima oleh dompet aktif Anda.</string>
-    <string name="notification_message_incoming_token_with_recipient">Dompet %1s telah menerima %2s dari %3s. Ketuk di sini untuk melihat detail transaksi.</string>
-    <string name="notification_message_incoming_token">Dompet %1s telah menerima %2s. Ketuk di sini untuk melihat detail transaksi.</string>
+    <string name="notification_message_incoming_token_with_recipient">Dompet %1$s telah menerima %2$s dari %3s. Ketuk di sini untuk melihat detail transaksi.</string>
+    <string name="notification_message_incoming_token">Dompet %1$s telah menerima %2$s. Ketuk di sini untuk melihat detail transaksi.</string>
     <string name="btn_ok_request_post_notifications_permission">Saya ingin menerima pemberitahuan</string>
     <string name="btn_skip">Lewati untuk saat ini</string>
     <string name="body_request_post_notifications_permission">Saat RamaPay berada di latar belakang, RamaPay dapat mengirimi Anda notifikasi untuk berbagai acara, seperti saat dompet Anda menerima token.</string>

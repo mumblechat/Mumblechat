@@ -130,9 +130,9 @@
     <string name="set_a_price">Fija un precio:</string>
     <string name="learn_more_about_ethereum">Más información sobre Ethereum</string>
     <string name="price_per_ticket">Precio por ticket</string>
-    <string name="set_price_subtext_abr">Fijar el precio en %1s (%2s)</string>
+    <string name="set_price_subtext_abr">Fijar el precio en %1$s (%2$s)</string>
     <string name="transfer_tickets">Transferir tickets</string>
-    <string name="link_valid_until">El MagicLink será válido hasta %1s %2s</string>
+    <string name="link_valid_until">El MagicLink será válido hasta %1$s %2$s</string>
     <string name="generate_pick_up_link">Generar un MagicLink</string>
     <string name="transfer_now">Transferir ahora</string>
     <string name="to">a</string>
@@ -189,7 +189,7 @@
     <string name="help_question6">¿Qué es TokenScript?</string>
     <string name="twenty_four_hours">24 horas</string>
     <string name="appreciation">Valoración</string>
-    <string name="eth_per_ticket">%1s/ticket</string>
+    <string name="eth_per_ticket">%1$s/ticket</string>
     <string name="ethereum">Ethereum</string>
     <string name="ethereum_blockchain">Cadena de bloques de Ethereum</string>
     <string name="issuer">Emisor:</string>
@@ -388,7 +388,7 @@
     <string name="welcome_to_the_decentralized_web">Bienvenido a la web descentralizada</string>
     <string name="action_remove">Eliminar</string>
     <string name="title_remove_dapp">Eliminar DApp</string>
-    <string name="remove_from_my_dapps">¿Eliminar %1s de Mis DApps?</string>
+    <string name="remove_from_my_dapps">¿Eliminar %1$s de Mis DApps?</string>
     <string name="dialog_title_clear">Borrar historial</string>
     <string name="action_clear">Borrar</string>
     <string name="dialog_message_clear">¿Seguro que deseas borrar tu historial de navegación?</string>

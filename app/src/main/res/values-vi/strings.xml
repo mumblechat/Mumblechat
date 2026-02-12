@@ -968,7 +968,7 @@
     <string name="use_hardware_card">Sử dụng thẻ cứng</string>
     <string name="unsupported_network">Mạng không được hỗ trợ (ID chuỗi: %s)</string>
     <string name="error_eip712_unsupported_network">Bạn đã được yêu cầu ký một tin nhắn cho một chuỗi không được hỗ trợ. (ID: %s)</string>
-    <string name="error_eip712_incompatible_network">Bạn đã được yêu cầu ký một tin nhắn cho chuỗi %1s. Bạn hiện đang ở trong chuỗi %2s.</string>
+    <string name="error_eip712_incompatible_network">Bạn đã được yêu cầu ký một tin nhắn cho chuỗi %1$s. Bạn hiện đang ở trong chuỗi %2$s.</string>
     <string name="error_eip712_wc2_disabled_network">Bạn được yêu cầu ký một tin nhắn cho %s. Vui lòng kích hoạt chuỗi này cho phiên WalletConnect của bạn.</string>
     <string name="action_view_session">Xem phiên</string>
     <string name="error_walletconnect_session_request_unsupported_network">Không thể xử lý yêu cầu phiên từ một chuỗi không được hỗ trợ. (ID: %s)</string>
@@ -987,8 +987,8 @@
     <string name="action_proceed">Tiếp tục</string>
     <string name="setting_title_notification_incoming_tokens">Mã thông báo đến</string>
     <string name="setting_description_notification_incoming_tokens">Hiển thị thông báo khi ví hoạt động của bạn nhận được mã thông báo.</string>
-    <string name="notification_message_incoming_token_with_recipient">Ví %1s đã nhận được %2s từ %3s. Nhấn vào đây để xem chi tiết giao dịch.</string>
-    <string name="notification_message_incoming_token">Ví %1s đã nhận được %2s. Nhấn vào đây để xem chi tiết giao dịch.</string>
+    <string name="notification_message_incoming_token_with_recipient">Ví %1$s đã nhận được %2$s từ %3s. Nhấn vào đây để xem chi tiết giao dịch.</string>
+    <string name="notification_message_incoming_token">Ví %1$s đã nhận được %2$s. Nhấn vào đây để xem chi tiết giao dịch.</string>
     <string name="btn_ok_request_post_notifications_permission">Tôi muốn nhận thông báo</string>
     <string name="btn_skip">Bỏ qua ngay bây giờ</string>
     <string name="body_request_post_notifications_permission">Mặc dù RamaPay ở chế độ nền nhưng nó có thể gửi cho bạn thông báo về các sự kiện khác nhau, chẳng hạn như khi ví của bạn nhận được mã thông báo.</string>
