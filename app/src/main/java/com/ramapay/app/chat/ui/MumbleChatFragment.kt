@@ -1,7 +1,10 @@
 package com.ramapay.app.chat.ui
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -103,8 +107,38 @@ class MumbleChatFragment : BaseFragment(),
         setupResultLaunchers()
         observeViewModel()
 
+        // Request notification permission on Android 13+
+        requestNotificationPermissionIfNeeded()
+
         // Initialize chat
         viewModel.initialize()
+    }
+    
+    /**
+     * Request POST_NOTIFICATIONS permission on Android 13+ (API 33+)
+     */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // Request permission
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+    
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Timber.d("MumbleChatFragment: Notification permission granted")
+        } else {
+            Timber.w("MumbleChatFragment: Notification permission denied")
+            // Optionally show a message explaining why notifications are useful
+        }
     }
     
     private fun setupResultLaunchers() {

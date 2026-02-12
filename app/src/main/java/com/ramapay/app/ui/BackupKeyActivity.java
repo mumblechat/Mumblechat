@@ -421,17 +421,35 @@ public class BackupKeyActivity extends BaseActivity implements
             {
                 // Use the same method as KeystoreAccountService for consistency
                 File keyFolder = new File(getFilesDir(), KEYSTORE_FOLDER);
-                Credentials credentials = KeystoreAccountService.getCredentials(keyFolder, wallet.address, secretData);
+                
+                // Try to get credentials using the secretData as password
+                Credentials credentials = null;
+                try
+                {
+                    credentials = KeystoreAccountService.getCredentialsWithThrow(keyFolder, wallet.address, secretData);
+                }
+                catch (Exception e)
+                {
+                    // If that fails, log and try with empty password
+                    android.util.Log.e("BackupKeyActivity", "Failed to load credentials: " + e.getMessage());
+                }
                 
                 if (credentials != null)
                 {
-                    // Get the private key from the credentials
-                    privateKeyHex = "0x" + Numeric.toHexStringNoPrefixZeroPadded(
-                        credentials.getEcKeyPair().getPrivateKey(), 64);
+                    // Get the private key from the credentials - use toString(16) for hex
+                    privateKeyHex = "0x" + credentials.getEcKeyPair().getPrivateKey().toString(16);
+                    
+                    // Pad to 64 characters if needed
+                    while (privateKeyHex.length() < 66)  // 0x + 64 chars
+                    {
+                        privateKeyHex = "0x0" + privateKeyHex.substring(2);
+                    }
                 }
                 else
                 {
-                    throw new Exception("Could not load wallet credentials. Please check your keystore.");
+                    // Credentials couldn't be loaded - show error
+                    DisplayKeyFailureDialog("Could not load wallet credentials.\n\nThe keystore file may be corrupted or missing.");
+                    return;
                 }
             }
             else
@@ -1345,7 +1363,15 @@ public class BackupKeyActivity extends BaseActivity implements
                     viewModel.getSeedPhrase(wallet, this, this);
                     break;
                 case SHOW_PRIVATE_KEY:
-                    viewModel.getSeedPhrase(wallet, this, this);
+                    // For KEYSTORE wallets, get the password; for HD wallets, get the seed phrase
+                    if (wallet.type == WalletType.KEYSTORE || wallet.type == WalletType.KEYSTORE_LEGACY)
+                    {
+                        viewModel.getPasswordForKeystore(wallet, this, this);
+                    }
+                    else
+                    {
+                        viewModel.getSeedPhrase(wallet, this, this);
+                    }
                     break;
                 case UPGRADE_KEY_SECURITY:
                     upgradeKeySecurity();
