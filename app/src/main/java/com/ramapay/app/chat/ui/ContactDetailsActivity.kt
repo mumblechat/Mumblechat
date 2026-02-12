@@ -270,10 +270,8 @@ class ContactDetailsActivity : AppCompatActivity() {
     private fun updateFavoriteButton(isFavorite: Boolean) {
         if (isFavorite) {
             binding.buttonFavorite.text = getString(R.string.remove_favorite)
-            binding.buttonFavorite.setIconResource(R.drawable.ic_star_filled)
         } else {
             binding.buttonFavorite.text = getString(R.string.add_favorite)
-            binding.buttonFavorite.setIconResource(R.drawable.ic_star_outline)
         }
     }
     
