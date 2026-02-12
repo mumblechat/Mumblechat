@@ -55,8 +55,8 @@ class ContactRepository @Inject constructor(
             return existingContact
         }
 
-        // Create new contact
-        val contactId = contactAddress.lowercase() // Use address as ID
+        // Create new contact - ID must be unique per owner+address combination
+        val contactId = "${ownerWallet.lowercase()}_${contactAddress.lowercase()}"
         val newContact = ContactEntity(
             id = contactId,
             ownerWallet = ownerWallet,

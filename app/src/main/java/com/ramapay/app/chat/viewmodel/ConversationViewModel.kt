@@ -202,9 +202,10 @@ class ConversationViewModel @Inject constructor(
             if (contact != null) {
                 contactDao.setBlocked(contact.id, true)
             } else {
-                // Create contact and block
+                // Create contact and block - use consistent ID format (owner_address)
+                val contactId = "${wallet.lowercase()}_${address.lowercase()}"
                 val newContact = ContactEntity(
-                    id = "$wallet-$address",
+                    id = contactId,
                     ownerWallet = wallet,
                     address = address,
                     sessionPublicKey = null,
